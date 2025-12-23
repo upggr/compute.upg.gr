@@ -36,6 +36,12 @@ def about():
     return render_template('about.html')
 
 
+@app.route('/demo.html')
+def demo():
+    """Interactive demo page"""
+    return render_template('demo.html')
+
+
 @app.route('/api/run-demo', methods=['POST'])
 def run_demo():
     """

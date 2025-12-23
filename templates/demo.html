@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Demo - CY-Search</title>
+    <meta name="description" content="Interactive demo with customizable parameters and run history.">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-brand">CY-Search</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/demo.html" class="active">Interactive Demo</a>
+                <a href="/docs.html">Docs</a>
+                <a href="/results.html">Results</a>
+                <a href="/about.html">About</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="section">
+            <h1>Interactive Demo</h1>
+            <p>Customize search parameters and run live ML-guided searches. All runs are saved to history for comparison.</p>
+        </section>
+
+        <section class="section">
+            <h2>Search Parameters</h2>
+            <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 8px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label for="n_candidates" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Dataset Size</label>
+                        <select id="n_candidates" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <option value="1000">1,000 candidates (fast, ~2s)</option>
+                            <option value="5000" selected>5,000 candidates (recommended, ~5s)</option>
+                            <option value="10000">10,000 candidates (thorough, ~10s)</option>
+                            <option value="25000">25,000 candidates (comprehensive, ~30s)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="top_k" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Top-K Results</label>
+                        <select id="top_k" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <option value="20">Top 20</option>
+                            <option value="50">Top 50</option>
+                            <option value="100" selected>Top 100</option>
+                            <option value="200">Top 200</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="seed" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Random Seed</label>
+                        <input type="number" id="seed" value="42" min="1" max="9999" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Verification</label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem;">
+                            <input type="checkbox" id="verify" checked style="width: 20px; height: 20px;">
+                            <span>Verify against ground truth</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div style="text-align: center;">
+                    <button id="run-search-btn" class="btn btn-primary" style="font-size: 1.125rem; padding: 1rem 3rem;">
+                        🚀 Run Search
+                    </button>
+                </div>
+            </div>
+
+            <div id="search-status" style="display: none; margin-top: 1.5rem; padding: 1rem; background: #f0f7ff; border-left: 4px solid var(--primary-color); border-radius: 4px;">
+                <p id="status-text" style="margin: 0; font-weight: 500;"></p>
+                <div id="progress-bar" style="margin-top: 0.5rem; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden;">
+                    <div id="progress-fill" style="height: 100%; width: 0%; background: var(--primary-color); transition: width 0.3s;"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="current-results" style="display: none;">
+            <h2>Current Run Results</h2>
+            <div class="metrics-cards">
+                <div class="metric-card">
+                    <div class="metric-value" id="current-precision">-</div>
+                    <div class="metric-label">Precision@K</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="current-recall">-</div>
+                    <div class="metric-label">Recall@K</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="current-runtime">-</div>
+                    <div class="metric-label">Runtime</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="current-verified">-</div>
+                    <div class="metric-label">Verified</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Run History</h2>
+            <p>All searches are automatically saved. Click any row to view full results.</p>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Candidates</th>
+                            <th>Top-K</th>
+                            <th>Precision</th>
+                            <th>Recall</th>
+                            <th>Runtime</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                                No runs yet. Start a search above to see history.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Contact: <a href="mailto:ioannis.kokkinis@upg.gr">ioannis.kokkinis@upg.gr</a> | <a href="https://www.linkedin.com/in/ioanniskokkinis" target="_blank" rel="noopener">LinkedIn</a></p>
+            <p class="footer-note">Research tooling for reproducible computational physics experiments</p>
+        </div>
+    </footer>
+
+    <script>
+    // Load history from localStorage
+    function loadHistory() {
+        const history = JSON.parse(localStorage.getItem('cy_search_history') || '[]');
+        const tbody = document.getElementById('history-tbody');
+
+        if (history.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No runs yet. Start a search above to see history.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = history.map(run => `
+            <tr style="cursor: pointer;" onclick="viewRun('${run.run_id}')">
+                <td>${new Date(run.timestamp).toLocaleString()}</td>
+                <td>${run.n_candidates.toLocaleString()}</td>
+                <td>${run.top_k}</td>
+                <td>${(run.precision * 100).toFixed(1)}%</td>
+                <td>${(run.recall * 100).toFixed(1)}%</td>
+                <td>${run.runtime.toFixed(1)}s</td>
+                <td><a href="#" onclick="event.stopPropagation(); deleteRun('${run.run_id}'); return false;" style="color: var(--warning-color);">Delete</a></td>
+            </tr>
+        `).join('');
+    }
+
+    function saveToHistory(runData) {
+        const history = JSON.parse(localStorage.getItem('cy_search_history') || '[]');
+        history.unshift(runData);  // Add to beginning
+        if (history.length > 50) history.pop();  // Keep last 50
+        localStorage.setItem('cy_search_history', JSON.stringify(history));
+        loadHistory();
+    }
+
+    function viewRun(runId) {
+        // Would load from server, but for now just show alert
+        alert('Viewing run: ' + runId + '\\nFull results would load here.');
+    }
+
+    function deleteRun(runId) {
+        const history = JSON.parse(localStorage.getItem('cy_search_history') || '[]');
+        const filtered = history.filter(run => run.run_id !== runId);
+        localStorage.setItem('cy_search_history', JSON.stringify(filtered));
+        loadHistory();
+    }
+
+    // Run search
+    document.getElementById('run-search-btn').addEventListener('click', async function() {
+        const btn = this;
+        const statusDiv = document.getElementById('search-status');
+        const statusText = document.getElementById('status-text');
+        const progressFill = document.getElementById('progress-fill');
+        const resultsSection = document.getElementById('current-results');
+
+        // Get parameters
+        const params = {
+            n_candidates: parseInt(document.getElementById('n_candidates').value),
+            top_k: parseInt(document.getElementById('top_k').value),
+            seed: parseInt(document.getElementById('seed').value),
+            verify: document.getElementById('verify').checked,
+            use_real: true
+        };
+
+        // UI updates
+        btn.disabled = true;
+        btn.textContent = '⏳ Running...';
+        statusDiv.style.display = 'block';
+        resultsSection.style.display = 'none';
+        statusText.textContent = `Searching ${params.n_candidates.toLocaleString()} Calabi-Yau manifolds...`;
+        progressFill.style.width = '30%';
+
+        try {
+            const response = await fetch('/api/run-demo', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params)
+            });
+
+            const data = await response.json();
+            progressFill.style.width = '100%';
+
+            if (data.status === 'success') {
+                const metrics = data.results.performance_metrics;
+                const timing = data.results.timing;
+
+                // Show results
+                document.getElementById('current-precision').textContent =
+                    metrics.precision_at_k ? (metrics.precision_at_k * 100).toFixed(1) + '%' : 'N/A';
+                document.getElementById('current-recall').textContent =
+                    metrics.recall_at_k ? (metrics.recall_at_k * 100).toFixed(1) + '%' : 'N/A';
+                document.getElementById('current-runtime').textContent =
+                    timing.total_runtime_seconds.toFixed(1) + 's';
+                document.getElementById('current-verified').textContent =
+                    `${metrics.verified_count}/${params.top_k}`;
+
+                statusDiv.style.display = 'none';
+                resultsSection.style.display = 'block';
+
+                // Save to history
+                saveToHistory({
+                    run_id: data.run_id,
+                    timestamp: new Date().toISOString(),
+                    n_candidates: params.n_candidates,
+                    top_k: params.top_k,
+                    precision: metrics.precision_at_k || 0,
+                    recall: metrics.recall_at_k || 0,
+                    runtime: timing.total_runtime_seconds
+                });
+
+                btn.textContent = '✓ Search Complete!';
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.textContent = '🚀 Run Search';
+                }, 2000);
+            } else {
+                statusText.textContent = 'Error: ' + (data.message || 'Unknown error');
+                btn.disabled = false;
+                btn.textContent = '🚀 Run Search';
+            }
+        } catch (error) {
+            statusText.textContent = 'Error: ' + error.message;
+            btn.disabled = false;
+            btn.textContent = '🚀 Run Search';
+        }
+    });
+
+    // Load history on page load
+    loadHistory();
+    </script>
+</body>
+</html>

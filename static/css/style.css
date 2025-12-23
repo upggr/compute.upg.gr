@@ -844,14 +844,44 @@ html[data-theme="dark"] .compat-pill {
 }
 
 .share-icon {
-    width: 34px;
-    height: 34px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     border: 1px solid var(--border-color);
     background-color: var(--bg-secondary);
-    color: var(--text-color);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-weight: 700;
     cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.share-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.share-icon[data-share="facebook"] {
+    background-color: #1877f2;
+    border-color: #1877f2;
+}
+
+.share-icon[data-share="linkedin"] {
+    background-color: #0a66c2;
+    border-color: #0a66c2;
+}
+
+.share-icon[data-share="x"] {
+    background-color: #111111;
+    border-color: #111111;
+}
+
+.share-icon:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
 }
 
 /* Renderer page */

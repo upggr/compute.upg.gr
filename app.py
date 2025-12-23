@@ -65,7 +65,26 @@ def eli5():
 @app.route('/render.html')
 def render_page():
     """Full renderer page"""
-    return render_template('render.html')
+    candidate_id = request.args.get('candidate_id', 'candidate')
+    dataset_id = request.args.get('dataset_id', '')
+    seed = request.args.get('seed', '4242')
+    og_title = f"3D Render — {candidate_id}"
+    if dataset_id:
+        og_title += f" ({dataset_id})"
+    og_description = "Interactive 3D render of a Calabi-Yau candidate."
+    og_url = request.url
+    og_image = request.url_root.rstrip('/') + '/static/assets/og-render.png'
+
+    return render_template(
+        'render.html',
+        candidate_id=candidate_id,
+        dataset_id=dataset_id,
+        seed=seed,
+        og_title=og_title,
+        og_description=og_description,
+        og_url=og_url,
+        og_image=og_image
+    )
 
 
 @app.route('/api/datasets')

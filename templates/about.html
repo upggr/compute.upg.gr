@@ -1,32 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About - upg-strings</title>
-    <meta name="description" content="About the upg-strings project and team.">
+{% extends "base.html" %}
+{% set active_page = "about" %}
 
-    <!-- OpenGraph tags -->
+{% block title %}About - upg-strings{% endblock %}
+{% block description %}About the upg-strings project and team.{% endblock %}
+{% block og_tags %}
     <meta property="og:title" content="About - upg-strings">
     <meta property="og:description" content="About the upg-strings project and team.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://compute.upg.gr/about.html">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <nav class="nav">
-        <div class="container">
-            <div class="nav-brand">upg-strings</div>
-            <div class="nav-links">
-                <a href="/">Home</a>
-                <a href="/candidates.html">Candidates</a>
-                <a href="/docs.html">Docs</a>
-                <a href="/results.html">Results</a>
-                <a href="/about.html" class="active">About</a>
-            </div>
-        </div>
-    </nav>
+{% endblock %}
 
+{% block content %}
     <main class="container">
         <section class="section">
             <h1>About This Project</h1>
@@ -124,43 +108,5 @@
             </ol>
             <p>upg-strings bridges the gap between having a massive database and doing detailed analysis. It answers: <strong>"Which manifolds should I analyze?"</strong></p>
         </section>
-
-        <section class="section">
-            <h2>Roadmap</h2>
-            <ul>
-                <li>Integrate actual CYTools library for full KS database access</li>
-                <li>User-definable search criteria (custom topological targets)</li>
-                <li>Expand to additional Calabi-Yau datasets beyond current baseline</li>
-                <li>Integrate advanced ML architectures (graph neural networks, transformers)</li>
-                <li>Develop automated verification against algebraic geometry constraints</li>
-                <li>Add mirror symmetry pair detection</li>
-            </ul>
-        </section>
-
-        <section class="section">
-            <h2>Background</h2>
-            <p>This work is part of an ongoing effort in applied computation and AI tooling for scientific research. The goal is to build reliable, transparent tools that researchers can trust and extend.</p>
-            <p>The project does not claim to solve string theory or make predictions about physical reality. It is a computational tool for exploring mathematical structures in large datasets.</p>
-        </section>
-
-        <section class="section">
-            <h2>Contact</h2>
-            <p>For questions, collaboration inquiries, or bug reports:</p>
-            <p><a href="mailto:ioannis.kokkinis@upg.gr">ioannis.kokkinis@upg.gr</a> | <a href="https://www.linkedin.com/in/ioanniskokkinis" target="_blank" rel="noopener">LinkedIn Profile</a></p>
-            <p><a href="https://github.com/upggr/compute.upg.gr" target="_blank" rel="noopener">GitHub Repository</a></p>
-        </section>
-
-        <section class="section">
-            <h2>Acknowledgments</h2>
-            <p>This project builds on publicly available Calabi-Yau datasets and open-source machine learning libraries. We are grateful to the broader computational physics and ML communities for their foundational work.</p>
-        </section>
     </main>
-
-    <footer class="footer">
-        <div class="container">
-            <p>Contact: <a href="mailto:ioannis.kokkinis@upg.gr">ioannis.kokkinis@upg.gr</a> | <a href="https://www.linkedin.com/in/ioanniskokkinis" target="_blank" rel="noopener">LinkedIn</a></p>
-            <p class="footer-note">Research tooling for reproducible computational physics experiments</p>
-        </div>
-    </footer>
-</body>
-</html>
+{% endblock %}

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}upg-strings{% endblock %}</title>
+    <meta name="description" content="{% block description %}Verified ML-guided search for rare Calabi-Yau targets.{% endblock %}">
+
+    {% block og_tags %}{% endblock %}
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-left">
+                <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
+                    <span class="theme-toggle-icon">◐</span>
+                </button>
+                <div class="nav-brand">upg-strings</div>
+            </div>
+            <div class="nav-links">
+                <a href="/" class="{% if active_page == 'home' %}active{% endif %}">Home</a>
+                <a href="/candidates.html" class="{% if active_page == 'candidates' %}active{% endif %}">Candidates</a>
+                <a href="/demo.html" class="{% if active_page == 'demo' %}active{% endif %}">Interactive Demo</a>
+                <a href="/docs.html" class="{% if active_page == 'docs' %}active{% endif %}">Docs</a>
+                <a href="/results.html" class="{% if active_page == 'results' %}active{% endif %}">Results</a>
+                <a href="/about.html" class="{% if active_page == 'about' %}active{% endif %}">About</a>
+            </div>
+        </div>
+    </nav>
+
+    {% block content %}{% endblock %}
+
+    <footer class="footer">
+        <div class="container">
+            <p>Contact: <a href="mailto:ioannis.kokkinis@upg.gr">ioannis.kokkinis@upg.gr</a> | <a href="https://www.linkedin.com/in/ioanniskokkinis" target="_blank" rel="noopener">LinkedIn</a></p>
+            <p class="footer-note">Research tooling for reproducible computational physics experiments</p>
+        </div>
+    </footer>
+
+    <script>
+    (function() {
+        const storageKey = 'upg_theme';
+        const root = document.documentElement;
+        const toggle = document.getElementById('theme-toggle');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+        function applyTheme(theme) {
+            if (theme) {
+                root.setAttribute('data-theme', theme);
+            } else {
+                root.removeAttribute('data-theme');
+            }
+        }
+
+        function getStoredTheme() {
+            return localStorage.getItem(storageKey);
+        }
+
+        function setStoredTheme(theme) {
+            if (theme) {
+                localStorage.setItem(storageKey, theme);
+            } else {
+                localStorage.removeItem(storageKey);
+            }
+        }
+
+        function initTheme() {
+            const stored = getStoredTheme();
+            if (stored) {
+                applyTheme(stored);
+            } else {
+                applyTheme(prefersDark.matches ? 'dark' : 'light');
+            }
+        }
+
+        if (toggle) {
+            toggle.addEventListener('click', () => {
+                const current = root.getAttribute('data-theme');
+                const next = current === 'dark' ? 'light' : 'dark';
+                applyTheme(next);
+                setStoredTheme(next);
+            });
+        }
+
+        prefersDark.addEventListener('change', event => {
+            if (getStoredTheme()) return;
+            applyTheme(event.matches ? 'dark' : 'light');
+        });
+
+        initTheme();
+    })();
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,32 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Results - upg-strings</title>
-    <meta name="description" content="Real-time results from upg-strings ML-guided pipeline.">
+{% extends "base.html" %}
+{% set active_page = "results" %}
 
-    <!-- OpenGraph tags -->
+{% block title %}Live Results - upg-strings{% endblock %}
+{% block description %}Real-time results from upg-strings ML-guided pipeline.{% endblock %}
+{% block og_tags %}
     <meta property="og:title" content="Live Results - upg-strings">
     <meta property="og:description" content="Real-time results from upg-strings ML-guided pipeline.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://compute.upg.gr/results.html">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <nav class="nav">
-        <div class="container">
-            <div class="nav-brand">upg-strings</div>
-            <div class="nav-links">
-                <a href="/">Home</a>
-                <a href="/candidates.html">Candidates</a>
-                <a href="/docs.html">Docs</a>
-                <a href="/results.html" class="active">Results</a>
-                <a href="/about.html">About</a>
-            </div>
-        </div>
-    </nav>
+{% endblock %}
 
+{% block content %}
     <main class="container">
         <section class="section">
             <h1>Live Demo Results</h1>
@@ -115,14 +99,9 @@
             </section>
         </div>
     </main>
+{% endblock %}
 
-    <footer class="footer">
-        <div class="container">
-            <p>Contact: <a href="mailto:ioannis.kokkinis@upg.gr">ioannis.kokkinis@upg.gr</a> | <a href="https://www.linkedin.com/in/ioanniskokkinis" target="_blank" rel="noopener">LinkedIn</a></p>
-            <p class="footer-note">Research tooling for reproducible computational physics experiments</p>
-        </div>
-    </footer>
-
+{% block scripts %}
     <script>
     // Load live results from API
     async function loadResults() {
@@ -184,5 +163,4 @@
     // Load results when page loads
     loadResults();
     </script>
-</body>
-</html>
+{% endblock %}

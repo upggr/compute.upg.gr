@@ -1,33 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Candidates Gallery - upg-strings</title>
-    <meta name="description" content="Top-ranked verified Calabi-Yau candidates with interactive manifold visualizations.">
+{% extends "base.html" %}
+{% set active_page = "candidates" %}
 
-    <!-- OpenGraph tags -->
+{% block title %}Candidates Gallery - upg-strings{% endblock %}
+{% block description %}Top-ranked verified Calabi-Yau candidates with interactive manifold visualizations.{% endblock %}
+{% block og_tags %}
     <meta property="og:title" content="Candidates Gallery - upg-strings">
     <meta property="og:description" content="Top-ranked verified Calabi-Yau candidates with interactive manifold visualizations.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://compute.upg.gr/candidates.html">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <nav class="nav">
-        <div class="container">
-            <div class="nav-brand">upg-strings</div>
-            <div class="nav-links">
-                <a href="/">Home</a>
-                <a href="/candidates.html" class="active">Candidates</a>
-                <a href="/demo.html">Interactive Demo</a>
-                <a href="/docs.html">Docs</a>
-                <a href="/results.html">Results</a>
-                <a href="/about.html">About</a>
-            </div>
-        </div>
-    </nav>
+{% endblock %}
 
+{% block content %}
     <main class="container">
         <section class="section">
             <h1>Top-Ranked Verified Candidates</h1>
@@ -63,44 +46,39 @@
                 <div class="candidate-card candidate-card-loading">Loading candidates...</div>
             </div>
         </section>
+
+        <div id="candidate-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2 id="modal-title">Candidate</h2>
+                        <p id="modal-subtitle" class="modal-subtitle"></p>
+                    </div>
+                    <button id="modal-close" class="modal-close">Close</button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-meta" id="modal-meta"></div>
+                    <div class="viz-grid">
+                        <div class="viz-panel">
+                            <h3>2D Projection</h3>
+                            <svg id="manifold-svg" class="viz-svg" viewBox="0 0 320 200" role="img" aria-label="2D manifold projection"></svg>
+                        </div>
+                        <div class="viz-panel">
+                            <h3>3D Fiber Sketch</h3>
+                            <canvas id="manifold-canvas" class="viz-canvas"></canvas>
+                        </div>
+                    </div>
+                    <div class="modal-details">
+                        <h3>Topological Profile</h3>
+                        <div id="modal-details-content" class="details-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
+{% endblock %}
 
-    <div id="candidate-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div>
-                    <h2 id="modal-title">Candidate</h2>
-                    <p id="modal-subtitle" class="modal-subtitle"></p>
-                </div>
-                <button id="modal-close" class="modal-close">Close</button>
-            </div>
-            <div class="modal-body">
-                <div class="modal-meta" id="modal-meta"></div>
-                <div class="viz-grid">
-                    <div class="viz-panel">
-                        <h3>2D Projection</h3>
-                        <svg id="manifold-svg" class="viz-svg" viewBox="0 0 320 200" role="img" aria-label="2D manifold projection"></svg>
-                    </div>
-                    <div class="viz-panel">
-                        <h3>3D Fiber Sketch</h3>
-                        <canvas id="manifold-canvas" class="viz-canvas"></canvas>
-                    </div>
-                </div>
-                <div class="modal-details">
-                    <h3>Topological Profile</h3>
-                    <div id="modal-details-content" class="details-grid"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <footer class="footer">
-        <div class="container">
-            <p>Contact: <a href="mailto:ioannis.kokkinis@upg.gr">ioannis.kokkinis@upg.gr</a> | <a href="https://www.linkedin.com/in/ioanniskokkinis" target="_blank" rel="noopener">LinkedIn</a></p>
-            <p class="footer-note">Research tooling for reproducible computational physics experiments</p>
-        </div>
-    </footer>
-
+{% block scripts %}
     <script>
     const datasetDescriptions = {
         'kreuzer-skarke': 'Searching for manifolds with |chi| < 100.',
@@ -245,9 +223,6 @@
             const cosA = Math.cos(angle);
             const sinA = Math.sin(angle);
 
-            ctx.strokeStyle = 'rgba(26, 84, 144, 0.6)';
-            ctx.lineWidth = 1;
-
             points.forEach(point => {
                 const x = point.x * cosA - point.z * sinA;
                 const z = point.x * sinA + point.z * cosA;
@@ -344,5 +319,4 @@
     updateDescription();
     loadCandidates();
     </script>
-</body>
-</html>
+{% endblock %}

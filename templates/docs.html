@@ -1,32 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documentation - upg-strings</title>
-    <meta name="description" content="Installation and usage documentation for upg-strings.">
+{% extends "base.html" %}
+{% set active_page = "docs" %}
 
-    <!-- OpenGraph tags -->
+{% block title %}Documentation - upg-strings{% endblock %}
+{% block description %}Installation and usage documentation for upg-strings.{% endblock %}
+{% block og_tags %}
     <meta property="og:title" content="Documentation - upg-strings">
     <meta property="og:description" content="Installation and usage documentation for upg-strings.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://compute.upg.gr/docs.html">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <nav class="nav">
-        <div class="container">
-            <div class="nav-brand">upg-strings</div>
-            <div class="nav-links">
-                <a href="/">Home</a>
-                <a href="/candidates.html">Candidates</a>
-                <a href="/docs.html" class="active">Docs</a>
-                <a href="/results.html">Results</a>
-                <a href="/about.html">About</a>
-            </div>
-        </div>
-    </nav>
+{% endblock %}
 
+{% block content %}
     <main class="container">
         <section class="section">
             <h1>Documentation</h1>
@@ -147,39 +131,8 @@ model:<br>
 search:<br>
   top_k: 100<br>
   verification: true<br>
-<br>
-reproducibility:<br>
-  seed: 42<br>
-  export_metadata: true</code>
-            </div>
-        </section>
-
-        <section class="section">
-            <h2>Troubleshooting</h2>
-
-            <h3>Checksum Verification Failed</h3>
-            <p>If the dataset checksum doesn't match, the file may be corrupted. Delete cached data and re-download:</p>
-            <div class="code-block">
-                <code>rm -rf ./cache/<br>
-python run_cy_search.py --config default.yml</code>
-            </div>
-
-            <h3>Out of Memory</h3>
-            <p>For large datasets, reduce batch size in config or use a machine with more RAM.</p>
-
-            <h3>Module Not Found</h3>
-            <p>Ensure all dependencies are installed:</p>
-            <div class="code-block">
-                <code>pip install -r requirements.txt</code>
+  seed: 42</code>
             </div>
         </section>
     </main>
-
-    <footer class="footer">
-        <div class="container">
-            <p>Contact: <a href="mailto:ioannis.kokkinis@upg.gr">ioannis.kokkinis@upg.gr</a> | <a href="https://www.linkedin.com/in/ioanniskokkinis" target="_blank" rel="noopener">LinkedIn</a></p>
-            <p class="footer-note">Research tooling for reproducible computational physics experiments</p>
-        </div>
-    </footer>
-</body>
-</html>
+{% endblock %}

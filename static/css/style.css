@@ -57,6 +57,34 @@ body {
     align-items: center;
 }
 
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.theme-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    color: var(--text-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.theme-toggle:hover {
+    transform: translateY(-1px);
+}
+
+.theme-toggle-icon {
+    font-size: 1rem;
+}
+
 .nav-brand {
     font-size: 1.25rem;
     font-weight: 600;
@@ -188,6 +216,61 @@ code {
     padding: 0.2rem 0.4rem;
     border-radius: 3px;
     font-size: 0.9em;
+}
+
+/* Form controls */
+select {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.6rem 2.5rem 0.6rem 0.75rem;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    background-image:
+        linear-gradient(45deg, transparent 50%, currentColor 50%),
+        linear-gradient(135deg, currentColor 50%, transparent 50%),
+        linear-gradient(to right, var(--border-color), var(--border-color));
+    background-position:
+        calc(100% - 18px) calc(1em + 2px),
+        calc(100% - 13px) calc(1em + 2px),
+        calc(100% - 2.2rem) 0.6rem;
+    background-size:
+        5px 5px,
+        5px 5px,
+        1px 1.6rem;
+    background-repeat: no-repeat;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(26, 84, 144, 0.2);
+}
+
+input[type="number"],
+input[type="text"],
+textarea {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.95rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+input[type="number"]:focus,
+input[type="text"]:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(26, 84, 144, 0.2);
 }
 
 /* Pipeline steps */
@@ -689,6 +772,11 @@ tbody tr:hover {
         gap: var(--spacing-sm);
     }
 
+    .nav-left {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
     .nav-links {
         flex-wrap: wrap;
         justify-content: center;
@@ -729,7 +817,7 @@ tbody tr:hover {
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
+    html:not([data-theme="light"]) {
         --primary-color: #6db7ff;
         --primary-dark: #3b82c4;
         --secondary-color: #8ab8de;
@@ -742,81 +830,170 @@ tbody tr:hover {
         --warning-color: #f0a24a;
     }
 
-    body {
+    html:not([data-theme="light"]) body {
         background-color: var(--bg-color);
     }
 
-    .nav {
+    html:not([data-theme="light"]) .nav {
         background-color: var(--bg-color);
         border-bottom: 1px solid var(--border-color);
     }
 
-    .hero {
+    html:not([data-theme="light"]) .hero {
         background-color: var(--bg-secondary);
     }
 
-    .code-block,
-    .output-item,
-    .metric-item,
-    .download-item,
-    .metadata-item,
-    .metric-card,
-    .step,
-    .output-item,
-    .candidate-card,
-    .viz-panel,
-    .detail-item,
-    .modal-close {
+    html:not([data-theme="light"]) .code-block,
+    html:not([data-theme="light"]) .output-item,
+    html:not([data-theme="light"]) .metric-item,
+    html:not([data-theme="light"]) .download-item,
+    html:not([data-theme="light"]) .metadata-item,
+    html:not([data-theme="light"]) .metric-card,
+    html:not([data-theme="light"]) .step,
+    html:not([data-theme="light"]) .output-item,
+    html:not([data-theme="light"]) .candidate-card,
+    html:not([data-theme="light"]) .viz-panel,
+    html:not([data-theme="light"]) .detail-item,
+    html:not([data-theme="light"]) .modal-close {
         background-color: var(--bg-secondary);
         border-color: var(--border-color);
     }
 
-    .table-container {
+    html:not([data-theme="light"]) .table-container {
         border-color: var(--border-color);
     }
 
-    thead {
+    html:not([data-theme="light"]) thead {
         background-color: var(--bg-secondary);
     }
 
-    tbody tr:hover {
+    html:not([data-theme="light"]) tbody tr:hover {
         background-color: rgba(255, 255, 255, 0.04);
     }
 
-    .badge {
+    html:not([data-theme="light"]) .badge {
         background-color: var(--success-color);
     }
 
-    .btn-secondary {
+    html:not([data-theme="light"]) .btn-secondary {
         background-color: var(--bg-color);
         color: var(--primary-color);
         border-color: var(--primary-color);
     }
 
-    .pill {
+    html:not([data-theme="light"]) .pill {
         background-color: rgba(109, 183, 255, 0.15);
         color: var(--text-color);
     }
 
-    .modal-overlay {
+    html:not([data-theme="light"]) .modal-overlay {
         background: rgba(8, 12, 16, 0.7);
     }
 
-    .footer {
+    html:not([data-theme="light"]) .footer {
         background-color: var(--bg-secondary);
         border-top: 1px solid var(--border-color);
     }
 
-    .disclaimer {
+    html:not([data-theme="light"]) .disclaimer {
         background-color: rgba(240, 162, 74, 0.12);
         border-color: rgba(240, 162, 74, 0.35);
     }
 
-    #demo-status,
-    #search-status {
+    html:not([data-theme="light"]) #demo-status,
+    html:not([data-theme="light"]) #search-status {
         background: rgba(109, 183, 255, 0.12) !important;
         border-left-color: var(--primary-color) !important;
     }
+}
+
+html[data-theme="dark"] {
+    --primary-color: #6db7ff;
+    --primary-dark: #3b82c4;
+    --secondary-color: #8ab8de;
+    --text-color: #e6edf3;
+    --text-secondary: #aab6c4;
+    --bg-color: #0f141a;
+    --bg-secondary: #151b23;
+    --border-color: #263241;
+    --success-color: #4fbf75;
+    --warning-color: #f0a24a;
+}
+
+html[data-theme="dark"] body {
+    background-color: var(--bg-color);
+}
+
+html[data-theme="dark"] .nav {
+    background-color: var(--bg-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+html[data-theme="dark"] .hero {
+    background-color: var(--bg-secondary);
+}
+
+html[data-theme="dark"] .code-block,
+html[data-theme="dark"] .output-item,
+html[data-theme="dark"] .metric-item,
+html[data-theme="dark"] .download-item,
+html[data-theme="dark"] .metadata-item,
+html[data-theme="dark"] .metric-card,
+html[data-theme="dark"] .step,
+html[data-theme="dark"] .output-item,
+html[data-theme="dark"] .candidate-card,
+html[data-theme="dark"] .viz-panel,
+html[data-theme="dark"] .detail-item,
+html[data-theme="dark"] .modal-close {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+html[data-theme="dark"] .table-container {
+    border-color: var(--border-color);
+}
+
+html[data-theme="dark"] thead {
+    background-color: var(--bg-secondary);
+}
+
+html[data-theme="dark"] tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+html[data-theme="dark"] .badge {
+    background-color: var(--success-color);
+}
+
+html[data-theme="dark"] .btn-secondary {
+    background-color: var(--bg-color);
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+html[data-theme="dark"] .pill {
+    background-color: rgba(109, 183, 255, 0.15);
+    color: var(--text-color);
+}
+
+html[data-theme="dark"] .modal-overlay {
+    background: rgba(8, 12, 16, 0.7);
+}
+
+html[data-theme="dark"] .footer {
+    background-color: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+}
+
+html[data-theme="dark"] .disclaimer {
+    background-color: rgba(240, 162, 74, 0.12);
+    border-color: rgba(240, 162, 74, 0.35);
+}
+
+html[data-theme="dark"] #demo-status,
+html[data-theme="dark"] #search-status {
+    background: rgba(109, 183, 255, 0.12) !important;
+    border-left-color: var(--primary-color) !important;
 }
 
 @media (max-width: 480px) {

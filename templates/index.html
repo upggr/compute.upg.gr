@@ -1,34 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>upg-strings - Verified ML-guided search for Calabi-Yau targets</title>
-    <meta name="description" content="Reproducible pipeline to rank and verify rare targets in Calabi-Yau datasets.">
+{% extends "base.html" %}
+{% set active_page = "home" %}
 
-    <!-- OpenGraph tags -->
+{% block title %}upg-strings - Verified ML-guided search for Calabi-Yau targets{% endblock %}
+{% block description %}Reproducible pipeline to rank and verify rare targets in Calabi-Yau datasets.{% endblock %}
+{% block og_tags %}
     <meta property="og:title" content="upg-strings - Verified ML-guided search">
     <meta property="og:description" content="Reproducible pipeline to rank and verify rare targets in Calabi-Yau datasets.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://compute.upg.gr">
+{% endblock %}
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <nav class="nav">
-        <div class="container">
-            <div class="nav-brand">upg-strings</div>
-            <div class="nav-links">
-                <a href="/" class="active">Home</a>
-                <a href="/candidates.html">Candidates</a>
-                <a href="/demo.html">Interactive Demo</a>
-                <a href="/docs.html">Docs</a>
-                <a href="/results.html">Results</a>
-                <a href="/about.html">About</a>
-            </div>
-        </div>
-    </nav>
-
+{% block content %}
     <header class="hero">
         <div class="container">
             <div class="badge">Verified Outputs</div>
@@ -84,67 +66,6 @@
                 <code>python cy_search_real.py</code>
             </div>
         </section>
-
-        <script>
-        document.getElementById('run-demo-btn').addEventListener('click', async function() {
-            const btn = this;
-            const statusDiv = document.getElementById('demo-status');
-            const resultsDiv = document.getElementById('demo-results');
-            const statusMsg = document.getElementById('status-message');
-
-            // Disable button
-            btn.disabled = true;
-            btn.textContent = '⏳ Running search...';
-
-            // Show status
-            statusDiv.style.display = 'block';
-            resultsDiv.style.display = 'none';
-            statusMsg.textContent = 'Initializing ML-guided search on 5,000 Calabi-Yau manifolds...';
-
-            try {
-                const response = await fetch('/api/run-demo', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        top_k: 100,
-                        seed: 42,
-                        n_candidates: 5000,
-                        verify: true,
-                        use_real: true
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.status === 'success') {
-                    // Show results
-                    const metrics = data.results.performance_metrics;
-                    const timing = data.results.timing;
-
-                    document.getElementById('demo-precision').textContent =
-                        (metrics.precision_at_k * 100).toFixed(1) + '%';
-                    document.getElementById('demo-recall').textContent =
-                        (metrics.recall_at_k * 100).toFixed(1) + '%';
-                    document.getElementById('demo-runtime').textContent =
-                        timing.total_runtime_seconds.toFixed(1) + 's';
-                    document.getElementById('demo-verified').textContent =
-                        metrics.verified_count + '/100';
-
-                    statusDiv.style.display = 'none';
-                    resultsDiv.style.display = 'block';
-                    btn.textContent = '✓ Search Complete!';
-                } else {
-                    statusMsg.textContent = 'Error: ' + (data.message || 'Unknown error');
-                    btn.disabled = false;
-                    btn.textContent = '🚀 Run Live Demo Now';
-                }
-            } catch (error) {
-                statusMsg.textContent = 'Error: ' + error.message;
-                btn.disabled = false;
-                btn.textContent = '🚀 Run Live Demo Now';
-            }
-        });
-        </script>
 
         <section class="section">
             <h2>What It Does</h2>
@@ -253,12 +174,67 @@
             <p><strong>Disclaimer:</strong> This tool accelerates computational search and verification. It does not claim to 'solve string theory'.</p>
         </section>
     </main>
+{% endblock %}
 
-    <footer class="footer">
-        <div class="container">
-            <p>Contact: <a href="mailto:ioannis.kokkinis@upg.gr">ioannis.kokkinis@upg.gr</a> | <a href="https://www.linkedin.com/in/ioanniskokkinis" target="_blank" rel="noopener">LinkedIn</a></p>
-            <p class="footer-note">Research tooling for reproducible computational physics experiments</p>
-        </div>
-    </footer>
-</body>
-</html>
+{% block scripts %}
+    <script>
+    document.getElementById('run-demo-btn').addEventListener('click', async function() {
+        const btn = this;
+        const statusDiv = document.getElementById('demo-status');
+        const resultsDiv = document.getElementById('demo-results');
+        const statusMsg = document.getElementById('status-message');
+
+        // Disable button
+        btn.disabled = true;
+        btn.textContent = '⏳ Running search...';
+
+        // Show status
+        statusDiv.style.display = 'block';
+        resultsDiv.style.display = 'none';
+        statusMsg.textContent = 'Initializing ML-guided search on 5,000 Calabi-Yau manifolds...';
+
+        try {
+            const response = await fetch('/api/run-demo', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    top_k: 100,
+                    seed: 42,
+                    n_candidates: 5000,
+                    verify: true,
+                    use_real: true
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                // Show results
+                const metrics = data.results.performance_metrics;
+                const timing = data.results.timing;
+
+                document.getElementById('demo-precision').textContent =
+                    (metrics.precision_at_k * 100).toFixed(1) + '%';
+                document.getElementById('demo-recall').textContent =
+                    (metrics.recall_at_k * 100).toFixed(1) + '%';
+                document.getElementById('demo-runtime').textContent =
+                    timing.total_runtime_seconds.toFixed(1) + 's';
+                document.getElementById('demo-verified').textContent =
+                    metrics.verified_count + '/100';
+
+                statusDiv.style.display = 'none';
+                resultsDiv.style.display = 'block';
+                btn.textContent = '✓ Search Complete!';
+            } else {
+                statusMsg.textContent = 'Error: ' + (data.message || 'Unknown error');
+                btn.disabled = false;
+                btn.textContent = '🚀 Run Live Demo Now';
+            }
+        } catch (error) {
+            statusMsg.textContent = 'Error: ' + error.message;
+            btn.disabled = false;
+            btn.textContent = '🚀 Run Live Demo Now';
+        }
+    });
+    </script>
+{% endblock %}

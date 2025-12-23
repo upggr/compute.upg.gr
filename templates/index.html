@@ -18,6 +18,7 @@
             <p class="subtitle">Verified ML-guided search for rare Calabi-Yau targets (string landscape)</p>
             <p class="tagline">We build ML-guided search tools that drastically reduce the cost of finding rare Calabi-Yau geometries in large string-theory datasets, with full verification and reproducibility.</p>
             <p class="tagline" style="font-weight: 600; color: var(--primary-color); margin-top: 1rem;">We achieve perfect precision and non-trivial recall in ML-guided search for rare targets, with sub-second runtime.</p>
+            <p class="tagline" style="margin-top: 0.75rem;">Compatible with CYTools, cymetric, Sage, Mathematica, plus JSON/CSV exports.</p>
         </div>
     </header>
 
@@ -61,51 +62,6 @@
                 </p>
             </div>
 
-            <p class="note" style="margin-top: 2rem;"><strong>For command-line usage:</strong></p>
-            <div class="code-block">
-                <code>python cy_search_real.py</code>
-            </div>
-        </section>
-
-        <section class="section">
-            <h2>What It Does</h2>
-            <div class="pipeline">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
-                        <h3>Download Dataset</h3>
-                        <p>Fetch Calabi-Yau dataset with checksum verification</p>
-                    </div>
-                </div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
-                        <h3>Train Baseline Model</h3>
-                        <p>Train ML classifier with fixed random seed for reproducibility</p>
-                    </div>
-                </div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
-                        <h3>Rank Candidates</h3>
-                        <p>Score and rank candidates by predicted likelihood</p>
-                    </div>
-                </div>
-                <div class="step">
-                    <div class="step-number">4</div>
-                    <div class="step-content">
-                        <h3>Verify Top-k</h3>
-                        <p>Validate top results against ground truth labels</p>
-                    </div>
-                </div>
-                <div class="step">
-                    <div class="step-number">5</div>
-                    <div class="step-content">
-                        <h3>Export Artifacts</h3>
-                        <p>Generate CSV/JSON outputs with reproducibility metadata</p>
-                    </div>
-                </div>
-            </div>
         </section>
 
         <section class="section">

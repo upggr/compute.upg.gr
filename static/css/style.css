@@ -721,6 +721,36 @@ tbody tr:hover {
     margin-top: var(--spacing-sm);
 }
 
+/* Compatibility badges */
+.compat-row {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.compat-pill {
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(26, 84, 144, 0.12), rgba(74, 123, 167, 0.2));
+    color: var(--primary-dark);
+    font-weight: 600;
+    font-size: 0.85rem;
+    border: 1px solid rgba(26, 84, 144, 0.2);
+}
+
+html:not([data-theme="light"]) .compat-pill {
+    background: linear-gradient(135deg, rgba(109, 183, 255, 0.15), rgba(59, 130, 196, 0.25));
+    color: var(--text-color);
+    border-color: rgba(109, 183, 255, 0.3);
+}
+
+html[data-theme="dark"] .compat-pill {
+    background: linear-gradient(135deg, rgba(109, 183, 255, 0.15), rgba(59, 130, 196, 0.25));
+    color: var(--text-color);
+    border-color: rgba(109, 183, 255, 0.3);
+}
+
 /* Export and share */
 .export-actions {
     margin-top: 1.5rem;

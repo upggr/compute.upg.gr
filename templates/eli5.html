@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% set active_page = "eli5" %}
+
+{% block title %}ELI5 - upg-strings{% endblock %}
+{% block description %}A simple, friendly explanation of string theory and what upg-strings does.{% endblock %}
+{% block og_tags %}
+    <meta property="og:title" content="ELI5 - upg-strings">
+    <meta property="og:description" content="A simple, friendly explanation of string theory and what upg-strings does.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://compute.upg.gr/eli5.html">
+{% endblock %}
+
+{% block content %}
+    <main class="container">
+        <section class="section">
+            <h1>Explain Like I'm Five</h1>
+            <p>String theory is a big idea about how the universe works. Here's the simple version.</p>
+        </section>
+
+        <section class="section">
+            <h2>What is String Theory?</h2>
+            <p>Imagine everything in the universe is made of tiny, tiny strings that vibrate. Different vibrations act like different particles, kind of like how different notes come from the same guitar string.</p>
+            <p>To make the math work, string theory says the universe has extra hidden dimensions that are curled up very small. The shapes of those hidden dimensions matter a lot.</p>
+        </section>
+
+        <section class="section">
+            <h2>What Are Calabi-Yau Manifolds?</h2>
+            <p>Calabi-Yau manifolds are fancy names for possible shapes of those hidden dimensions. There are a huge number of possible shapes, and each one could change what physics looks like.</p>
+            <p>Think of them as different blueprints for how the hidden dimensions are folded.</p>
+        </section>
+
+        <section class="section">
+            <h2>What Does upg-strings Do?</h2>
+            <p>upg-strings is a search engine for these shapes. It uses machine learning to rank which shapes are most promising for researchers, then verifies the top results.</p>
+            <ul>
+                <li>It scans lots of candidates quickly</li>
+                <li>It finds the top few that look special</li>
+                <li>It checks those results to make sure they are correct</li>
+                <li>It exports files scientists can analyze in other tools</li>
+            </ul>
+        </section>
+
+        <section class="section">
+            <h2>Why Does This Help?</h2>
+            <p>There are too many possible shapes to check one by one. upg-strings helps scientists focus on the best candidates first, which saves a huge amount of time and computing power.</p>
+        </section>
+
+        <section class="section">
+            <h2>Want to Explore?</h2>
+            <p>Try a live run or browse the candidate gallery:</p>
+            <div class="links-grid">
+                <a href="/demo.html" class="btn btn-primary">Run a Search</a>
+                <a href="/candidates.html" class="btn btn-secondary">View Candidates</a>
+            </div>
+        </section>
+    </main>
+{% endblock %}

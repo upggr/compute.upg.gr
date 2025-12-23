@@ -92,6 +92,10 @@
                             <h3>3D Fiber Sketch</h3>
                             <canvas id="manifold-canvas" class="viz-canvas"></canvas>
                         </div>
+                        <div class="viz-panel">
+                            <h3>3D Field</h3>
+                            <canvas id="manifold-field" class="viz-canvas"></canvas>
+                        </div>
                     </div>
                     <div class="modal-details">
                         <h3>Topological Profile</h3>
@@ -119,7 +123,9 @@
     const modalDetails = document.getElementById('modal-details-content');
     const svg = document.getElementById('manifold-svg');
     const canvas = document.getElementById('manifold-canvas');
+    const fieldCanvas = document.getElementById('manifold-field');
     let animationId = null;
+    let fieldAnimationId = null;
     let featuredTags = [];
     let selectedIds = new Set();
 
@@ -130,6 +136,30 @@
             t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
             return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
         };
+    }
+
+    function getThemeColors() {
+        const styles = getComputedStyle(document.documentElement);
+        return {
+            primary: styles.getPropertyValue('--primary-color').trim() || '#1a5490',
+            secondary: styles.getPropertyValue('--secondary-color').trim() || '#4a7ba7',
+            bg: styles.getPropertyValue('--bg-secondary').trim() || '#f4f6f8'
+        };
+    }
+
+    function hexToRgb(hex) {
+        const cleaned = hex.replace('#', '');
+        if (cleaned.length !== 6) return { r: 26, g: 84, b: 144 };
+        return {
+            r: parseInt(cleaned.slice(0, 2), 16),
+            g: parseInt(cleaned.slice(2, 4), 16),
+            b: parseInt(cleaned.slice(4, 6), 16)
+        };
+    }
+
+    function colorToRgba(hex, alpha) {
+        const { r, g, b } = hexToRgb(hex);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
     function updateDescription() {
@@ -218,6 +248,7 @@
     function renderSvg(detail) {
         const seed = detail.viz_seed || 42;
         const rand = mulberry32(seed);
+        const colors = getThemeColors();
         const loops = 3 + Math.floor(rand() * 3);
         const amplitude = 60 + rand() * 40;
         const path = [];
@@ -235,11 +266,11 @@
         svg.innerHTML = `
             <defs>
                 <linearGradient id="manifoldGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#1a5490"/>
-                    <stop offset="100%" stop-color="#4a7ba7"/>
+                    <stop offset="0%" stop-color="${colors.primary}"/>
+                    <stop offset="100%" stop-color="${colors.secondary}"/>
                 </linearGradient>
             </defs>
-            <rect width="320" height="200" rx="16" fill="#f4f6f8"></rect>
+            <rect width="320" height="200" rx="16" fill="${colors.bg}"></rect>
             <path d="${path.join(' ')}" fill="none" stroke="url(#manifoldGradient)" stroke-width="3" stroke-linecap="round"></path>
         `;
     }
@@ -252,6 +283,7 @@
         const ctx = canvas.getContext('2d');
         const seed = detail.viz_seed || 42;
         const rand = mulberry32(seed);
+        const colors = getThemeColors();
         const width = canvas.clientWidth || 320;
         const height = canvas.clientHeight || 200;
         canvas.width = width;
@@ -273,7 +305,10 @@
         let angle = 0;
         const draw = () => {
             ctx.clearRect(0, 0, width, height);
-            ctx.fillStyle = '#f4f6f8';
+            const bgGrad = ctx.createLinearGradient(0, 0, width, height);
+            bgGrad.addColorStop(0, colors.bg);
+            bgGrad.addColorStop(1, colorToRgba(colors.secondary, 0.08));
+            ctx.fillStyle = bgGrad;
             ctx.fillRect(0, 0, width, height);
 
             const cx = width / 2;
@@ -291,12 +326,65 @@
                 const py = cy + y * scale;
                 ctx.beginPath();
                 ctx.arc(px, py, 1.2 + depth * 1.8, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(74, 123, 167, ${0.4 + depth * 0.4})`;
+                ctx.fillStyle = colorToRgba(colors.secondary, 0.28 + depth * 0.5);
                 ctx.fill();
             });
 
             angle += 0.01;
             animationId = requestAnimationFrame(draw);
+        };
+
+        draw();
+    }
+
+    function renderFieldCanvas(detail) {
+        if (fieldAnimationId) {
+            cancelAnimationFrame(fieldAnimationId);
+        }
+
+        const ctx = fieldCanvas.getContext('2d');
+        const seed = detail.viz_seed || 42;
+        const rand = mulberry32(seed + 99);
+        const colors = getThemeColors();
+        const width = fieldCanvas.clientWidth || 320;
+        const height = fieldCanvas.clientHeight || 200;
+        fieldCanvas.width = width;
+        fieldCanvas.height = height;
+
+        const ribbons = Array.from({ length: 6 }, () => ({
+            offset: rand() * Math.PI * 2,
+            speed: 0.4 + rand() * 0.6,
+            amplitude: 20 + rand() * 25
+        }));
+
+        let t = 0;
+        const draw = () => {
+            ctx.clearRect(0, 0, width, height);
+            const bgGrad = ctx.createLinearGradient(0, 0, width, height);
+            bgGrad.addColorStop(0, colors.bg);
+            bgGrad.addColorStop(1, colorToRgba(colors.primary, 0.08));
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            ribbons.forEach((ribbon, idx) => {
+                ctx.beginPath();
+                for (let x = 0; x <= width; x += 6) {
+                    const phase = ribbon.offset + t * ribbon.speed + x * 0.01;
+                    const y = height / 2 + Math.sin(phase) * ribbon.amplitude + Math.sin(phase * 0.7) * 12;
+                    if (x === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                const alpha = 0.22 + idx * 0.1;
+                ctx.strokeStyle = colorToRgba(colors.primary, alpha);
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            t += 0.02;
+            fieldAnimationId = requestAnimationFrame(draw);
         };
 
         draw();
@@ -315,6 +403,7 @@
         `;
         renderSvg(candidate);
         renderCanvas(candidate);
+        renderFieldCanvas(candidate);
         modalDetails.innerHTML = '';
 
         fetch(`/api/candidate/${candidate.candidate_id}?dataset_id=${candidate.dataset_id}`)
@@ -347,6 +436,10 @@
         if (animationId) {
             cancelAnimationFrame(animationId);
             animationId = null;
+        }
+        if (fieldAnimationId) {
+            cancelAnimationFrame(fieldAnimationId);
+            fieldAnimationId = null;
         }
     }
 

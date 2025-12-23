@@ -56,6 +56,12 @@ def candidates():
     return render_template('candidates.html')
 
 
+@app.route('/eli5.html')
+def eli5():
+    """ELI5 page"""
+    return render_template('eli5.html')
+
+
 @app.route('/api/datasets')
 def list_datasets():
     """List all available datasets"""

@@ -20,7 +20,7 @@
             <h2>For Scientists</h2>
             <p>Use the application to quickly surface rare Calabi-Yau candidates while keeping a reproducible record.</p>
             <ul>
-                <li>Run the demo or CLI to rank candidates by predicted likelihood</li>
+                <li>Run searches in the web UI or CLI to rank candidates by predicted likelihood</li>
                 <li>Verify top-k hits and track precision/recall for experimental comparison</li>
                 <li>Export CSV/JSON artifacts for downstream analysis and sharing</li>
                 <li>Record random seeds and dataset metadata for reproducibility</li>
@@ -49,7 +49,12 @@ pip install -r requirements.txt</code>
 
             <h3>Basic Run</h3>
             <div class="code-block">
-                <code>python run_cy_search.py --config default.yml --verify --export-artifacts</code>
+                <code>python cy_search_real.py</code>
+            </div>
+
+            <h3>Web App</h3>
+            <div class="code-block">
+                <code>python app.py</code>
             </div>
 
             <h3>Expected Runtime</h3>
@@ -66,8 +71,47 @@ pip install -r requirements.txt</code>
             <h3>Run Exports</h3>
             <p>The Run page provides download buttons for JSON/CSV plus tool-friendly exports for CYTools, cymetric, Sage, and Mathematica.</p>
 
+            <h3>Import / Export (API)</h3>
+            <p>Use the REST API to import datasets or export results programmatically.</p>
+            <div class="code-block">
+                <code># Import: score custom candidates and save a run<br>
+curl -X POST https://compute.upg.gr/api/score-custom -H "Content-Type: application/json" \\<br>
+  -d '{"dataset_id":"kreuzer-skarke","rows":[[12,45,66,3.75,924]],"top_k":20,"seed":42,"verify":true,"save":true}'<br>
+<br>
+# Export: fetch results in tool-friendly formats<br>
+curl -o results.json "https://compute.upg.gr/api/export/RUN_ID?format=json"<br>
+curl -o results.csv "https://compute.upg.gr/api/export/RUN_ID?format=csv"<br>
+curl -o cytools.json "https://compute.upg.gr/api/export/RUN_ID?format=cytools"<br>
+curl -o cymetric.json "https://compute.upg.gr/api/export/RUN_ID?format=cymetric"<br>
+curl -o candidates.sage "https://compute.upg.gr/api/export/RUN_ID?format=sage"<br>
+curl -o candidates.wl "https://compute.upg.gr/api/export/RUN_ID?format=mathematica"</code>
+            </div>
+
+            <h3>Per-Tool Schemas</h3>
+            <p>Exports share the same candidate objects, packaged per tool. Each candidate includes the fields returned by the dataset formatter.</p>
+            <div class="code-block">
+                <code># Kreuzer-Skarke candidate fields<br>
+rank, h11, h21, euler_char, score, verified_target<br>
+<br>
+# CY5-Folds candidate fields<br>
+rank, h11, h21, h31, euler_char, score, verified_target<br>
+<br>
+# Heterotic candidate fields<br>
+rank, h11, h21, euler_char, hodge_balance, n_generations, score, verified_target<br>
+<br>
+# CYTools / cymetric JSON wrapper<br>
+{ "schema": "cytools-candidates-v1", "run_metadata": {...}, "candidates": [ ... ] }<br>
+{ "schema": "cymetric-candidates-v1", "run_metadata": {...}, "candidates": [ ... ] }<br>
+<br>
+# Sage output<br>
+candidates = [ { ... }, { ... } ]<br>
+<br>
+# Mathematica output<br>
+candidates = {<| "rank" -> 1, "h11" -> 12, ... |>, ...};</code>
+            </div>
+
             <h3>Bring Your Own Data</h3>
-            <p>Paste custom candidates as CSV rows in the demo. Each row must include all feature columns for the selected dataset in order:</p>
+            <p>Paste custom candidates as CSV rows in the Run page. Each row must include all feature columns for the selected dataset in order:</p>
             <ul>
                 <li>Kreuzer-Skarke: h11, h21, euler_abs, hodge_ratio, c2_h11</li>
                 <li>CY5-Folds: h11, h21, h31, euler, euler_abs, hodge_sum</li>

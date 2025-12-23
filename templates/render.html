@@ -109,7 +109,10 @@
             target.set(x, y, z);
         };
 
-        return new THREE.ParametricGeometry(surface, 200, 100);
+        if (typeof THREE.ParametricGeometry !== 'undefined') {
+            return new THREE.ParametricGeometry(surface, 200, 100);
+        }
+        return null;
     }
 
     function renderMesh(seed) {
@@ -135,7 +138,8 @@
         rimLight.position.set(-5, -3, 4);
         scene.add(rimLight);
 
-        const geometry = createParametricGeometry(seed);
+        const geometry = createParametricGeometry(seed) ||
+            new THREE.TorusKnotGeometry(1.7, 0.55, 200, 40, 2, 3);
         const material = new THREE.MeshStandardMaterial({
             color: colors.primary,
             metalness: 0.7,

@@ -1,10 +1,19 @@
-FROM nginx:alpine
+FROM python:3.11-slim
 
-# Copy static files to nginx html directory
-COPY static/ /usr/share/nginx/html/
+WORKDIR /app
 
-# Expose port 80
-EXPOSE 80
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Copy application files
+COPY app.py .
+COPY cy_search.py .
+COPY templates/ templates/
+COPY static/ static/
+
+# Expose port 5102
+EXPOSE 5102
+
+# Run with gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:5102", "--workers", "4", "--timeout", "120", "app:app"]

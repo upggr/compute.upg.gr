@@ -73,7 +73,7 @@ def render_page():
         og_title += f" ({dataset_id})"
     og_description = "Interactive 3D render of a Calabi-Yau candidate."
     og_url = request.url
-    og_image = request.url_root.rstrip('/') + '/static/assets/og-render.png'
+    og_image = request.url_root.rstrip('/') + '/static/assets/og-render.svg'
 
     return render_template(
         'render.html',

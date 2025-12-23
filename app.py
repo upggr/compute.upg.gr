@@ -3,7 +3,7 @@ import json
 import os
 from datetime import datetime
 from cy_search import run_search, get_sample_results  # Demo implementation
-from cy_search_real import run_real_search  # Real implementation
+from cy_search_real import run_real_search, list_available_datasets  # Real implementation
 
 app = Flask(__name__)
 
@@ -42,10 +42,17 @@ def demo():
     return render_template('demo.html')
 
 
+@app.route('/api/datasets')
+def list_datasets():
+    """List all available datasets"""
+    datasets = list_available_datasets()
+    return jsonify({'datasets': datasets})
+
+
 @app.route('/api/run-demo', methods=['POST'])
 def run_demo():
     """
-    API endpoint to run the CY-Search demo
+    API endpoint to run the upg-strings search
 
     Accepts JSON payload:
     {
@@ -53,7 +60,8 @@ def run_demo():
         "seed": 42,
         "verify": true,
         "n_candidates": 5000,
-        "use_real": true  # Use real KS database implementation
+        "dataset_id": "kreuzer-skarke",  # or "cy5-folds", "heterotic"
+        "use_real": true
     }
 
     Returns:
@@ -70,19 +78,21 @@ def run_demo():
         seed = params.get('seed', 42)
         verify = params.get('verify', True)
         n_candidates = params.get('n_candidates', 5000)
+        dataset_id = params.get('dataset_id', 'kreuzer-skarke')
         use_real = params.get('use_real', True)  # Default to real implementation
 
         # Run the search - use real implementation by default
         if use_real:
-            print(f"Running REAL CY-Search: {n_candidates} candidates, top_k={top_k}, seed={seed}")
+            print(f"Running upg-strings: dataset={dataset_id}, {n_candidates} candidates, top_k={top_k}, seed={seed}")
             results = run_real_search(
                 top_k=top_k,
                 seed=seed,
                 n_candidates=n_candidates,
-                verify=verify
+                verify=verify,
+                dataset_id=dataset_id
             )
         else:
-            print(f"Running DEMO CY-Search: top_k={top_k}, seed={seed}")
+            print(f"Running DEMO: top_k={top_k}, seed={seed}")
             results = run_search(top_k=top_k, seed=seed, verify=verify)
 
         # Save results
@@ -125,7 +135,14 @@ def get_results(run_id):
 def sample_results():
     """Get sample results for display (uses real implementation)"""
     # Use real implementation with small dataset for quick response
-    results = run_real_search(top_k=20, seed=42, n_candidates=1000, verify=True)
+    dataset_id = request.args.get('dataset_id', 'kreuzer-skarke')
+    results = run_real_search(
+        top_k=20,
+        seed=42,
+        n_candidates=1000,
+        verify=True,
+        dataset_id=dataset_id
+    )
     return jsonify(results)
 
 

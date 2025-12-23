@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 COPY cy_search.py .
 COPY cy_search_real.py .
+COPY datasets_registry.py .
 COPY templates/ templates/
 COPY static/ static/
 

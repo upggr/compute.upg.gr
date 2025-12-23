@@ -23,12 +23,12 @@
 
     <main class="container">
         <section class="section">
-            <h2>Run the Demo</h2>
+            <h2>Run a Search</h2>
             <p>Click the button below to run a live ML-guided search on 5,000 Calabi-Yau manifolds. Results will appear in ~5-10 seconds.</p>
 
             <div style="margin: 2rem 0; text-align: center;">
                 <button id="run-demo-btn" class="btn btn-primary" style="font-size: 1.125rem; padding: 1rem 2rem;">
-                    🚀 Run Live Demo Now
+                    🚀 Run Live Search Now
                 </button>
             </div>
 
@@ -228,12 +228,12 @@
             } else {
                 statusMsg.textContent = 'Error: ' + (data.message || 'Unknown error');
                 btn.disabled = false;
-                btn.textContent = '🚀 Run Live Demo Now';
+                    btn.textContent = '🚀 Run Live Search Now';
             }
         } catch (error) {
             statusMsg.textContent = 'Error: ' + error.message;
             btn.disabled = false;
-            btn.textContent = '🚀 Run Live Demo Now';
+                btn.textContent = '🚀 Run Live Search Now';
         }
     });
     </script>

@@ -446,6 +446,10 @@ tbody tr:hover {
     background-color: var(--bg-secondary);
 }
 
+#results-table tbody tr {
+    cursor: pointer;
+}
+
 .verified-true {
     color: var(--success-color);
     font-weight: 600;
@@ -531,6 +535,24 @@ tbody tr:hover {
     box-shadow: 0 8px 20px rgba(13, 58, 107, 0.08);
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.candidate-card.selected {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(26, 84, 144, 0.2);
+}
+
+.select-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    color: var(--text-secondary);
+}
+
+.select-toggle input {
+    width: 18px;
+    height: 18px;
 }
 
 .candidate-card:hover {

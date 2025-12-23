@@ -1,4 +1,6 @@
 from flask import Flask, render_template, jsonify, request, send_file, Response
+import io
+import zipfile
 import json
 import os
 import numpy as np
@@ -344,6 +346,31 @@ def _export_mathematica(results):
     return "candidates = {" + ", ".join(rows) + "};"
 
 
+def _candidates_to_csv(candidates):
+    if not candidates:
+        return ""
+    headers = sorted({key for candidate in candidates for key in candidate.keys()})
+    lines = [",".join(headers)]
+    for candidate in candidates:
+        row = []
+        for header in headers:
+            value = candidate.get(header, "")
+            value_str = "" if value is None else str(value).replace('"', '""')
+            row.append(f'"{value_str}"')
+        lines.append(",".join(row))
+    return "\n".join(lines)
+
+
+def _bundle_candidates(candidates, metadata):
+    bundle = io.BytesIO()
+    with zipfile.ZipFile(bundle, 'w', zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr('candidates.json', json.dumps(candidates, indent=2))
+        archive.writestr('candidates.csv', _candidates_to_csv(candidates))
+        archive.writestr('metadata.json', json.dumps(metadata, indent=2))
+    bundle.seek(0)
+    return bundle
+
+
 @app.route('/api/export/<run_id>')
 def export_results(run_id):
     export_format = request.args.get('format', 'json').lower()
@@ -394,6 +421,49 @@ def export_results(run_id):
     response = Response(content, mimetype=mime)
     response.headers["Content-Disposition"] = f"attachment; filename={filename}"
     return response
+
+
+@app.route('/api/export-gallery', methods=['POST'])
+def export_gallery():
+    params = request.get_json() or {}
+    candidate_ids = params.get('candidate_ids', [])
+    source = params.get('source', 'featured')
+    dataset_id = params.get('dataset_id')
+    seed = int(params.get('seed', 42))
+    top_n = int(params.get('top_n', 12))
+
+    if not candidate_ids or not isinstance(candidate_ids, list):
+        return jsonify({'error': 'No candidate ids provided'}), 400
+    if len(candidate_ids) > 50:
+        return jsonify({'error': 'Too many candidates selected (max 50).'}), 400
+
+    candidates = []
+    if source == 'featured':
+        if not os.path.exists(FEATURED_PATH):
+            return jsonify({'error': 'Featured candidates not available'}), 404
+        with open(FEATURED_PATH, 'r') as f:
+            payload = json.load(f)
+        candidates = [c for c in payload.get('candidates', []) if c.get('candidate_id') in candidate_ids]
+    elif source == 'live':
+        if not dataset_id:
+            return jsonify({'error': 'dataset_id required for live export'}), 400
+        payload = _build_candidate_cards(dataset_id=dataset_id, seed=seed, top_n=top_n, n_candidates=5000)
+        candidates = [c.get('raw', c) for c in payload.get('candidates', []) if c.get('candidate_id') in candidate_ids]
+    else:
+        return jsonify({'error': 'Unsupported source'}), 400
+
+    if not candidates:
+        return jsonify({'error': 'No matching candidates found'}), 404
+
+    metadata = {
+        "source": source,
+        "dataset_id": dataset_id,
+        "selection_count": len(candidates),
+        "generated_at": datetime.utcnow().isoformat() + "Z"
+    }
+
+    bundle = _bundle_candidates(candidates, metadata)
+    return send_file(bundle, mimetype='application/zip', as_attachment=True, download_name='gallery_selection.zip')
 
 
 @app.route('/api/score-custom', methods=['POST'])

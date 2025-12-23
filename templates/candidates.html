@@ -51,9 +51,18 @@
                         <option value="false">Unverified only</option>
                     </select>
                 </div>
+                <div class="control-group">
+                    <label for="select-mode">Select</label>
+                    <label class="select-toggle">
+                        <input type="checkbox" id="select-mode">
+                        <span>Enable export</span>
+                    </label>
+                </div>
                 <button id="gallery-refresh" class="btn btn-primary">Refresh Gallery</button>
+                <button id="gallery-export" class="btn btn-secondary" disabled>Export Selected</button>
             </div>
             <div id="tag-filters" class="tag-filters"></div>
+            <p id="selection-count" class="note"></p>
             <p id="gallery-description" class="note"></p>
         </section>
 
@@ -112,6 +121,7 @@
     const canvas = document.getElementById('manifold-canvas');
     let animationId = null;
     let featuredTags = [];
+    let selectedIds = new Set();
 
     function mulberry32(a) {
         return function() {
@@ -142,8 +152,9 @@
                 `<span class="pill">${label}: ${value}</span>`
             ).join('');
             const verifiedText = candidate.verified_target ? 'Verified' : 'Unverified';
+            const selectedClass = selectedIds.has(candidate.candidate_id) ? 'selected' : '';
             return `
-                <div class="candidate-card" data-id="${candidate.candidate_id}" data-dataset="${candidate.dataset_id}" data-seed="${candidate.viz_seed}" data-score="${candidate.score}" data-rank="${candidate.rank}" data-verified="${candidate.verified_target}" data-name="${candidate.dataset_name}">
+                <div class="candidate-card ${selectedClass}" data-id="${candidate.candidate_id}" data-dataset="${candidate.dataset_id}" data-seed="${candidate.viz_seed}" data-score="${candidate.score}" data-rank="${candidate.rank}" data-verified="${candidate.verified_target}" data-name="${candidate.dataset_name}">
                     <div class="candidate-rank">#${candidate.rank}</div>
                     <h3 class="candidate-title">${candidate.candidate_id}</h3>
                     <p class="candidate-meta">${candidate.dataset_name}</p>
@@ -169,6 +180,8 @@
 
     async function loadCandidates() {
         setLoading();
+        selectedIds.clear();
+        updateSelectionUI();
         const view = document.getElementById('gallery-view').value;
         const datasetId = document.getElementById('gallery-dataset').value;
         const topN = document.getElementById('gallery-top-n').value;
@@ -352,6 +365,19 @@
     grid.addEventListener('click', event => {
         const card = event.target.closest('.candidate-card');
         if (!card || card.classList.contains('candidate-card-loading')) return;
+        if (document.getElementById('select-mode').checked) {
+            const id = card.dataset.id;
+            if (selectedIds.has(id)) {
+                selectedIds.delete(id);
+                card.classList.remove('selected');
+            } else {
+                selectedIds.add(id);
+                card.classList.add('selected');
+            }
+            updateSelectionUI();
+            return;
+        }
+
         openModal({
             candidate_id: card.dataset.id,
             dataset_id: card.dataset.dataset,
@@ -403,5 +429,48 @@
 
     updateDescription();
     loadCandidates();
+
+    function updateSelectionUI() {
+        const count = selectedIds.size;
+        const exportBtn = document.getElementById('gallery-export');
+        exportBtn.disabled = count === 0;
+        document.getElementById('selection-count').textContent = count ? `Selected: ${count}` : '';
+    }
+
+    document.getElementById('select-mode').addEventListener('change', function() {
+        selectedIds.clear();
+        document.querySelectorAll('.candidate-card.selected').forEach(card => card.classList.remove('selected'));
+        updateSelectionUI();
+    });
+
+    document.getElementById('gallery-export').addEventListener('click', async function() {
+        if (!selectedIds.size) return;
+        const view = document.getElementById('gallery-view').value;
+        const datasetId = document.getElementById('gallery-dataset').value;
+        const seed = document.getElementById('gallery-seed').value;
+        const topN = document.getElementById('gallery-top-n').value;
+
+        const response = await fetch('/api/export-gallery', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                source: view,
+                dataset_id: datasetId,
+                seed: seed,
+                top_n: topN,
+                candidate_ids: Array.from(selectedIds)
+            })
+        });
+
+        if (!response.ok) return;
+        const blob = await response.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'gallery_selection.zip';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    });
     </script>
 {% endblock %}

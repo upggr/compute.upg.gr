@@ -115,6 +115,35 @@
                 </div>
             </section>
         </div>
+
+        <div id="result-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2 id="result-modal-title">Candidate</h2>
+                        <p id="result-modal-subtitle" class="modal-subtitle"></p>
+                    </div>
+                    <button id="result-modal-close" class="modal-close">Close</button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-meta" id="result-modal-meta"></div>
+                    <div class="viz-grid">
+                        <div class="viz-panel">
+                            <h3>2D Projection</h3>
+                            <svg id="result-svg" class="viz-svg" viewBox="0 0 320 200" role="img" aria-label="2D manifold projection"></svg>
+                        </div>
+                        <div class="viz-panel">
+                            <h3>3D Fiber Sketch</h3>
+                            <canvas id="result-canvas" class="viz-canvas"></canvas>
+                        </div>
+                    </div>
+                    <div class="modal-details">
+                        <h3>Topological Profile</h3>
+                        <div id="result-details" class="details-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 {% endblock %}
 
@@ -132,6 +161,140 @@
         activeRunId = runId;
         panel.style.display = 'block';
         document.getElementById('results-share-link').value = `${window.location.origin}/results.html?run_id=${runId}`;
+    }
+
+    const modal = document.getElementById('result-modal');
+    const modalTitle = document.getElementById('result-modal-title');
+    const modalSubtitle = document.getElementById('result-modal-subtitle');
+    const modalMeta = document.getElementById('result-modal-meta');
+    const modalDetails = document.getElementById('result-details');
+    const svg = document.getElementById('result-svg');
+    const canvas = document.getElementById('result-canvas');
+    let animationId = null;
+
+    function mulberry32(a) {
+        return function() {
+            let t = a += 0x6D2B79F5;
+            t = Math.imul(t ^ (t >>> 15), t | 1);
+            t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    function renderSvg(seed) {
+        const rand = mulberry32(seed);
+        const loops = 3 + Math.floor(rand() * 3);
+        const amplitude = 60 + rand() * 40;
+        const path = [];
+        const centerX = 160;
+        const centerY = 100;
+
+        for (let i = 0; i <= 200; i++) {
+            const t = (i / 200) * Math.PI * 2 * loops;
+            const r = amplitude * (0.6 + 0.4 * Math.sin(t * 0.6 + rand()));
+            const x = centerX + Math.cos(t) * r;
+            const y = centerY + Math.sin(t * 1.2) * (r * 0.6);
+            path.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`);
+        }
+
+        svg.innerHTML = `
+            <defs>
+                <linearGradient id="resultGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#1a5490"/>
+                    <stop offset="100%" stop-color="#4a7ba7"/>
+                </linearGradient>
+            </defs>
+            <rect width="320" height="200" rx="16" fill="#f4f6f8"></rect>
+            <path d="${path.join(' ')}" fill="none" stroke="url(#resultGradient)" stroke-width="3" stroke-linecap="round"></path>
+        `;
+    }
+
+    function renderCanvas(seed) {
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+        }
+
+        const ctx = canvas.getContext('2d');
+        const rand = mulberry32(seed);
+        const width = canvas.clientWidth || 320;
+        const height = canvas.clientHeight || 200;
+        canvas.width = width;
+        canvas.height = height;
+
+        const pointCount = 240;
+        const baseRadius = 40 + rand() * 30;
+        const points = Array.from({ length: pointCount }, () => {
+            const theta = rand() * Math.PI * 2;
+            const phi = rand() * Math.PI * 2;
+            const radius = baseRadius + rand() * 30;
+            return {
+                x: radius * Math.cos(theta) * Math.sin(phi),
+                y: radius * Math.sin(theta) * Math.sin(phi),
+                z: radius * Math.cos(phi)
+            };
+        });
+
+        let angle = 0;
+        const draw = () => {
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = '#f4f6f8';
+            ctx.fillRect(0, 0, width, height);
+
+            const cx = width / 2;
+            const cy = height / 2;
+            const scale = 1.2;
+            const cosA = Math.cos(angle);
+            const sinA = Math.sin(angle);
+
+            points.forEach(point => {
+                const x = point.x * cosA - point.z * sinA;
+                const z = point.x * sinA + point.z * cosA;
+                const y = point.y * Math.cos(angle * 0.7) - z * Math.sin(angle * 0.7);
+                const depth = (z + 120) / 240;
+                const px = cx + x * scale;
+                const py = cy + y * scale;
+                ctx.beginPath();
+                ctx.arc(px, py, 1.2 + depth * 1.8, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(74, 123, 167, ${0.4 + depth * 0.4})`;
+                ctx.fill();
+            });
+
+            angle += 0.01;
+            animationId = requestAnimationFrame(draw);
+        };
+
+        draw();
+    }
+
+    function openModal(result, datasetName) {
+        const seed = (result.rank || 1) * 1357;
+        modal.style.display = 'flex';
+        modalTitle.textContent = `Rank #${result.rank}`;
+        modalSubtitle.textContent = datasetName || 'Candidate details';
+        modalMeta.innerHTML = `
+            <span class="pill">Score ${result.score.toFixed(4)}</span>
+            <span class="pill ${result.verified_target ? 'pill-verified' : 'pill-unverified'}">
+                ${result.verified_target ? 'Verified' : 'Unverified'}
+            </span>
+        `;
+
+        const detailItems = [];
+        Object.entries(result).forEach(([key, value]) => {
+            if (key === 'score' || key === 'verified_target') return;
+            detailItems.push(`<div class="detail-item"><span>${key}</span><strong>${value}</strong></div>`);
+        });
+        modalDetails.innerHTML = detailItems.join('');
+
+        renderSvg(seed);
+        renderCanvas(seed);
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
     }
 
     async function loadResults() {
@@ -187,6 +350,9 @@
                     <td>${result.score.toFixed(4)}</td>
                     <td class="${verifiedClass}">${verifiedText}</td>
                 `;
+                row.addEventListener('click', () => {
+                    openModal(result, data.run_metadata.dataset);
+                });
                 tbody.appendChild(row);
             });
 
@@ -199,6 +365,11 @@
 
     // Load results when page loads
     loadResults();
+
+    document.getElementById('result-modal-close').addEventListener('click', closeModal);
+    modal.addEventListener('click', event => {
+        if (event.target === modal) closeModal();
+    });
 
     function downloadExport(format, filename) {
         if (!activeRunId) return;

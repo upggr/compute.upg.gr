@@ -96,10 +96,21 @@
                             <h3>3D Field</h3>
                             <canvas id="manifold-field" class="viz-canvas"></canvas>
                         </div>
+                        <div class="viz-panel">
+                            <h3>3D Mesh</h3>
+                            <canvas id="manifold-webgl" class="viz-canvas"></canvas>
+                        </div>
                     </div>
                     <div class="modal-details">
                         <h3>Topological Profile</h3>
                         <div id="modal-details-content" class="details-grid"></div>
+                    </div>
+                    <div class="share-row">
+                        <span class="share-label">Share</span>
+                        <a id="share-link" class="share-pill" target="_blank" rel="noopener">Open full renderer</a>
+                        <button class="share-icon" data-share="facebook" aria-label="Share on Facebook">f</button>
+                        <button class="share-icon" data-share="linkedin" aria-label="Share on LinkedIn">in</button>
+                        <button class="share-icon" data-share="x" aria-label="Share on X">x</button>
                     </div>
                 </div>
             </div>
@@ -108,6 +119,7 @@
 {% endblock %}
 
 {% block scripts %}
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     <script>
     const datasetDescriptions = {
         'kreuzer-skarke': 'Searching for manifolds with |chi| < 100.',
@@ -124,8 +136,14 @@
     const svg = document.getElementById('manifold-svg');
     const canvas = document.getElementById('manifold-canvas');
     const fieldCanvas = document.getElementById('manifold-field');
+    const webglCanvas = document.getElementById('manifold-webgl');
     let animationId = null;
     let fieldAnimationId = null;
+    let webglAnimationId = null;
+    let webglRenderer = null;
+    let webglScene = null;
+    let webglCamera = null;
+    let webglMesh = null;
     let featuredTags = [];
     let selectedIds = new Set();
 
@@ -390,6 +408,63 @@
         draw();
     }
 
+    function renderWebGL(detail) {
+        if (!window.THREE || !webglCanvas) return;
+        if (webglAnimationId) {
+            cancelAnimationFrame(webglAnimationId);
+        }
+
+        const colors = getThemeColors();
+        const width = webglCanvas.clientWidth || 320;
+        const height = webglCanvas.clientHeight || 200;
+
+        webglRenderer = new THREE.WebGLRenderer({
+            canvas: webglCanvas,
+            antialias: true,
+            alpha: true
+        });
+        webglRenderer.setSize(width, height, false);
+        webglRenderer.setPixelRatio(window.devicePixelRatio || 1);
+        webglRenderer.setClearColor(0x000000, 0);
+
+        webglScene = new THREE.Scene();
+        webglCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+        webglCamera.position.set(0, 0, 6);
+
+        const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+        webglScene.add(ambient);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        keyLight.position.set(3, 4, 6);
+        webglScene.add(keyLight);
+
+        const fillLight = new THREE.PointLight(0x6db7ff, 0.6);
+        fillLight.position.set(-4, -2, 4);
+        webglScene.add(fillLight);
+
+        const geometry = new THREE.TorusKnotGeometry(1.4, 0.48, 160, 32, 2, 3);
+        const material = new THREE.MeshStandardMaterial({
+            color: colors.primary,
+            metalness: 0.6,
+            roughness: 0.25,
+            emissive: new THREE.Color(colors.secondary),
+            emissiveIntensity: 0.2
+        });
+
+        webglMesh = new THREE.Mesh(geometry, material);
+        webglScene.add(webglMesh);
+
+        const animate = () => {
+            webglMesh.rotation.x += 0.007;
+            webglMesh.rotation.y += 0.01;
+            webglMesh.rotation.z += 0.004;
+            webglRenderer.render(webglScene, webglCamera);
+            webglAnimationId = requestAnimationFrame(animate);
+        };
+
+        animate();
+    }
+
     function openModal(candidate) {
         modal.style.display = 'flex';
         modalTitle.textContent = candidate.candidate_id;
@@ -404,7 +479,29 @@
         renderSvg(candidate);
         renderCanvas(candidate);
         renderFieldCanvas(candidate);
+        renderWebGL(candidate);
         modalDetails.innerHTML = '';
+
+        const renderUrl = `${window.location.origin}/render.html?candidate_id=${candidate.candidate_id}&dataset_id=${candidate.dataset_id}&seed=${candidate.viz_seed}`;
+        const shareLink = document.getElementById('share-link');
+        if (shareLink) {
+            shareLink.href = renderUrl;
+        }
+
+        modal.querySelectorAll('.share-icon').forEach(button => {
+            button.onclick = () => {
+                const encoded = encodeURIComponent(renderUrl);
+                let shareUrl = renderUrl;
+                if (button.dataset.share === 'facebook') {
+                    shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encoded}`;
+                } else if (button.dataset.share === 'linkedin') {
+                    shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encoded}`;
+                } else if (button.dataset.share === 'x') {
+                    shareUrl = `https://twitter.com/intent/tweet?url=${encoded}`;
+                }
+                window.open(shareUrl, '_blank', 'noopener,noreferrer');
+            };
+        });
 
         fetch(`/api/candidate/${candidate.candidate_id}?dataset_id=${candidate.dataset_id}`)
             .then(response => response.json())
@@ -440,6 +537,14 @@
         if (fieldAnimationId) {
             cancelAnimationFrame(fieldAnimationId);
             fieldAnimationId = null;
+        }
+        if (webglAnimationId) {
+            cancelAnimationFrame(webglAnimationId);
+            webglAnimationId = null;
+        }
+        if (webglRenderer) {
+            webglRenderer.dispose();
+            webglRenderer = null;
         }
     }
 

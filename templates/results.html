@@ -140,10 +140,21 @@
                             <h3>3D Field</h3>
                             <canvas id="result-field" class="viz-canvas"></canvas>
                         </div>
+                        <div class="viz-panel">
+                            <h3>3D Mesh</h3>
+                            <canvas id="result-webgl" class="viz-canvas"></canvas>
+                        </div>
                     </div>
                     <div class="modal-details">
                         <h3>Topological Profile</h3>
                         <div id="result-details" class="details-grid"></div>
+                    </div>
+                    <div class="share-row">
+                        <span class="share-label">Share</span>
+                        <a id="result-share-link" class="share-pill" target="_blank" rel="noopener">Open full renderer</a>
+                        <button class="share-icon" data-share="facebook" aria-label="Share on Facebook">f</button>
+                        <button class="share-icon" data-share="linkedin" aria-label="Share on LinkedIn">in</button>
+                        <button class="share-icon" data-share="x" aria-label="Share on X">x</button>
                     </div>
                 </div>
             </div>
@@ -152,6 +163,7 @@
 {% endblock %}
 
 {% block scripts %}
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     <script>
     // Load live results from API
     let activeRunId = null;
@@ -175,8 +187,14 @@
     const svg = document.getElementById('result-svg');
     const canvas = document.getElementById('result-canvas');
     const fieldCanvas = document.getElementById('result-field');
+    const webglCanvas = document.getElementById('result-webgl');
     let animationId = null;
     let fieldAnimationId = null;
+    let webglAnimationId = null;
+    let webglRenderer = null;
+    let webglScene = null;
+    let webglCamera = null;
+    let webglMesh = null;
 
     function mulberry32(a) {
         return function() {
@@ -353,6 +371,63 @@
         draw();
     }
 
+    function renderWebGL(seed) {
+        if (!window.THREE || !webglCanvas) return;
+        if (webglAnimationId) {
+            cancelAnimationFrame(webglAnimationId);
+        }
+
+        const colors = getThemeColors();
+        const width = webglCanvas.clientWidth || 320;
+        const height = webglCanvas.clientHeight || 200;
+
+        webglRenderer = new THREE.WebGLRenderer({
+            canvas: webglCanvas,
+            antialias: true,
+            alpha: true
+        });
+        webglRenderer.setSize(width, height, false);
+        webglRenderer.setPixelRatio(window.devicePixelRatio || 1);
+        webglRenderer.setClearColor(0x000000, 0);
+
+        webglScene = new THREE.Scene();
+        webglCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+        webglCamera.position.set(0, 0, 6);
+
+        const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+        webglScene.add(ambient);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        keyLight.position.set(3, 4, 6);
+        webglScene.add(keyLight);
+
+        const fillLight = new THREE.PointLight(0x6db7ff, 0.6);
+        fillLight.position.set(-4, -2, 4);
+        webglScene.add(fillLight);
+
+        const geometry = new THREE.TorusKnotGeometry(1.4, 0.48, 160, 32, 2, 3);
+        const material = new THREE.MeshStandardMaterial({
+            color: colors.primary,
+            metalness: 0.6,
+            roughness: 0.25,
+            emissive: new THREE.Color(colors.secondary),
+            emissiveIntensity: 0.2
+        });
+
+        webglMesh = new THREE.Mesh(geometry, material);
+        webglScene.add(webglMesh);
+
+        const animate = () => {
+            webglMesh.rotation.x += 0.007;
+            webglMesh.rotation.y += 0.01;
+            webglMesh.rotation.z += 0.004;
+            webglRenderer.render(webglScene, webglCamera);
+            webglAnimationId = requestAnimationFrame(animate);
+        };
+
+        animate();
+    }
+
     function openModal(result, datasetName) {
         const seed = (result.rank || 1) * 1357;
         modal.style.display = 'flex';
@@ -375,6 +450,27 @@
         renderSvg(seed);
         renderCanvas(seed);
         renderFieldCanvas(seed);
+        renderWebGL(seed);
+
+        const renderUrl = `${window.location.origin}/render.html?seed=${seed}`;
+        const shareLink = document.getElementById('result-share-link');
+        if (shareLink) {
+            shareLink.href = renderUrl;
+        }
+        modal.querySelectorAll('.share-icon').forEach(button => {
+            button.onclick = () => {
+                const encoded = encodeURIComponent(renderUrl);
+                let shareUrl = renderUrl;
+                if (button.dataset.share === 'facebook') {
+                    shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encoded}`;
+                } else if (button.dataset.share === 'linkedin') {
+                    shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encoded}`;
+                } else if (button.dataset.share === 'x') {
+                    shareUrl = `https://twitter.com/intent/tweet?url=${encoded}`;
+                }
+                window.open(shareUrl, '_blank', 'noopener,noreferrer');
+            };
+        });
     }
 
     function closeModal() {
@@ -386,6 +482,14 @@
         if (fieldAnimationId) {
             cancelAnimationFrame(fieldAnimationId);
             fieldAnimationId = null;
+        }
+        if (webglAnimationId) {
+            cancelAnimationFrame(webglAnimationId);
+            webglAnimationId = null;
+        }
+        if (webglRenderer) {
+            webglRenderer.dispose();
+            webglRenderer = null;
         }
     }
 

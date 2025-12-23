@@ -832,6 +832,45 @@ html[data-theme="dark"] .compat-pill {
     min-width: min(420px, 90vw);
 }
 
+.share-pill {
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    color: var(--text-color);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.share-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    color: var(--text-color);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* Renderer page */
+.renderer-shell {
+    background: linear-gradient(135deg, var(--bg-secondary), rgba(26, 84, 144, 0.08));
+    border-radius: 18px;
+    padding: var(--spacing-lg);
+    border: 1px solid var(--border-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.renderer-canvas {
+    width: min(960px, 100%);
+    height: min(520px, 60vh);
+    border-radius: 16px;
+}
+
 .disclaimer {
     padding: var(--spacing-md);
     background-color: #fff9e6;

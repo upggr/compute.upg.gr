@@ -62,6 +62,12 @@ def eli5():
     return render_template('eli5.html')
 
 
+@app.route('/render.html')
+def render_page():
+    """Full renderer page"""
+    return render_template('render.html')
+
+
 @app.route('/api/datasets')
 def list_datasets():
     """List all available datasets"""

@@ -39,11 +39,109 @@
     <main class="container">
         <section class="section">
             <h2>Run the Demo</h2>
-            <div class="code-block">
-                <code>python run_cy_search.py --config default.yml --verify --export-artifacts</code>
+            <p>Click the button below to run a live ML-guided search on 5,000 Calabi-Yau manifolds. Results will appear in ~5-10 seconds.</p>
+
+            <div style="margin: 2rem 0; text-align: center;">
+                <button id="run-demo-btn" class="btn btn-primary" style="font-size: 1.125rem; padding: 1rem 2rem;">
+                    🚀 Run Live Demo Now
+                </button>
             </div>
-            <p class="note">Expected runtime: 5-15 minutes on standard hardware. All outputs saved to <code>./output/</code></p>
+
+            <div id="demo-status" style="display: none; margin-top: 1rem; padding: 1rem; background: #f0f7ff; border-left: 4px solid var(--primary-color); border-radius: 4px;">
+                <p id="status-message" style="margin: 0; font-weight: 500;"></p>
+            </div>
+
+            <div id="demo-results" style="display: none; margin-top: 2rem;">
+                <h3>Search Complete!</h3>
+                <div class="metrics-cards" style="margin-top: 1rem;">
+                    <div class="metric-card">
+                        <div class="metric-value" id="demo-precision">-</div>
+                        <div class="metric-label">Precision@100</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="demo-recall">-</div>
+                        <div class="metric-label">Recall@100</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="demo-runtime">-</div>
+                        <div class="metric-label">Runtime</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="demo-verified">-</div>
+                        <div class="metric-label">Verified Targets</div>
+                    </div>
+                </div>
+                <p style="margin-top: 1rem; text-align: center;">
+                    <a href="/results.html" class="btn btn-secondary">View Full Results</a>
+                </p>
+            </div>
+
+            <p class="note" style="margin-top: 2rem;"><strong>For command-line usage:</strong></p>
+            <div class="code-block">
+                <code>python cy_search_real.py</code>
+            </div>
         </section>
+
+        <script>
+        document.getElementById('run-demo-btn').addEventListener('click', async function() {
+            const btn = this;
+            const statusDiv = document.getElementById('demo-status');
+            const resultsDiv = document.getElementById('demo-results');
+            const statusMsg = document.getElementById('status-message');
+
+            // Disable button
+            btn.disabled = true;
+            btn.textContent = '⏳ Running search...';
+
+            // Show status
+            statusDiv.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            statusMsg.textContent = 'Initializing ML-guided search on 5,000 Calabi-Yau manifolds...';
+
+            try {
+                const response = await fetch('/api/run-demo', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        top_k: 100,
+                        seed: 42,
+                        n_candidates: 5000,
+                        verify: true,
+                        use_real: true
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    // Show results
+                    const metrics = data.results.performance_metrics;
+                    const timing = data.results.timing;
+
+                    document.getElementById('demo-precision').textContent =
+                        (metrics.precision_at_k * 100).toFixed(1) + '%';
+                    document.getElementById('demo-recall').textContent =
+                        (metrics.recall_at_k * 100).toFixed(1) + '%';
+                    document.getElementById('demo-runtime').textContent =
+                        timing.total_runtime_seconds.toFixed(1) + 's';
+                    document.getElementById('demo-verified').textContent =
+                        metrics.verified_count + '/100';
+
+                    statusDiv.style.display = 'none';
+                    resultsDiv.style.display = 'block';
+                    btn.textContent = '✓ Search Complete!';
+                } else {
+                    statusMsg.textContent = 'Error: ' + (data.message || 'Unknown error');
+                    btn.disabled = false;
+                    btn.textContent = '🚀 Run Live Demo Now';
+                }
+            } catch (error) {
+                statusMsg.textContent = 'Error: ' + error.message;
+                btn.disabled = false;
+                btn.textContent = '🚀 Run Live Demo Now';
+            }
+        });
+        </script>
 
         <section class="section">
             <h2>What It Does</h2>

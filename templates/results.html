@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demo Results - CY-Search</title>
-    <meta name="description" content="Latest demo results from CY-Search pipeline.">
+    <title>Live Results - CY-Search</title>
+    <meta name="description" content="Real-time results from CY-Search ML-guided pipeline.">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -22,105 +22,91 @@
 
     <main class="container">
         <section class="section">
-            <h1>Latest Demo Results</h1>
-            <p class="note">Sample data shown below. Run the pipeline to generate actual results.</p>
+            <h1>Live Demo Results</h1>
+            <p>Real results from ML-guided Calabi-Yau search. <a href="/" style="margin-left: 1rem;">← Run New Search</a></p>
         </section>
 
-        <section class="section">
-            <h2>Run Metadata</h2>
-            <div class="metadata-grid">
-                <div class="metadata-item">
-                    <strong>Run Date:</strong>
-                    <span id="run-date">2025-01-15 14:32:17 UTC</span>
-                </div>
-                <div class="metadata-item">
-                    <strong>Dataset:</strong>
-                    <span id="dataset-name">cy_landscape_v1.2.csv</span>
-                </div>
-                <div class="metadata-item">
-                    <strong>Model:</strong>
-                    <span id="model-type">RandomForest (n=100)</span>
-                </div>
-                <div class="metadata-item">
-                    <strong>Random Seed:</strong>
-                    <span id="random-seed">42</span>
-                </div>
-                <div class="metadata-item">
-                    <strong>Total Candidates:</strong>
-                    <span id="total-candidates">50,000</span>
-                </div>
-                <div class="metadata-item">
-                    <strong>Runtime:</strong>
-                    <span id="runtime">8m 34s</span>
-                </div>
-            </div>
-        </section>
+        <div id="loading" style="text-align: center; padding: 3rem;">
+            <p style="font-size: 1.125rem;">Loading latest results...</p>
+        </div>
 
-        <section class="section">
-            <h2>Performance Metrics</h2>
-            <div class="metrics-cards">
-                <div class="metric-card">
-                    <div class="metric-value" id="precision-k">0.847</div>
-                    <div class="metric-label">Precision@100</div>
+        <div id="results-content" style="display: none;">
+            <section class="section">
+                <h2>Run Metadata</h2>
+                <div class="metadata-grid">
+                    <div class="metadata-item">
+                        <strong>Run Date:</strong>
+                        <span id="run-date">-</span>
+                    </div>
+                    <div class="metadata-item">
+                        <strong>Dataset:</strong>
+                        <span id="dataset-name">-</span>
+                    </div>
+                    <div class="metadata-item">
+                        <strong>Model:</strong>
+                        <span id="model-type">-</span>
+                    </div>
+                    <div class="metadata-item">
+                        <strong>Random Seed:</strong>
+                        <span id="random-seed">-</span>
+                    </div>
+                    <div class="metadata-item">
+                        <strong>Total Candidates:</strong>
+                        <span id="total-candidates">-</span>
+                    </div>
+                    <div class="metadata-item">
+                        <strong>Runtime:</strong>
+                        <span id="runtime">-</span>
+                    </div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-value" id="recall-k">0.623</div>
-                    <div class="metric-label">Recall@100</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value" id="time-first-hit">12s</div>
-                    <div class="metric-label">Time to First Hit</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value" id="verified-count">84/100</div>
-                    <div class="metric-label">Verified Targets</div>
-                </div>
-            </div>
-        </section>
+            </section>
 
-        <section class="section">
-            <h2>Top-K Results</h2>
-            <div class="table-controls">
-                <p>Showing first 20 of 100 results</p>
-            </div>
-            <div class="table-container">
-                <table id="results-table">
-                    <thead>
-                        <tr>
-                            <th>Rank</th>
-                            <th>Candidate ID</th>
-                            <th>Score</th>
-                            <th>Verified</th>
-                            <th>Notes</th>
-                        </tr>
-                    </thead>
-                    <tbody id="results-tbody">
-                        <!-- Populated by script.js -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
+            <section class="section">
+                <h2>Performance Metrics</h2>
+                <div class="metrics-cards">
+                    <div class="metric-card">
+                        <div class="metric-value" id="precision-k">-</div>
+                        <div class="metric-label">Precision@100</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="recall-k">-</div>
+                        <div class="metric-label">Recall@100</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="time-first-hit">-</div>
+                        <div class="metric-label">Time to First Hit</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="verified-count">-</div>
+                        <div class="metric-label">Verified Targets</div>
+                    </div>
+                </div>
+            </section>
 
-        <section class="section">
-            <h2>Download Artifacts</h2>
-            <div class="download-grid">
-                <div class="download-item">
-                    <h3>results_topk.csv</h3>
-                    <p>Complete top-100 results with all metadata</p>
-                    <a href="/data/results_topk.csv" class="btn btn-secondary" download>Download CSV</a>
+            <section class="section">
+                <h2>Top-20 Results</h2>
+                <div class="table-controls">
+                    <p>Showing top 20 candidates with highest scores</p>
                 </div>
-                <div class="download-item">
-                    <h3>metrics.json</h3>
-                    <p>Performance metrics and timing data</p>
-                    <a href="/data/metrics.json" class="btn btn-secondary" download>Download JSON</a>
+                <div class="table-container">
+                    <table id="results-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>h¹¹</th>
+                                <th>h²¹</th>
+                                <th>χ (Euler)</th>
+                                <th>Score</th>
+                                <th>Verified</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
                 </div>
-                <div class="download-item">
-                    <h3>repro.md</h3>
-                    <p>Full reproducibility report</p>
-                    <a href="/data/repro.md" class="btn btn-secondary" download>Download Report</a>
-                </div>
-            </div>
-        </section>
+            </section>
+        </div>
     </main>
 
     <footer class="footer">
@@ -130,6 +116,66 @@
         </div>
     </footer>
 
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+    // Load live results from API
+    async function loadResults() {
+        try {
+            const response = await fetch('/api/sample-results');
+            const data = await response.json();
+
+            // Hide loading, show content
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('results-content').style.display = 'block';
+
+            // Populate metadata
+            const metadata = data.run_metadata;
+            document.getElementById('run-date').textContent = metadata.timestamp;
+            document.getElementById('dataset-name').textContent = metadata.dataset;
+            document.getElementById('model-type').textContent = `${metadata.model_type} (n=${metadata.n_estimators})`;
+            document.getElementById('random-seed').textContent = metadata.random_seed;
+            document.getElementById('total-candidates').textContent = metadata.total_candidates.toLocaleString();
+            document.getElementById('runtime').textContent = data.timing.total_runtime_seconds.toFixed(1) + 's';
+
+            // Populate metrics
+            const metrics = data.performance_metrics;
+            document.getElementById('precision-k').textContent =
+                metrics.precision_at_k ? (metrics.precision_at_k * 100).toFixed(1) + '%' : 'N/A';
+            document.getElementById('recall-k').textContent =
+                metrics.recall_at_k ? (metrics.recall_at_k * 100).toFixed(1) + '%' : 'N/A';
+            document.getElementById('time-first-hit').textContent =
+                metrics.time_to_first_hit !== null ? `Rank ${metrics.time_to_first_hit}` : 'N/A';
+            document.getElementById('verified-count').textContent =
+                `${metrics.verified_count}/${metrics.total_top_k}`;
+
+            // Populate table
+            const tbody = document.getElementById('results-tbody');
+            tbody.innerHTML = '';
+
+            data.top_results.forEach(result => {
+                const row = document.createElement('tr');
+                const verifiedClass = result.verified_target ? 'verified-true' : 'verified-false';
+                const verifiedText = result.verified_target ? '✓ Yes' : '✗ No';
+
+                row.innerHTML = `
+                    <td>${result.rank}</td>
+                    <td>${result.h11}</td>
+                    <td>${result.h21}</td>
+                    <td>${result.euler_char}</td>
+                    <td>${result.score.toFixed(4)}</td>
+                    <td class="${verifiedClass}">${verifiedText}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+        } catch (error) {
+            document.getElementById('loading').innerHTML =
+                '<p style="color: #c41e3a;">Error loading results: ' + error.message + '</p>' +
+                '<p><a href="/">← Run a new search</a></p>';
+        }
+    }
+
+    // Load results when page loads
+    loadResults();
+    </script>
 </body>
 </html>

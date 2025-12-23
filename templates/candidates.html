@@ -17,6 +17,13 @@
             <p>Explore a curated gallery of the highest-ranked manifolds. Click any candidate to view a detailed manifold visualization and topological profile.</p>
             <div class="candidate-controls">
                 <div class="control-group">
+                    <label for="gallery-view">View</label>
+                    <select id="gallery-view">
+                        <option value="featured" selected>Featured</option>
+                        <option value="live">Live Results</option>
+                    </select>
+                </div>
+                <div class="control-group">
                     <label for="gallery-dataset">Dataset</label>
                     <select id="gallery-dataset">
                         <option value="kreuzer-skarke" selected>Kreuzer-Skarke (CY 3-folds)</option>
@@ -36,8 +43,17 @@
                     <label for="gallery-seed">Seed</label>
                     <input type="number" id="gallery-seed" value="42" min="1" max="9999">
                 </div>
+                <div class="control-group">
+                    <label for="gallery-verified">Verified</label>
+                    <select id="gallery-verified">
+                        <option value="all" selected>All</option>
+                        <option value="true">Verified only</option>
+                        <option value="false">Unverified only</option>
+                    </select>
+                </div>
                 <button id="gallery-refresh" class="btn btn-primary">Refresh Gallery</button>
             </div>
+            <div id="tag-filters" class="tag-filters"></div>
             <p id="gallery-description" class="note"></p>
         </section>
 
@@ -95,6 +111,7 @@
     const svg = document.getElementById('manifold-svg');
     const canvas = document.getElementById('manifold-canvas');
     let animationId = null;
+    let featuredTags = [];
 
     function mulberry32(a) {
         return function() {
@@ -138,19 +155,48 @@
         }).join('');
     }
 
+    function renderTags(tags) {
+        const container = document.getElementById('tag-filters');
+        if (!tags.length) {
+            container.innerHTML = '';
+            return;
+        }
+        container.innerHTML = `
+            <span class="tag-label">Tags:</span>
+            ${tags.map(tag => `<button class="tag-chip" data-tag="${tag}">${tag}</button>`).join('')}
+        `;
+    }
+
     async function loadCandidates() {
         setLoading();
+        const view = document.getElementById('gallery-view').value;
         const datasetId = document.getElementById('gallery-dataset').value;
         const topN = document.getElementById('gallery-top-n').value;
         const seed = document.getElementById('gallery-seed').value;
+        const verified = document.getElementById('gallery-verified').value;
 
         try {
-            const response = await fetch(`/api/candidates?dataset_id=${datasetId}&top_n=${topN}&seed=${seed}`);
+            let endpoint = `/api/candidates?dataset_id=${datasetId}&top_n=${topN}&seed=${seed}`;
+            if (view === 'featured') {
+                endpoint = `/api/featured-candidates?dataset_id=${datasetId}`;
+                if (verified !== 'all') {
+                    endpoint += `&verified=${verified}`;
+                }
+            }
+            const response = await fetch(endpoint);
             const data = await response.json();
             if (data.status !== 'success') {
                 throw new Error(data.message || 'Failed to load candidates.');
             }
-            renderCandidates(data.candidates || []);
+            const candidates = data.candidates || [];
+            renderCandidates(candidates);
+
+            if (view === 'featured') {
+                featuredTags = [...new Set(candidates.flatMap(item => item.tags || []))].sort();
+                renderTags(featuredTags);
+            } else {
+                renderTags([]);
+            }
         } catch (error) {
             grid.innerHTML = `<div class="candidate-card candidate-card-loading">Error: ${error.message}</div>`;
         }
@@ -296,6 +342,12 @@
         updateDescription();
         loadCandidates();
     });
+    document.getElementById('gallery-view').addEventListener('change', () => {
+        loadCandidates();
+    });
+    document.getElementById('gallery-verified').addEventListener('change', () => {
+        loadCandidates();
+    });
 
     grid.addEventListener('click', event => {
         const card = event.target.closest('.candidate-card');
@@ -314,6 +366,39 @@
     document.getElementById('modal-close').addEventListener('click', closeModal);
     modal.addEventListener('click', event => {
         if (event.target === modal) closeModal();
+    });
+
+    document.getElementById('tag-filters').addEventListener('click', event => {
+        const chip = event.target.closest('.tag-chip');
+        if (!chip) return;
+        if (document.getElementById('gallery-view').value !== 'featured') return;
+        document.querySelectorAll('.tag-chip').forEach(item => {
+            if (item !== chip) item.classList.remove('active');
+        });
+        const selected = chip.classList.toggle('active');
+        if (!selected) {
+            loadCandidates();
+            return;
+        }
+        const tag = chip.dataset.tag;
+        setLoading();
+        const datasetId = document.getElementById('gallery-dataset').value;
+        const verified = document.getElementById('gallery-verified').value;
+        let endpoint = `/api/featured-candidates?dataset_id=${datasetId}&tag=${tag}`;
+        if (verified !== 'all') {
+            endpoint += `&verified=${verified}`;
+        }
+        fetch(endpoint)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status !== 'success') {
+                    throw new Error(data.message || 'Failed to filter candidates.');
+                }
+                renderCandidates(data.candidates || []);
+            })
+            .catch(error => {
+                grid.innerHTML = `<div class="candidate-card candidate-card-loading">Error: ${error.message}</div>`;
+            });
     });
 
     updateDescription();

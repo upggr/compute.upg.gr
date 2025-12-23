@@ -15,6 +15,7 @@ RESULTS_DIR = 'static/data'
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
 CANDIDATE_CACHE = {}
+FEATURED_PATH = os.path.join('static', 'data', 'featured_candidates.json')
 
 
 @app.route('/')
@@ -278,6 +279,30 @@ def candidate_detail(candidate_id):
             return jsonify({'status': 'success', 'candidate': detail})
 
     return jsonify({'status': 'error', 'message': 'Candidate not found'}), 404
+
+
+@app.route('/api/featured-candidates')
+def featured_candidates():
+    if not os.path.exists(FEATURED_PATH):
+        return jsonify({'status': 'error', 'message': 'Featured candidates not available'}), 404
+
+    with open(FEATURED_PATH, 'r') as f:
+        payload = json.load(f)
+
+    candidates = payload.get('candidates', [])
+    dataset_id = request.args.get('dataset_id')
+    tag = request.args.get('tag')
+    verified = request.args.get('verified')
+
+    if dataset_id:
+        candidates = [c for c in candidates if c.get('dataset_id') == dataset_id]
+    if tag:
+        candidates = [c for c in candidates if tag in c.get('tags', [])]
+    if verified is not None:
+        verified_bool = verified.lower() == 'true'
+        candidates = [c for c in candidates if c.get('verified_target') == verified_bool]
+
+    return jsonify({'status': 'success', 'candidates': candidates})
 
 
 def _export_candidates(results):

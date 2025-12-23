@@ -1,0 +1,136 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "kreuzer-skarke-001",
+      "dataset_id": "kreuzer-skarke",
+      "dataset_name": "Kreuzer-Skarke Database",
+      "rank": 1,
+      "score": 0.9921,
+      "verified_target": true,
+      "features": [["h11", 38], ["h21", 12], ["χ", 52]],
+      "tags": ["low-euler", "phenomenology", "verified"],
+      "summary": "Low |χ| candidate with compact Hodge numbers.",
+      "viz_seed": 48291
+    },
+    {
+      "candidate_id": "kreuzer-skarke-004",
+      "dataset_id": "kreuzer-skarke",
+      "dataset_name": "Kreuzer-Skarke Database",
+      "rank": 4,
+      "score": 0.9716,
+      "verified_target": true,
+      "features": [["h11", 25], ["h21", 26], ["χ", -2]],
+      "tags": ["balanced", "low-euler", "verified"],
+      "summary": "Near-balanced Hodge numbers with tiny Euler characteristic.",
+      "viz_seed": 19428
+    },
+    {
+      "candidate_id": "cy5-folds-002",
+      "dataset_id": "cy5-folds",
+      "dataset_name": "CY5-Folds (CI5F)",
+      "rank": 2,
+      "score": 0.9834,
+      "verified_target": true,
+      "features": [["h11", 140], ["h21", 62], ["h31", 18]],
+      "tags": ["large-volume", "verified", "ci5f"],
+      "summary": "High h11 with moderate higher Hodge numbers.",
+      "viz_seed": 78231
+    },
+    {
+      "candidate_id": "cy5-folds-007",
+      "dataset_id": "cy5-folds",
+      "dataset_name": "CY5-Folds (CI5F)",
+      "rank": 7,
+      "score": 0.9482,
+      "verified_target": false,
+      "features": [["h11", 112], ["h21", 48], ["h31", 33]],
+      "tags": ["large-volume", "ci5f"],
+      "summary": "Large volume candidate awaiting verification.",
+      "viz_seed": 22119
+    },
+    {
+      "candidate_id": "heterotic-003",
+      "dataset_id": "heterotic",
+      "dataset_name": "Heterotic Compactifications",
+      "rank": 3,
+      "score": 0.9678,
+      "verified_target": true,
+      "features": [["h11", 64], ["h21", 60], ["balance", 0.031]],
+      "tags": ["balanced", "yukawa", "verified"],
+      "summary": "Balanced moduli with small Hodge asymmetry.",
+      "viz_seed": 34512
+    },
+    {
+      "candidate_id": "heterotic-008",
+      "dataset_id": "heterotic",
+      "dataset_name": "Heterotic Compactifications",
+      "rank": 8,
+      "score": 0.9314,
+      "verified_target": false,
+      "features": [["h11", 89], ["h21", 92], ["balance", 0.016]],
+      "tags": ["balanced", "yukawa"],
+      "summary": "Strong balance signal, pending verification.",
+      "viz_seed": 55392
+    },
+    {
+      "candidate_id": "kreuzer-skarke-009",
+      "dataset_id": "kreuzer-skarke",
+      "dataset_name": "Kreuzer-Skarke Database",
+      "rank": 9,
+      "score": 0.9238,
+      "verified_target": true,
+      "features": [["h11", 14], ["h21", 62], ["χ", -96]],
+      "tags": ["low-euler", "verified"],
+      "summary": "Low Euler magnitude with asymmetric Hodge numbers.",
+      "viz_seed": 66832
+    },
+    {
+      "candidate_id": "cy5-folds-010",
+      "dataset_id": "cy5-folds",
+      "dataset_name": "CY5-Folds (CI5F)",
+      "rank": 10,
+      "score": 0.9025,
+      "verified_target": true,
+      "features": [["h11", 151], ["h21", 41], ["h31", 22]],
+      "tags": ["large-volume", "verified", "ci5f"],
+      "summary": "High h11 candidate with strong score.",
+      "viz_seed": 99821
+    },
+    {
+      "candidate_id": "heterotic-011",
+      "dataset_id": "heterotic",
+      "dataset_name": "Heterotic Compactifications",
+      "rank": 11,
+      "score": 0.9143,
+      "verified_target": true,
+      "features": [["h11", 73], ["h21", 70], ["balance", 0.021]],
+      "tags": ["balanced", "verified"],
+      "summary": "Balanced moduli candidate with stable score.",
+      "viz_seed": 77351
+    },
+    {
+      "candidate_id": "kreuzer-skarke-012",
+      "dataset_id": "kreuzer-skarke",
+      "dataset_name": "Kreuzer-Skarke Database",
+      "rank": 12,
+      "score": 0.8994,
+      "verified_target": false,
+      "features": [["h11", 44], ["h21", 33], ["χ", 22]],
+      "tags": ["low-euler", "phenomenology"],
+      "summary": "Shortlisted low Euler candidate.",
+      "viz_seed": 41206
+    },
+    {
+      "candidate_id": "cy5-folds-013",
+      "dataset_id": "cy5-folds",
+      "dataset_name": "CY5-Folds (CI5F)",
+      "rank": 13,
+      "score": 0.8872,
+      "verified_target": true,
+      "features": [["h11", 131], ["h21", 55], ["h31", 29]],
+      "tags": ["large-volume", "verified"],
+      "summary": "Balanced high h11 for large volume scenarios.",
+      "viz_seed": 32166
+    }
+  ]
+}

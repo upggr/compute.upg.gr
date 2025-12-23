@@ -110,6 +110,15 @@ candidates = [ { ... }, { ... } ]<br>
 candidates = {<| "rank" -> 1, "h11" -> 12, ... |>, ...};</code>
             </div>
 
+            <h3>Local Export Scripts</h3>
+            <p>Use the adapter script to convert a saved results JSON file into tool-specific formats.</p>
+            <div class="code-block">
+                <code>python scripts/export_adapters.py --input static/data/results_RUN_ID.json --format cytools --output cytools.json<br>
+python scripts/export_adapters.py --input static/data/results_RUN_ID.json --format cymetric --output cymetric.json<br>
+python scripts/export_adapters.py --input static/data/results_RUN_ID.json --format sage --output candidates.sage<br>
+python scripts/export_adapters.py --input static/data/results_RUN_ID.json --format mathematica --output candidates.wl</code>
+            </div>
+
             <h3>Bring Your Own Data</h3>
             <p>Paste custom candidates as CSV rows in the Run page. Each row must include all feature columns for the selected dataset in order:</p>
             <ul>

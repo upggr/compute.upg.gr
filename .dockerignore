@@ -16,3 +16,5 @@ README.md
 .venv
 venv/
 ENV/
+data/ks_cache/*
+*.pkl

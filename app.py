@@ -2,7 +2,8 @@ from flask import Flask, render_template, jsonify, request, send_file
 import json
 import os
 from datetime import datetime
-from cy_search import run_search, get_sample_results
+from cy_search import run_search, get_sample_results  # Demo implementation
+from cy_search_real import run_real_search  # Real implementation
 
 app = Flask(__name__)
 
@@ -44,7 +45,9 @@ def run_demo():
     {
         "top_k": 100,
         "seed": 42,
-        "verify": true
+        "verify": true,
+        "n_candidates": 5000,
+        "use_real": true  # Use real KS database implementation
     }
 
     Returns:
@@ -60,9 +63,21 @@ def run_demo():
         top_k = params.get('top_k', 100)
         seed = params.get('seed', 42)
         verify = params.get('verify', True)
+        n_candidates = params.get('n_candidates', 5000)
+        use_real = params.get('use_real', True)  # Default to real implementation
 
-        # Run the search
-        results = run_search(top_k=top_k, seed=seed, verify=verify)
+        # Run the search - use real implementation by default
+        if use_real:
+            print(f"Running REAL CY-Search: {n_candidates} candidates, top_k={top_k}, seed={seed}")
+            results = run_real_search(
+                top_k=top_k,
+                seed=seed,
+                n_candidates=n_candidates,
+                verify=verify
+            )
+        else:
+            print(f"Running DEMO CY-Search: top_k={top_k}, seed={seed}")
+            results = run_search(top_k=top_k, seed=seed, verify=verify)
 
         # Save results
         run_id = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
@@ -102,8 +117,10 @@ def get_results(run_id):
 
 @app.route('/api/sample-results')
 def sample_results():
-    """Get sample results for display"""
-    return jsonify(get_sample_results())
+    """Get sample results for display (uses real implementation)"""
+    # Use real implementation with small dataset for quick response
+    results = run_real_search(top_k=20, seed=42, n_candidates=1000, verify=True)
+    return jsonify(results)
 
 
 @app.route('/data/<path:filename>')

@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data cache
+data/ks_cache/
+*.pkl
+
+# Environment variables
+.env
+.env.local
+
+# Results (large files)
+static/data/*.json
+static/data/*.csv
+!static/data/results_topk.csv
+!static/data/metrics.json
+!static/data/repro.md

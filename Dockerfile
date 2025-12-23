@@ -9,8 +9,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files
 COPY app.py .
 COPY cy_search.py .
+COPY cy_search_real.py .
 COPY templates/ templates/
 COPY static/ static/
+
+# Create data directory for KS database cache
+RUN mkdir -p data/ks_cache
 
 # Expose port 5102
 EXPOSE 5102

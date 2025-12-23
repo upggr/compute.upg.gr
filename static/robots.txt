@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://compute.upg.gr/sitemap.xml

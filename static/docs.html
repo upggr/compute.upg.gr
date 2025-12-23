@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation - CY-Search</title>
+    <meta name="description" content="Installation and usage documentation for CY-Search.">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-brand">CY-Search</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/docs.html" class="active">Docs</a>
+                <a href="/results.html">Results</a>
+                <a href="/about.html">About</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="section">
+            <h1>Documentation</h1>
+        </section>
+
+        <section class="section">
+            <h2>Installation Prerequisites</h2>
+            <ul>
+                <li>Python 3.9 or higher</li>
+                <li>pip package manager</li>
+                <li>4GB RAM minimum (8GB recommended)</li>
+                <li>2GB free disk space for datasets and outputs</li>
+            </ul>
+
+            <h3>Quick Install</h3>
+            <div class="code-block">
+                <code>git clone https://github.com/upggr/compute.upg.gr.git<br>
+cd compute.upg.gr<br>
+pip install -r requirements.txt</code>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>How to Run</h2>
+
+            <h3>Basic Demo</h3>
+            <div class="code-block">
+                <code>python run_cy_search.py --config default.yml --verify --export-artifacts</code>
+            </div>
+
+            <h3>Expected Runtime</h3>
+            <p>5-15 minutes on standard hardware, depending on dataset size and CPU performance.</p>
+
+            <h3>Output Location</h3>
+            <p>All artifacts are saved to <code>./output/</code> directory:</p>
+            <ul>
+                <li><code>output/results_topk.csv</code> - Top-k ranked results</li>
+                <li><code>output/metrics.json</code> - Performance metrics</li>
+                <li><code>output/repro.md</code> - Reproducibility report</li>
+            </ul>
+
+            <h3>Command-Line Options</h3>
+            <div class="code-block">
+                <code>--config CONFIG_FILE    Path to configuration YAML (default: default.yml)<br>
+--verify                Verify top results against ground truth<br>
+--export-artifacts      Generate CSV/JSON output files<br>
+--top-k K              Number of top results to export (default: 100)<br>
+--seed SEED            Random seed for reproducibility (default: 42)</code>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Reproducibility Guarantees</h2>
+
+            <h3>Fixed Random Seeds</h3>
+            <p>All stochastic operations (model training, data shuffling) use deterministic seeds specified in the configuration file. Default seed is 42.</p>
+
+            <h3>Pinned Dependencies</h3>
+            <p>The <code>requirements.txt</code> file pins exact versions of all Python packages to ensure identical runtime environments.</p>
+            <div class="code-block">
+                <code>pip freeze > requirements.lock  # Generate locked dependencies</code>
+            </div>
+
+            <h3>Dataset Checksum Verification</h3>
+            <p>Dataset downloads are verified using SHA-256 checksums before processing begins. If the checksum fails, the pipeline halts with an error.</p>
+            <div class="code-block">
+                <code># Expected checksum stored in config<br>
+dataset_checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"</code>
+            </div>
+
+            <h3>Run Metadata</h3>
+            <p>Every run generates a <code>repro.md</code> file containing:</p>
+            <ul>
+                <li>Timestamp and hostname</li>
+                <li>Git commit hash</li>
+                <li>Python version and environment info</li>
+                <li>Configuration parameters used</li>
+                <li>Dataset checksum verified</li>
+                <li>Random seeds employed</li>
+            </ul>
+        </section>
+
+        <section class="section">
+            <h2>Configuration</h2>
+            <p>Edit <code>default.yml</code> to customize pipeline behavior:</p>
+            <div class="code-block">
+                <code>dataset:<br>
+  url: "https://example.com/cy_dataset.csv"<br>
+  checksum: "sha256:e3b0c44..."<br>
+<br>
+model:<br>
+  type: "random_forest"<br>
+  n_estimators: 100<br>
+  max_depth: 10<br>
+<br>
+search:<br>
+  top_k: 100<br>
+  verification: true<br>
+<br>
+reproducibility:<br>
+  seed: 42<br>
+  export_metadata: true</code>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Troubleshooting</h2>
+
+            <h3>Checksum Verification Failed</h3>
+            <p>If the dataset checksum doesn't match, the file may be corrupted. Delete cached data and re-download:</p>
+            <div class="code-block">
+                <code>rm -rf ./cache/<br>
+python run_cy_search.py --config default.yml</code>
+            </div>
+
+            <h3>Out of Memory</h3>
+            <p>For large datasets, reduce batch size in config or use a machine with more RAM.</p>
+
+            <h3>Module Not Found</h3>
+            <p>Ensure all dependencies are installed:</p>
+            <div class="code-block">
+                <code>pip install -r requirements.txt</code>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Contact: <a href="mailto:research@upg.gr">research@upg.gr</a></p>
+            <p class="footer-note">Research tooling for reproducible computational physics experiments</p>
+        </div>
+    </footer>
+</body>
+</html>

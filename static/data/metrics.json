@@ -1,0 +1,29 @@
+{
+  "run_metadata": {
+    "timestamp": "2025-01-15T14:32:17Z",
+    "dataset": "cy_landscape_v1.2.csv",
+    "dataset_checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "model_type": "RandomForest",
+    "random_seed": 42,
+    "total_candidates": 50000
+  },
+  "performance_metrics": {
+    "precision_at_100": 0.847,
+    "recall_at_100": 0.623,
+    "time_to_first_hit_seconds": 12,
+    "verified_count": 84,
+    "total_top_k": 100
+  },
+  "timing": {
+    "total_runtime_seconds": 514,
+    "dataset_download_seconds": 23,
+    "model_training_seconds": 187,
+    "ranking_seconds": 142,
+    "verification_seconds": 162
+  },
+  "environment": {
+    "python_version": "3.11.5",
+    "platform": "linux",
+    "cpu_count": 8
+  }
+}

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Results - CY-Search</title>
+    <meta name="description" content="Latest demo results from CY-Search pipeline.">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-brand">CY-Search</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/docs.html">Docs</a>
+                <a href="/results.html" class="active">Results</a>
+                <a href="/about.html">About</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="section">
+            <h1>Latest Demo Results</h1>
+            <p class="note">Sample data shown below. Run the pipeline to generate actual results.</p>
+        </section>
+
+        <section class="section">
+            <h2>Run Metadata</h2>
+            <div class="metadata-grid">
+                <div class="metadata-item">
+                    <strong>Run Date:</strong>
+                    <span id="run-date">2025-01-15 14:32:17 UTC</span>
+                </div>
+                <div class="metadata-item">
+                    <strong>Dataset:</strong>
+                    <span id="dataset-name">cy_landscape_v1.2.csv</span>
+                </div>
+                <div class="metadata-item">
+                    <strong>Model:</strong>
+                    <span id="model-type">RandomForest (n=100)</span>
+                </div>
+                <div class="metadata-item">
+                    <strong>Random Seed:</strong>
+                    <span id="random-seed">42</span>
+                </div>
+                <div class="metadata-item">
+                    <strong>Total Candidates:</strong>
+                    <span id="total-candidates">50,000</span>
+                </div>
+                <div class="metadata-item">
+                    <strong>Runtime:</strong>
+                    <span id="runtime">8m 34s</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Performance Metrics</h2>
+            <div class="metrics-cards">
+                <div class="metric-card">
+                    <div class="metric-value" id="precision-k">0.847</div>
+                    <div class="metric-label">Precision@100</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="recall-k">0.623</div>
+                    <div class="metric-label">Recall@100</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="time-first-hit">12s</div>
+                    <div class="metric-label">Time to First Hit</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="verified-count">84/100</div>
+                    <div class="metric-label">Verified Targets</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Top-K Results</h2>
+            <div class="table-controls">
+                <p>Showing first 20 of 100 results</p>
+            </div>
+            <div class="table-container">
+                <table id="results-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Candidate ID</th>
+                            <th>Score</th>
+                            <th>Verified</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-tbody">
+                        <!-- Populated by script.js -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Download Artifacts</h2>
+            <div class="download-grid">
+                <div class="download-item">
+                    <h3>results_topk.csv</h3>
+                    <p>Complete top-100 results with all metadata</p>
+                    <a href="/data/results_topk.csv" class="btn btn-secondary" download>Download CSV</a>
+                </div>
+                <div class="download-item">
+                    <h3>metrics.json</h3>
+                    <p>Performance metrics and timing data</p>
+                    <a href="/data/metrics.json" class="btn btn-secondary" download>Download JSON</a>
+                </div>
+                <div class="download-item">
+                    <h3>repro.md</h3>
+                    <p>Full reproducibility report</p>
+                    <a href="/data/repro.md" class="btn btn-secondary" download>Download Report</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Contact: <a href="mailto:research@upg.gr">research@upg.gr</a></p>
+            <p class="footer-note">Research tooling for reproducible computational physics experiments</p>
+        </div>
+    </footer>
+
+    <script src="/script.js"></script>
+</body>
+</html>

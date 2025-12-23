@@ -1,0 +1,21 @@
+rank,candidate_id,score,verified_label,notes
+1,CY_147823,0.9847,true,High confidence
+2,CY_092341,0.9721,true,Verified match
+3,CY_183294,0.9658,true,
+4,CY_045619,0.9543,true,Strong signal
+5,CY_128473,0.9421,false,Needs review
+6,CY_076234,0.9385,true,
+7,CY_201394,0.9312,true,Confirmed
+8,CY_159472,0.9287,true,
+9,CY_083124,0.9156,true,
+10,CY_194735,0.9043,false,Edge case
+11,CY_067281,0.8987,true,
+12,CY_142398,0.8921,true,
+13,CY_185749,0.8876,true,
+14,CY_093827,0.8754,true,
+15,CY_127463,0.8698,false,Low signal
+16,CY_074159,0.8621,true,
+17,CY_198234,0.8543,true,
+18,CY_136472,0.8487,true,
+19,CY_081923,0.8421,true,
+20,CY_165847,0.8376,false,Ambiguous

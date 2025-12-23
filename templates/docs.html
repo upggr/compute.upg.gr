@@ -13,6 +13,7 @@
             <div class="nav-brand">upg-strings</div>
             <div class="nav-links">
                 <a href="/">Home</a>
+                <a href="/candidates.html">Candidates</a>
                 <a href="/docs.html" class="active">Docs</a>
                 <a href="/results.html">Results</a>
                 <a href="/about.html">About</a>
@@ -23,6 +24,17 @@
     <main class="container">
         <section class="section">
             <h1>Documentation</h1>
+        </section>
+
+        <section class="section">
+            <h2>For Scientists</h2>
+            <p>Use the application to quickly surface rare Calabi-Yau candidates while keeping a reproducible record.</p>
+            <ul>
+                <li>Run the demo or CLI to rank candidates by predicted likelihood</li>
+                <li>Verify top-k hits and track precision/recall for experimental comparison</li>
+                <li>Export CSV/JSON artifacts for downstream analysis and sharing</li>
+                <li>Record random seeds and dataset metadata for reproducibility</li>
+            </ul>
         </section>
 
         <section class="section">
@@ -59,6 +71,17 @@ pip install -r requirements.txt</code>
                 <li><code>output/results_topk.csv</code> - Top-k ranked results</li>
                 <li><code>output/metrics.json</code> - Performance metrics</li>
                 <li><code>output/repro.md</code> - Reproducibility report</li>
+            </ul>
+
+            <h3>Demo Exports</h3>
+            <p>The Interactive Demo provides download buttons for JSON and CSV artifacts after each run.</p>
+
+            <h3>Bring Your Own Data</h3>
+            <p>Paste custom candidates as CSV rows in the demo. Each row must include all feature columns for the selected dataset in order:</p>
+            <ul>
+                <li>Kreuzer-Skarke: h11, h21, euler_abs, hodge_ratio, c2_h11</li>
+                <li>CY5-Folds: h11, h21, h31, euler, euler_abs, hodge_sum</li>
+                <li>Heterotic: h11, h21, euler, euler_abs, hodge_ratio, hodge_balance, n_gen</li>
             </ul>
 
             <h3>Command-Line Options</h3>

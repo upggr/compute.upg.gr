@@ -13,6 +13,7 @@
             <div class="nav-brand">upg-strings</div>
             <div class="nav-links">
                 <a href="/">Home</a>
+                <a href="/candidates.html">Candidates</a>
                 <a href="/demo.html" class="active">Interactive Demo</a>
                 <a href="/docs.html">Docs</a>
                 <a href="/results.html">Results</a>
@@ -94,6 +95,7 @@
 
         <section class="section" id="current-results" style="display: none;">
             <h2>Current Run Results</h2>
+            <p id="current-run-label" style="color: var(--text-secondary); margin-bottom: 1rem;"></p>
             <div class="metrics-cards">
                 <div class="metric-card">
                     <div class="metric-value" id="current-precision">-</div>
@@ -112,6 +114,27 @@
                     <div class="metric-label">Verified</div>
                 </div>
             </div>
+            <div style="margin-top: 1.5rem; text-align: center;">
+                <button id="download-json" class="btn btn-secondary">Download Results JSON</button>
+                <button id="download-csv" class="btn btn-secondary" style="margin-left: 0.75rem;">Download Top Results CSV</button>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Bring Your Own Data</h2>
+            <p>Paste CSV rows matching the selected dataset's feature columns and score them with the trained model.</p>
+            <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 8px;">
+                <p id="custom-columns" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.75rem;"></p>
+                <textarea id="custom-data" rows="6" placeholder="Example:&#10;12, 45, 66, 3.75, 924&#10;18, 20, 4, 1.12, 430" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: var(--font-mono);"></textarea>
+                <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
+                    <label style="font-weight: 600;">Load CSV file</label>
+                    <input type="file" id="custom-file" accept=".csv,text/csv">
+                    <label for="custom-top-k" style="font-weight: 600;">Top-K</label>
+                    <input type="number" id="custom-top-k" value="20" min="1" max="200" style="width: 100px; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+                    <button id="run-custom-btn" class="btn btn-primary">Score Custom Data</button>
+                </div>
+                <p id="custom-error" style="color: #c41e3a; margin-top: 0.75rem; display: none;"></p>
+            </div>
         </section>
 
         <section class="section">
@@ -127,12 +150,11 @@
                             <th>Precision</th>
                             <th>Recall</th>
                             <th>Runtime</th>
-                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="history-tbody">
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
                                 No runs yet. Start a search above to see history.
                             </td>
                         </tr>
@@ -149,6 +171,21 @@
         </div>
     </footer>
 
+    <div id="history-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-narrow">
+            <div class="modal-header">
+                <div>
+                    <h2>Run Details</h2>
+                    <p id="history-subtitle" class="modal-subtitle"></p>
+                </div>
+                <button id="history-close" class="modal-close">Close</button>
+            </div>
+            <div class="modal-body">
+                <div id="history-details" class="details-grid"></div>
+            </div>
+        </div>
+    </div>
+
     <script>
     // Dataset descriptions
     const datasetDescriptions = {
@@ -157,10 +194,26 @@
         'heterotic': 'Searching for balanced manifolds with h^{1,1} ≈ h^{2,1}'
     };
 
+    const featureColumns = {
+        'kreuzer-skarke': ['h11', 'h21', 'euler_abs', 'hodge_ratio', 'c2_h11'],
+        'cy5-folds': ['h11', 'h21', 'h31', 'euler', 'euler_abs', 'hodge_sum'],
+        'heterotic': ['h11', 'h21', 'euler', 'euler_abs', 'hodge_ratio', 'hodge_balance', 'n_gen']
+    };
+
+    let latestResults = null;
+
+    function updateCustomColumns() {
+        const datasetId = document.getElementById('dataset_id').value;
+        const cols = featureColumns[datasetId] || [];
+        const text = cols.length ? `Expected columns: ${cols.join(', ')}` : '';
+        document.getElementById('custom-columns').textContent = text;
+    }
+
     // Update description when dataset changes
     document.getElementById('dataset_id').addEventListener('change', function() {
         const desc = datasetDescriptions[this.value] || '';
         document.getElementById('dataset-description').textContent = desc;
+        updateCustomColumns();
     });
 
     // Load history from localStorage
@@ -169,7 +222,7 @@
         const tbody = document.getElementById('history-tbody');
 
         if (history.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No runs yet. Start a search above to see history.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No runs yet. Start a search above to see history.</td></tr>';
             return;
         }
 
@@ -181,7 +234,6 @@
                 <td>${(run.precision * 100).toFixed(1)}%</td>
                 <td>${(run.recall * 100).toFixed(1)}%</td>
                 <td>${run.runtime.toFixed(1)}s</td>
-                <td><a href="#" onclick="event.stopPropagation(); deleteRun('${run.run_id}'); return false;" style="color: var(--warning-color);">Delete</a></td>
             </tr>
         `).join('');
     }
@@ -195,15 +247,67 @@
     }
 
     function viewRun(runId) {
-        // Would load from server, but for now just show alert
-        alert('Viewing run: ' + runId + '\\nFull results would load here.');
+        const history = JSON.parse(localStorage.getItem('cy_search_history') || '[]');
+        const run = history.find(item => item.run_id === runId);
+        const details = document.getElementById('history-details');
+        const subtitle = document.getElementById('history-subtitle');
+
+        if (!run) {
+            subtitle.textContent = 'Run not found in local history.';
+            details.innerHTML = '';
+        } else {
+            subtitle.textContent = `Run ID: ${run.run_id}`;
+            details.innerHTML = `
+                <div class="detail-item"><span>Timestamp</span><strong>${new Date(run.timestamp).toLocaleString()}</strong></div>
+                <div class="detail-item"><span>Dataset size</span><strong>${run.n_candidates.toLocaleString()}</strong></div>
+                <div class="detail-item"><span>Top-K</span><strong>${run.top_k}</strong></div>
+                <div class="detail-item"><span>Precision</span><strong>${(run.precision * 100).toFixed(1)}%</strong></div>
+                <div class="detail-item"><span>Recall</span><strong>${(run.recall * 100).toFixed(1)}%</strong></div>
+                <div class="detail-item"><span>Runtime</span><strong>${run.runtime.toFixed(1)}s</strong></div>
+            `;
+        }
+
+        document.getElementById('history-modal').style.display = 'flex';
     }
 
-    function deleteRun(runId) {
-        const history = JSON.parse(localStorage.getItem('cy_search_history') || '[]');
-        const filtered = history.filter(run => run.run_id !== runId);
-        localStorage.setItem('cy_search_history', JSON.stringify(filtered));
-        loadHistory();
+    function showResults(results, label) {
+        const metrics = results.performance_metrics;
+        const timing = results.timing || { total_runtime_seconds: 0 };
+
+        document.getElementById('current-precision').textContent =
+            metrics.precision_at_k ? (metrics.precision_at_k * 100).toFixed(1) + '%' : 'N/A';
+        document.getElementById('current-recall').textContent =
+            metrics.recall_at_k ? (metrics.recall_at_k * 100).toFixed(1) + '%' : 'N/A';
+        document.getElementById('current-runtime').textContent =
+            timing.total_runtime_seconds !== undefined ? timing.total_runtime_seconds.toFixed(1) + 's' : 'N/A';
+        document.getElementById('current-verified').textContent =
+            `${metrics.verified_count}/${metrics.total_top_k}`;
+        document.getElementById('current-run-label').textContent = label;
+
+        latestResults = results;
+        document.getElementById('current-results').style.display = 'block';
+    }
+
+    function downloadFile(filename, content, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    }
+
+    function toCsv(data) {
+        if (!data || data.length === 0) return '';
+        const headers = Object.keys(data[0]);
+        const escapeValue = value => {
+            const str = value === null || value === undefined ? '' : String(value);
+            return `"${str.replace(/"/g, '""')}"`;
+        };
+        const rows = data.map(row => headers.map(key => escapeValue(row[key])).join(','));
+        return [headers.join(','), ...rows].join('\n');
     }
 
     // Run search
@@ -243,21 +347,8 @@
             progressFill.style.width = '100%';
 
             if (data.status === 'success') {
-                const metrics = data.results.performance_metrics;
-                const timing = data.results.timing;
-
-                // Show results
-                document.getElementById('current-precision').textContent =
-                    metrics.precision_at_k ? (metrics.precision_at_k * 100).toFixed(1) + '%' : 'N/A';
-                document.getElementById('current-recall').textContent =
-                    metrics.recall_at_k ? (metrics.recall_at_k * 100).toFixed(1) + '%' : 'N/A';
-                document.getElementById('current-runtime').textContent =
-                    timing.total_runtime_seconds.toFixed(1) + 's';
-                document.getElementById('current-verified').textContent =
-                    `${metrics.verified_count}/${params.top_k}`;
-
+                showResults(data.results, `Run type: demo search (${params.dataset_id})`);
                 statusDiv.style.display = 'none';
-                resultsSection.style.display = 'block';
 
                 // Save to history
                 saveToHistory({
@@ -287,8 +378,104 @@
         }
     });
 
+    // Custom data scoring
+    document.getElementById('run-custom-btn').addEventListener('click', async function() {
+        const errorEl = document.getElementById('custom-error');
+        errorEl.style.display = 'none';
+
+        const datasetId = document.getElementById('dataset_id').value;
+        const expectedCount = (featureColumns[datasetId] || []).length;
+        const raw = document.getElementById('custom-data').value.trim();
+
+        if (!raw) {
+            errorEl.textContent = 'Please paste CSV rows before scoring.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        let rows = [];
+        try {
+            raw.split(/\r?\n/).forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+                const parts = trimmed.split(/[\s,]+/).filter(Boolean);
+                if (parts.length !== expectedCount) {
+                    throw new Error(`Each row must have ${expectedCount} values.`);
+                }
+                rows.push(parts.map(val => {
+                    const num = Number(val);
+                    if (Number.isNaN(num)) {
+                        throw new Error('All values must be numeric.');
+                    }
+                    return num;
+                }));
+            });
+        } catch (err) {
+            errorEl.textContent = err.message;
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/score-custom', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    dataset_id: datasetId,
+                    rows,
+                    top_k: parseInt(document.getElementById('custom-top-k').value, 10) || 20,
+                    seed: parseInt(document.getElementById('seed').value, 10) || 42,
+                    verify: document.getElementById('verify').checked
+                })
+            });
+
+            const data = await response.json();
+            if (data.status === 'success') {
+                showResults(data.results, `Run type: custom input (${datasetId})`);
+            } else {
+                errorEl.textContent = data.message || 'Failed to score custom data.';
+                errorEl.style.display = 'block';
+            }
+        } catch (error) {
+            errorEl.textContent = error.message;
+            errorEl.style.display = 'block';
+        }
+    });
+
+    // File loader for custom CSV
+    document.getElementById('custom-file').addEventListener('change', function() {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = event => {
+            document.getElementById('custom-data').value = event.target.result || '';
+        };
+        reader.readAsText(file);
+    });
+
+    // Download actions
+    document.getElementById('download-json').addEventListener('click', function() {
+        if (!latestResults) return;
+        downloadFile('results.json', JSON.stringify(latestResults, null, 2), 'application/json');
+    });
+
+    document.getElementById('download-csv').addEventListener('click', function() {
+        if (!latestResults) return;
+        const csv = toCsv(latestResults.top_results || []);
+        downloadFile('results_top.csv', csv, 'text/csv');
+    });
+
     // Load history on page load
     loadHistory();
+    updateCustomColumns();
+    document.getElementById('history-close').addEventListener('click', () => {
+        document.getElementById('history-modal').style.display = 'none';
+    });
+    document.getElementById('history-modal').addEventListener('click', event => {
+        if (event.target.id === 'history-modal') {
+            document.getElementById('history-modal').style.display = 'none';
+        }
+    });
     </script>
 </body>
 </html>

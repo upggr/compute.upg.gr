@@ -315,6 +315,13 @@ If you use upg-strings in your research, please cite:
 }
 ```
 
+## Roadmap
+
+- [x] Candidates gallery with ranked manifolds
+- [x] Manifold visualization modal (2D/3D)
+- [x] Candidate details API endpoint
+- [ ] Server-side export bundle for gallery selections
+
 ## Contact
 
 - **Email**: ioannis.kokkinis@upg.gr

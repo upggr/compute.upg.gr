@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% set active_page = "results" %}
 
-{% block title %}Live Results - upg-strings{% endblock %}
-{% block description %}Real-time results from upg-strings ML-guided pipeline.{% endblock %}
+{% block title %}Run Results - upg-strings{% endblock %}
+{% block description %}Results from upg-strings ML-guided pipeline runs.{% endblock %}
 {% block og_tags %}
-    <meta property="og:title" content="Live Results - upg-strings">
-    <meta property="og:description" content="Real-time results from upg-strings ML-guided pipeline.">
+    <meta property="og:title" content="Run Results - upg-strings">
+    <meta property="og:description" content="Results from upg-strings ML-guided pipeline runs.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://compute.upg.gr/results.html">
 {% endblock %}
@@ -13,8 +13,25 @@
 {% block content %}
     <main class="container">
         <section class="section">
-            <h1>Live Demo Results</h1>
+            <h1>Run Results</h1>
             <p>Real results from ML-guided Calabi-Yau search. <a href="/" style="margin-left: 1rem;">← Run New Search</a></p>
+        </section>
+
+        <section class="section" id="share-panel" style="display: none;">
+            <h2>Share & Export</h2>
+            <div class="share-row">
+                <span class="share-label">Shareable run link</span>
+                <input id="results-share-link" type="text" readonly>
+                <button id="results-copy-share" class="btn btn-secondary">Copy</button>
+            </div>
+            <div class="export-actions">
+                <button id="results-download-json" class="btn btn-secondary">Download JSON</button>
+                <button id="results-download-csv" class="btn btn-secondary">Download CSV</button>
+                <button id="results-download-cytools" class="btn btn-secondary">CYTools</button>
+                <button id="results-download-cymetric" class="btn btn-secondary">cymetric</button>
+                <button id="results-download-sage" class="btn btn-secondary">Sage</button>
+                <button id="results-download-math" class="btn btn-secondary">Mathematica</button>
+            </div>
         </section>
 
         <div id="loading" style="text-align: center; padding: 3rem;">
@@ -104,14 +121,34 @@
 {% block scripts %}
     <script>
     // Load live results from API
+    let activeRunId = null;
+
+    function updateSharePanel(runId) {
+        const panel = document.getElementById('share-panel');
+        if (!runId) {
+            panel.style.display = 'none';
+            return;
+        }
+        activeRunId = runId;
+        panel.style.display = 'block';
+        document.getElementById('results-share-link').value = `${window.location.origin}/results.html?run_id=${runId}`;
+    }
+
     async function loadResults() {
         try {
-            const response = await fetch('/api/sample-results');
+            const params = new URLSearchParams(window.location.search);
+            const runId = params.get('run_id');
+            const endpoint = runId ? `/api/results/${runId}` : '/api/sample-results';
+            const response = await fetch(endpoint);
             const data = await response.json();
+            if (data.error) {
+                throw new Error(data.error);
+            }
 
             // Hide loading, show content
             document.getElementById('loading').style.display = 'none';
             document.getElementById('results-content').style.display = 'block';
+            updateSharePanel(runId);
 
             // Populate metadata
             const metadata = data.run_metadata;
@@ -162,5 +199,54 @@
 
     // Load results when page loads
     loadResults();
+
+    function downloadExport(format, filename) {
+        if (!activeRunId) return;
+        fetch(`/api/export/${activeRunId}?format=${format}`)
+            .then(response => Promise.all([response.text(), response.headers.get('Content-Type')]))
+            .then(([content, contentType]) => {
+                const blob = new Blob([content], { type: contentType || 'text/plain' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+    }
+
+    document.getElementById('results-download-json').addEventListener('click', () => {
+        downloadExport('json', `results_${activeRunId || 'run'}.json`);
+    });
+    document.getElementById('results-download-csv').addEventListener('click', () => {
+        downloadExport('csv', `results_${activeRunId || 'run'}.csv`);
+    });
+    document.getElementById('results-download-cytools').addEventListener('click', () => {
+        downloadExport('cytools', `cytools_${activeRunId || 'run'}.json`);
+    });
+    document.getElementById('results-download-cymetric').addEventListener('click', () => {
+        downloadExport('cymetric', `cymetric_${activeRunId || 'run'}.json`);
+    });
+    document.getElementById('results-download-sage').addEventListener('click', () => {
+        downloadExport('sage', `candidates_${activeRunId || 'run'}.sage`);
+    });
+    document.getElementById('results-download-math').addEventListener('click', () => {
+        downloadExport('mathematica', `candidates_${activeRunId || 'run'}.wl`);
+    });
+
+    document.getElementById('results-copy-share').addEventListener('click', async function() {
+        const input = document.getElementById('results-share-link');
+        if (!input.value) return;
+        try {
+            await navigator.clipboard.writeText(input.value);
+            this.textContent = 'Copied!';
+            setTimeout(() => {
+                this.textContent = 'Copy';
+            }, 1500);
+        } catch (error) {
+            input.select();
+            document.execCommand('copy');
+        }
+    });
     </script>
 {% endblock %}

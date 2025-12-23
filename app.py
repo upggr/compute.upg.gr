@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, send_file
+from flask import Flask, render_template, jsonify, request, send_file, Response
 import json
 import os
 import numpy as np
@@ -107,11 +107,7 @@ def run_demo():
             results = run_search(top_k=top_k, seed=seed, verify=verify)
 
         # Save results
-        run_id = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-        results_file = os.path.join(RESULTS_DIR, f'results_{run_id}.json')
-
-        with open(results_file, 'w') as f:
-            json.dump(results, f, indent=2)
+        run_id = _save_results(results)
 
         return jsonify({
             'status': 'success',
@@ -131,14 +127,9 @@ def run_demo():
 @app.route('/api/results/<run_id>')
 def get_results(run_id):
     """Get results for a specific run"""
-    results_file = os.path.join(RESULTS_DIR, f'results_{run_id}.json')
-
-    if not os.path.exists(results_file):
+    results = _load_results(run_id)
+    if results is None:
         return jsonify({'error': 'Results not found'}), 404
-
-    with open(results_file, 'r') as f:
-        results = json.load(f)
-
     return jsonify(results)
 
 
@@ -155,6 +146,22 @@ def sample_results():
         dataset_id=dataset_id
     )
     return jsonify(results)
+
+
+def _save_results(results):
+    run_id = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    results_file = os.path.join(RESULTS_DIR, f'results_{run_id}.json')
+    with open(results_file, 'w') as f:
+        json.dump(results, f, indent=2)
+    return run_id
+
+
+def _load_results(run_id):
+    results_file = os.path.join(RESULTS_DIR, f'results_{run_id}.json')
+    if not os.path.exists(results_file):
+        return None
+    with open(results_file, 'r') as f:
+        return json.load(f)
 
 
 def _build_candidate_cards(dataset_id, seed=42, top_n=12, n_candidates=5000):
@@ -273,6 +280,97 @@ def candidate_detail(candidate_id):
     return jsonify({'status': 'error', 'message': 'Candidate not found'}), 404
 
 
+def _export_candidates(results):
+    candidates = results.get("top_results", [])
+    return candidates
+
+
+def _make_export_payload(results, schema_name):
+    metadata = results.get("run_metadata", {})
+    return {
+        "schema": schema_name,
+        "run_metadata": metadata,
+        "candidates": _export_candidates(results)
+    }
+
+
+def _export_sage(results):
+    payload = _export_candidates(results)
+    return "candidates = " + repr(payload)
+
+
+def _export_mathematica(results):
+    candidates = _export_candidates(results)
+    def format_value(value):
+        if isinstance(value, bool):
+            return "True" if value else "False"
+        if value is None:
+            return "Null"
+        if isinstance(value, (int, float)):
+            return str(value)
+        return f"\"{str(value)}\""
+
+    rows = []
+    for candidate in candidates:
+        items = []
+        for key, value in candidate.items():
+            items.append(f'"{key}" -> {format_value(value)}')
+        rows.append("<|" + ", ".join(items) + "|>")
+    return "candidates = {" + ", ".join(rows) + "};"
+
+
+@app.route('/api/export/<run_id>')
+def export_results(run_id):
+    export_format = request.args.get('format', 'json').lower()
+    results = _load_results(run_id)
+    if results is None:
+        return jsonify({'error': 'Results not found'}), 404
+
+    if export_format == 'json':
+        content = json.dumps(results, indent=2)
+        filename = f"results_{run_id}.json"
+        mime = "application/json"
+    elif export_format == 'csv':
+        candidates = _export_candidates(results)
+        if not candidates:
+            content = ""
+        else:
+            headers = sorted({key for candidate in candidates for key in candidate.keys()})
+            lines = [",".join(headers)]
+            for candidate in candidates:
+                row = []
+                for header in headers:
+                    value = candidate.get(header, "")
+                    value_str = "" if value is None else str(value).replace('"', '""')
+                    row.append(f'"{value_str}"')
+                lines.append(",".join(row))
+            content = "\n".join(lines)
+        filename = f"results_{run_id}.csv"
+        mime = "text/csv"
+    elif export_format == 'cytools':
+        content = json.dumps(_make_export_payload(results, "cytools-candidates-v1"), indent=2)
+        filename = f"cytools_{run_id}.json"
+        mime = "application/json"
+    elif export_format == 'cymetric':
+        content = json.dumps(_make_export_payload(results, "cymetric-candidates-v1"), indent=2)
+        filename = f"cymetric_{run_id}.json"
+        mime = "application/json"
+    elif export_format == 'sage':
+        content = _export_sage(results)
+        filename = f"candidates_{run_id}.sage"
+        mime = "text/plain"
+    elif export_format == 'mathematica':
+        content = _export_mathematica(results)
+        filename = f"candidates_{run_id}.wl"
+        mime = "text/plain"
+    else:
+        return jsonify({'error': 'Unsupported export format'}), 400
+
+    response = Response(content, mimetype=mime)
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    return response
+
+
 @app.route('/api/score-custom', methods=['POST'])
 def score_custom():
     """
@@ -294,6 +392,7 @@ def score_custom():
         top_k = int(params.get('top_k', 20))
         seed = int(params.get('seed', 42))
         verify = bool(params.get('verify', True))
+        save_results = bool(params.get('save', False))
 
         if not rows or not isinstance(rows, list):
             return jsonify({'status': 'error', 'message': 'No input rows provided.'}), 400
@@ -377,6 +476,15 @@ def score_custom():
                 rank=idx + 1
             )
             results["top_results"].append(result)
+
+        if save_results:
+            run_id = _save_results(results)
+            return jsonify({
+                'status': 'success',
+                'run_id': run_id,
+                'results': results,
+                'results_url': f'/api/results/{run_id}'
+            })
 
         return jsonify({'status': 'success', 'results': results})
 

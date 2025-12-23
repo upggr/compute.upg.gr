@@ -721,6 +721,34 @@ tbody tr:hover {
     margin-top: var(--spacing-sm);
 }
 
+/* Export and share */
+.export-actions {
+    margin-top: 1.5rem;
+    text-align: center;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.share-row {
+    margin-top: 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.share-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.share-row input {
+    min-width: min(420px, 90vw);
+}
+
 .disclaimer {
     padding: var(--spacing-md);
     background-color: #fff9e6;

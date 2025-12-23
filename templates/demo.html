@@ -103,15 +103,26 @@
                     <div class="metric-label">Verified</div>
                 </div>
             </div>
-            <div style="margin-top: 1.5rem; text-align: center;">
+            <div class="export-actions">
                 <button id="download-json" class="btn btn-secondary">Download Results JSON</button>
                 <button id="download-csv" class="btn btn-secondary" style="margin-left: 0.75rem;">Download Top Results CSV</button>
+            </div>
+            <div class="export-actions">
+                <button id="download-cytools" class="btn btn-secondary">Export for CYTools</button>
+                <button id="download-cymetric" class="btn btn-secondary">Export for cymetric</button>
+                <button id="download-sage" class="btn btn-secondary">Export for Sage</button>
+                <button id="download-mathematica" class="btn btn-secondary">Export for Mathematica</button>
+            </div>
+            <div class="share-row">
+                <span class="share-label">Shareable run link</span>
+                <input id="share-link" type="text" readonly>
+                <button id="copy-share" class="btn btn-secondary">Copy</button>
             </div>
         </section>
 
         <section class="section">
-            <h2>Bring Your Own Data</h2>
-            <p>Paste CSV rows matching the selected dataset's feature columns and score them with the trained model.</p>
+            <h2>Upload Dataset (Real Mode)</h2>
+            <p>Paste or upload CSV rows matching the selected dataset's feature columns. The model will rank your dataset and save a shareable run.</p>
             <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 8px;">
                 <p id="custom-columns" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.75rem;"></p>
                 <textarea id="custom-data" rows="6" placeholder="Example:&#10;12, 45, 66, 3.75, 924&#10;18, 20, 4, 1.12, 430" style="width: 100%; font-family: var(--font-mono);"></textarea>
@@ -120,7 +131,7 @@
                     <input type="file" id="custom-file" accept=".csv,text/csv">
                     <label for="custom-top-k" style="font-weight: 600;">Top-K</label>
                     <input type="number" id="custom-top-k" value="20" min="1" max="200" style="width: 100px;">
-                    <button id="run-custom-btn" class="btn btn-primary">Score Custom Data</button>
+                    <button id="run-custom-btn" class="btn btn-primary">Run on Uploaded Data</button>
                 </div>
                 <p id="custom-error" style="color: #c41e3a; margin-top: 0.75rem; display: none;"></p>
             </div>
@@ -185,6 +196,7 @@
     };
 
     let latestResults = null;
+    let latestRunId = null;
 
     function updateCustomColumns() {
         const datasetId = document.getElementById('dataset_id').value;
@@ -254,7 +266,7 @@
         document.getElementById('history-modal').style.display = 'flex';
     }
 
-    function showResults(results, label) {
+    function showResults(results, label, runId) {
         const metrics = results.performance_metrics;
         const timing = results.timing || { total_runtime_seconds: 0 };
 
@@ -269,6 +281,8 @@
         document.getElementById('current-run-label').textContent = label;
 
         latestResults = results;
+        latestRunId = runId || null;
+        updateShareLink();
         document.getElementById('current-results').style.display = 'block';
     }
 
@@ -281,6 +295,25 @@
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(link.href);
+    }
+
+    function updateShareLink() {
+        const input = document.getElementById('share-link');
+        if (!input) return;
+        if (!latestRunId) {
+            input.value = '';
+            return;
+        }
+        input.value = `${window.location.origin}/results.html?run_id=${latestRunId}`;
+    }
+
+    async function downloadExport(format, filename) {
+        if (!latestRunId) return;
+        const response = await fetch(`/api/export/${latestRunId}?format=${format}`);
+        if (!response.ok) return;
+        const content = await response.text();
+        const mimeType = response.headers.get('Content-Type') || 'application/octet-stream';
+        downloadFile(filename, content, mimeType);
     }
 
     function toCsv(data) {
@@ -330,7 +363,7 @@
             progressFill.style.width = '100%';
 
             if (data.status === 'success') {
-                showResults(data.results, `Run type: demo search (${params.dataset_id})`);
+                showResults(data.results, `Run type: search (${params.dataset_id})`, data.run_id);
                 statusDiv.style.display = 'none';
 
                 // Save to history
@@ -408,13 +441,23 @@
                     rows,
                     top_k: parseInt(document.getElementById('custom-top-k').value, 10) || 20,
                     seed: parseInt(document.getElementById('seed').value, 10) || 42,
-                    verify: document.getElementById('verify').checked
+                    verify: document.getElementById('verify').checked,
+                    save: true
                 })
             });
 
             const data = await response.json();
             if (data.status === 'success') {
-                showResults(data.results, `Run type: custom input (${datasetId})`);
+                showResults(data.results, `Run type: uploaded dataset (${datasetId})`, data.run_id);
+                saveToHistory({
+                    run_id: data.run_id,
+                    timestamp: new Date().toISOString(),
+                    n_candidates: rows.length,
+                    top_k: data.results.performance_metrics.total_top_k,
+                    precision: data.results.performance_metrics.precision_at_k || 0,
+                    recall: data.results.performance_metrics.recall_at_k || 0,
+                    runtime: data.results.timing.total_runtime_seconds || 0
+                });
             } else {
                 errorEl.textContent = data.message || 'Failed to score custom data.';
                 errorEl.style.display = 'block';
@@ -438,14 +481,55 @@
 
     // Download actions
     document.getElementById('download-json').addEventListener('click', function() {
-        if (!latestResults) return;
-        downloadFile('results.json', JSON.stringify(latestResults, null, 2), 'application/json');
+        if (latestRunId) {
+            downloadExport('json', `results_${latestRunId}.json`);
+            return;
+        }
+        if (latestResults) {
+            downloadFile('results.json', JSON.stringify(latestResults, null, 2), 'application/json');
+        }
     });
 
     document.getElementById('download-csv').addEventListener('click', function() {
-        if (!latestResults) return;
-        const csv = toCsv(latestResults.top_results || []);
-        downloadFile('results_top.csv', csv, 'text/csv');
+        if (latestRunId) {
+            downloadExport('csv', `results_${latestRunId}.csv`);
+            return;
+        }
+        if (latestResults) {
+            const csv = toCsv(latestResults.top_results || []);
+            downloadFile('results_top.csv', csv, 'text/csv');
+        }
+    });
+
+    document.getElementById('download-cytools').addEventListener('click', function() {
+        downloadExport('cytools', `cytools_${latestRunId || 'run'}.json`);
+    });
+
+    document.getElementById('download-cymetric').addEventListener('click', function() {
+        downloadExport('cymetric', `cymetric_${latestRunId || 'run'}.json`);
+    });
+
+    document.getElementById('download-sage').addEventListener('click', function() {
+        downloadExport('sage', `candidates_${latestRunId || 'run'}.sage`);
+    });
+
+    document.getElementById('download-mathematica').addEventListener('click', function() {
+        downloadExport('mathematica', `candidates_${latestRunId || 'run'}.wl`);
+    });
+
+    document.getElementById('copy-share').addEventListener('click', async function() {
+        const input = document.getElementById('share-link');
+        if (!input.value) return;
+        try {
+            await navigator.clipboard.writeText(input.value);
+            this.textContent = 'Copied!';
+            setTimeout(() => {
+                this.textContent = 'Copy';
+            }, 1500);
+        } catch (error) {
+            input.select();
+            document.execCommand('copy');
+        }
     });
 
     // Load history on page load

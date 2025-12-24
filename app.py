@@ -313,6 +313,19 @@ def candidate_detail(candidate_id):
 
             return jsonify({'status': 'success', 'candidate': detail})
 
+    # Fallback to featured candidates for curated gallery views
+    if os.path.exists(FEATURED_PATH):
+        with open(FEATURED_PATH, 'r') as f:
+            featured = json.load(f)
+        for candidate in featured.get('candidates', []):
+            if candidate.get('candidate_id') == candidate_id:
+                detail = candidate.copy()
+                detail.update({
+                    "invariants": [],
+                    "summary": f"Target: {detail.get('summary', 'Featured candidate')}"
+                })
+                return jsonify({'status': 'success', 'candidate': detail})
+
     return jsonify({'status': 'error', 'message': 'Candidate not found'}), 404
 
 

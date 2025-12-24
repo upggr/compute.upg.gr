@@ -144,6 +144,35 @@
         };
     }
 
+    function applyVertexColors(geometry, seed) {
+        const rand = (() => {
+            let a = seed + 91;
+            return () => {
+                let t = a += 0x6D2B79F5;
+                t = Math.imul(t ^ (t >>> 15), t | 1);
+                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
+        })();
+        const color = new THREE.Color();
+        const position = geometry.attributes.position;
+        const colors = [];
+        const baseHue = rand();
+
+        for (let i = 0; i < position.count; i++) {
+            const x = position.getX(i);
+            const y = position.getY(i);
+            const z = position.getZ(i);
+            const hue = (baseHue + (Math.atan2(y, x) / (Math.PI * 2)) + 0.5) % 1;
+            const light = 0.45 + 0.2 * Math.sin(z * 0.9);
+            color.setHSL(hue, 0.7, light);
+            colors.push(color.r, color.g, color.b);
+        }
+
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        return geometry;
+    }
+
     function createParametricGeometry(seed) {
         const rand = (() => {
             let a = seed + 777;
@@ -169,7 +198,8 @@
         };
 
         if (typeof THREE.ParametricGeometry !== 'undefined') {
-            return new THREE.ParametricGeometry(surface, 200, 100);
+            const geometry = new THREE.ParametricGeometry(surface, 200, 100);
+            return applyVertexColors(geometry, seed);
         }
         return null;
     }
@@ -197,17 +227,30 @@
         rimLight.position.set(-5, -3, 4);
         scene.add(rimLight);
 
+        const seedRand = (() => {
+            let a = seed + 31;
+            return () => {
+                let t = a += 0x6D2B79F5;
+                t = Math.imul(t ^ (t >>> 15), t | 1);
+                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
+        })();
         const geometry = createParametricGeometry(seed) ||
-            new THREE.TorusKnotGeometry(1.7, 0.55, 200, 40, 2, 3);
+            applyVertexColors(new THREE.TorusKnotGeometry(1.7, 0.55, 200, 40, 2, 3), seed);
+        const meshColor = new THREE.Color().setHSL(seedRand(), 0.65, 0.52);
         const material = new THREE.MeshStandardMaterial({
-            color: colors.primary,
+            color: meshColor,
+            vertexColors: true,
             metalness: 0.7,
             roughness: 0.22,
             emissive: new THREE.Color(colors.secondary),
             emissiveIntensity: 0.25
         });
         const mesh = new THREE.Mesh(geometry, material);
-        mesh.rotation.set(0.4, 0.3, 0);
+        const scale = 0.9 + seedRand() * 0.25;
+        mesh.scale.set(scale, scale, scale);
+        mesh.rotation.set(seedRand() * Math.PI, seedRand() * Math.PI, seedRand() * Math.PI);
         scene.add(mesh);
 
         let t = 0;

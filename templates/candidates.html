@@ -424,6 +424,27 @@
         draw();
     }
 
+    function applyVertexColors(geometry, seed) {
+        const rand = mulberry32(seed + 91);
+        const color = new THREE.Color();
+        const position = geometry.attributes.position;
+        const colors = [];
+        const baseHue = rand();
+
+        for (let i = 0; i < position.count; i++) {
+            const x = position.getX(i);
+            const y = position.getY(i);
+            const z = position.getZ(i);
+            const hue = (baseHue + (Math.atan2(y, x) / (Math.PI * 2)) + 0.5) % 1;
+            const light = 0.45 + 0.2 * Math.sin(z * 0.9);
+            color.setHSL(hue, 0.7, light);
+            colors.push(color.r, color.g, color.b);
+        }
+
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        return geometry;
+    }
+
     function createParametricGeometry(seed) {
         const rand = mulberry32(seed + 777);
         const a = 1.2 + rand() * 0.4;
@@ -443,7 +464,8 @@
         };
 
         if (typeof THREE.ParametricGeometry !== 'undefined') {
-            return new THREE.ParametricGeometry(surface, 140, 80);
+            const geometry = new THREE.ParametricGeometry(surface, 140, 80);
+            return applyVertexColors(geometry, seed);
         }
         return null;
     }
@@ -482,10 +504,15 @@
         fillLight.position.set(-4, -2, 4);
         webglScene.add(fillLight);
 
-        const geometry = createParametricGeometry(detail.viz_seed || 42) ||
-            new THREE.TorusKnotGeometry(1.4, 0.48, 160, 32, 2, 3);
+        const seed = detail.viz_seed || 42;
+        const seedRand = mulberry32(seed + 31);
+        const geometry = createParametricGeometry(seed) ||
+            applyVertexColors(new THREE.TorusKnotGeometry(1.4, 0.48, 160, 32, 2, 3), seed);
+        const hue = seedRand();
+        const meshColor = new THREE.Color().setHSL(hue, 0.65, 0.52);
         const material = new THREE.MeshStandardMaterial({
-            color: colors.primary,
+            color: meshColor,
+            vertexColors: true,
             metalness: 0.6,
             roughness: 0.25,
             emissive: new THREE.Color(colors.secondary),
@@ -493,6 +520,9 @@
         });
 
         webglMesh = new THREE.Mesh(geometry, material);
+        const scale = 0.9 + seedRand() * 0.25;
+        webglMesh.scale.set(scale, scale, scale);
+        webglMesh.rotation.set(seedRand() * Math.PI, seedRand() * Math.PI, seedRand() * Math.PI);
         webglScene.add(webglMesh);
 
         const animate = () => {

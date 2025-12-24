@@ -37,6 +37,18 @@
                     <span>Seed</span>
                     <strong id="render-seed">-</strong>
                 </div>
+                <div class="detail-item">
+                    <span>h11</span>
+                    <strong id="render-h11">-</strong>
+                </div>
+                <div class="detail-item">
+                    <span>h21</span>
+                    <strong id="render-h21">-</strong>
+                </div>
+                <div class="detail-item">
+                    <span>χ</span>
+                    <strong id="render-chi">-</strong>
+                </div>
             </div>
         </section>
 
@@ -75,15 +87,18 @@
     <script>
     const canvas = document.getElementById('render-canvas');
     const subtitle = document.getElementById('render-subtitle');
-    const params = new URLSearchParams(window.location.search);
-    const seedParam = parseInt(params.get('seed') || '4242', 10);
-    const candidateId = params.get('candidate_id');
-    const datasetId = params.get('dataset_id');
+    const urlParams = new URLSearchParams(window.location.search);
+    const seedParam = parseInt(urlParams.get('seed') || '4242', 10);
+    const candidateId = urlParams.get('candidate_id');
+    const datasetId = urlParams.get('dataset_id');
 
     subtitle.textContent = candidateId ? `${candidateId} (${datasetId || 'unknown dataset'})` : 'Interactive render preview.';
     document.getElementById('render-candidate').textContent = candidateId || 'Sample candidate';
     document.getElementById('render-dataset').textContent = datasetId || 'Not specified';
     document.getElementById('render-seed').textContent = seedParam;
+    document.getElementById('render-h11').textContent = urlParams.get('h11') || 'N/A';
+    document.getElementById('render-h21').textContent = urlParams.get('h21') || 'N/A';
+    document.getElementById('render-chi').textContent = urlParams.get('chi') || 'N/A';
 
     document.getElementById('render-analysis').addEventListener('click', async () => {
         const status = document.getElementById('render-analysis-status');
@@ -173,7 +188,7 @@
         return geometry;
     }
 
-    function createParametricGeometry(seed) {
+    function createParametricGeometry(seed, params) {
         const rand = (() => {
             let a = seed + 777;
             return () => {
@@ -183,17 +198,26 @@
                 return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
             };
         })();
-        const a = 1.2 + rand() * 0.4;
-        const b = 0.7 + rand() * 0.3;
-        const c = 0.6 + rand() * 0.3;
+        const a = params.a ?? (1.1 + rand() * 0.6);
+        const b = params.b ?? (0.5 + rand() * 0.6);
+        const c = params.c ?? (0.4 + rand() * 0.6);
+        const f1 = params.f1 ?? (2 + Math.floor(rand() * 4));
+        const f2 = params.f2 ?? (2 + Math.floor(rand() * 5));
+        const f3 = params.f3 ?? (3 + Math.floor(rand() * 4));
+        const f4 = params.f4 ?? (2 + Math.floor(rand() * 6));
+        const f5 = params.f5 ?? (3 + Math.floor(rand() * 5));
+        const warp = params.warp ?? (0.2 + rand() * 0.4);
+        const twist = params.twist ?? (0.15 + rand() * 0.35);
 
         const surface = (u, v, target) => {
             const U = u * Math.PI * 2;
             const V = v * Math.PI * 2;
-            const r = 1 + 0.35 * Math.cos(3 * U) * Math.sin(2 * V);
-            const x = (a * Math.cos(U) + b * Math.cos(2 * U)) * r;
-            const y = (a * Math.sin(U) - b * Math.sin(2 * U)) * r;
-            const z = c * Math.sin(3 * V) + 0.25 * Math.sin(U + V);
+            const r = 1
+                + warp * Math.cos(f1 * U) * Math.sin(f2 * V)
+                + 0.18 * Math.sin(f3 * (U + V));
+            const x = (a * Math.cos(U) + b * Math.cos(f1 * U)) * r;
+            const y = (a * Math.sin(U) - b * Math.sin(f2 * U)) * r;
+            const z = c * Math.sin(f3 * V) + twist * Math.sin(f4 * U - f5 * V);
             target.set(x, y, z);
         };
 
@@ -236,7 +260,24 @@
                 return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
             };
         })();
-        const geometry = createParametricGeometry(seed) ||
+        const shapeParams = (() => {
+            const h11 = Number(urlParams.get('h11') || 10);
+            const h21 = Number(urlParams.get('h21') || 12);
+            const chi = Number(urlParams.get('chi') || 0);
+            return {
+                a: 1.0 + (h11 % 7) * 0.06,
+                b: 0.5 + (h21 % 9) * 0.05,
+                c: 0.35 + (Math.abs(chi) % 11) * 0.03,
+                f1: 2 + (h11 % 5),
+                f2: 2 + (h21 % 6),
+                f3: 3 + (Math.abs(chi) % 4),
+                f4: 2 + ((h11 + h21) % 6),
+                f5: 3 + ((h11 + Math.abs(chi)) % 5),
+                warp: 0.22 + ((h11 % 10) / 50),
+                twist: 0.18 + ((h21 % 10) / 50)
+            };
+        })();
+        const geometry = createParametricGeometry(seed, shapeParams) ||
             applyVertexColors(new THREE.TorusKnotGeometry(1.7, 0.55, 200, 40, 2, 3), seed);
         const meshColor = new THREE.Color().setHSL(seedRand(), 0.65, 0.52);
         const material = new THREE.MeshStandardMaterial({

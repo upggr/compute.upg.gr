@@ -445,20 +445,29 @@
         return geometry;
     }
 
-    function createParametricGeometry(seed) {
+    function createParametricGeometry(seed, params) {
         const rand = mulberry32(seed + 777);
-        const a = 1.2 + rand() * 0.4;
-        const b = 0.7 + rand() * 0.3;
-        const c = 0.6 + rand() * 0.3;
+        const a = params.a ?? (1.1 + rand() * 0.6);
+        const b = params.b ?? (0.5 + rand() * 0.6);
+        const c = params.c ?? (0.4 + rand() * 0.6);
+        const f1 = params.f1 ?? (2 + Math.floor(rand() * 4));
+        const f2 = params.f2 ?? (2 + Math.floor(rand() * 5));
+        const f3 = params.f3 ?? (3 + Math.floor(rand() * 4));
+        const f4 = params.f4 ?? (2 + Math.floor(rand() * 6));
+        const f5 = params.f5 ?? (3 + Math.floor(rand() * 5));
+        const warp = params.warp ?? (0.2 + rand() * 0.4);
+        const twist = params.twist ?? (0.15 + rand() * 0.35);
 
         const surface = (u, v, target) => {
             const U = u * Math.PI * 2;
             const V = v * Math.PI * 2;
 
-            const r = 1 + 0.35 * Math.cos(3 * U) * Math.sin(2 * V);
-            const x = (a * Math.cos(U) + b * Math.cos(2 * U)) * r;
-            const y = (a * Math.sin(U) - b * Math.sin(2 * U)) * r;
-            const z = c * Math.sin(3 * V) + 0.25 * Math.sin(U + V);
+            const r = 1
+                + warp * Math.cos(f1 * U) * Math.sin(f2 * V)
+                + 0.18 * Math.sin(f3 * (U + V));
+            const x = (a * Math.cos(U) + b * Math.cos(f1 * U)) * r;
+            const y = (a * Math.sin(U) - b * Math.sin(f2 * U)) * r;
+            const z = c * Math.sin(f3 * V) + twist * Math.sin(f4 * U - f5 * V);
 
             target.set(x, y, z);
         };
@@ -506,7 +515,26 @@
 
         const seed = detail.viz_seed || 42;
         const seedRand = mulberry32(seed + 31);
-        const geometry = createParametricGeometry(seed) ||
+        const params = (() => {
+            const features = detail.features || [];
+            const featureMap = Object.fromEntries(features);
+            const h11 = Number(featureMap.h11 ?? featureMap['h11'] ?? 10);
+            const h21 = Number(featureMap.h21 ?? featureMap['h21'] ?? 12);
+            const chi = Number(featureMap['χ'] ?? 0);
+            return {
+                a: 1.0 + (h11 % 7) * 0.06,
+                b: 0.5 + (h21 % 9) * 0.05,
+                c: 0.35 + (Math.abs(chi) % 11) * 0.03,
+                f1: 2 + (h11 % 5),
+                f2: 2 + (h21 % 6),
+                f3: 3 + (Math.abs(chi) % 4),
+                f4: 2 + ((h11 + h21) % 6),
+                f5: 3 + ((h11 + Math.abs(chi)) % 5),
+                warp: 0.22 + ((h11 % 10) / 50),
+                twist: 0.18 + ((h21 % 10) / 50)
+            };
+        })();
+        const geometry = createParametricGeometry(seed, params) ||
             applyVertexColors(new THREE.TorusKnotGeometry(1.4, 0.48, 160, 32, 2, 3), seed);
         const hue = seedRand();
         const meshColor = new THREE.Color().setHSL(hue, 0.65, 0.52);
@@ -556,7 +584,12 @@
         document.getElementById('analysis-results').innerHTML = '';
         document.getElementById('analysis-download').style.display = 'none';
 
-        const renderUrl = `${window.location.origin}/render.html?candidate_id=${candidate.candidate_id}&dataset_id=${candidate.dataset_id}&seed=${candidate.viz_seed}`;
+        const featureMap = Object.fromEntries(candidate.features || []);
+        const h11 = featureMap.h11 ?? '';
+        const h21 = featureMap.h21 ?? '';
+        const chi = featureMap['χ'] ?? '';
+        const renderUrl = `${window.location.origin}/render.html?candidate_id=${candidate.candidate_id}` +
+            `&dataset_id=${candidate.dataset_id}&seed=${candidate.viz_seed}&h11=${h11}&h21=${h21}&chi=${chi}`;
         const shareLink = document.getElementById('share-link');
         if (shareLink) {
             shareLink.href = renderUrl;

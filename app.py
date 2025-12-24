@@ -15,6 +15,8 @@ app = Flask(__name__)
 # Configure upload folder for results
 RESULTS_DIR = 'static/data'
 os.makedirs(RESULTS_DIR, exist_ok=True)
+ANALYSIS_DIR = os.path.join('static', 'data', 'analysis')
+os.makedirs(ANALYSIS_DIR, exist_ok=True)
 
 CANDIDATE_CACHE = {}
 FEATURED_PATH = os.path.join('static', 'data', 'featured_candidates.json')
@@ -402,6 +404,60 @@ def _bundle_candidates(candidates, metadata):
     return bundle
 
 
+def _analysis_path(candidate_id):
+    safe_id = candidate_id.replace('/', '_')
+    return os.path.join(ANALYSIS_DIR, f'analysis_{safe_id}.json')
+
+
+def _analyze_candidate(candidate):
+    features = candidate.get("features", [])
+    feature_map = {label: value for label, value in features if isinstance(label, str)}
+    score = candidate.get("score")
+    verified = candidate.get("verified_target")
+    dataset_id = candidate.get("dataset_id")
+
+    h11 = feature_map.get("h11")
+    h21 = feature_map.get("h21")
+    h31 = feature_map.get("h31")
+    euler = candidate.get("raw", {}).get("euler_char", feature_map.get("χ"))
+
+    def ratio(a, b):
+        if a is None or b in (None, 0):
+            return None
+        return round(float(a) / float(b), 4)
+
+    derived = {
+        "h11_h21_ratio": ratio(h11, h21),
+        "h21_h11_ratio": ratio(h21, h11),
+        "h31_h11_ratio": ratio(h31, h11),
+        "euler_abs": abs(euler) if euler is not None else None
+    }
+
+    # Simple heuristic indicators (placeholders for deeper geometry)
+    complexity_index = None
+    if h11 is not None and h21 is not None:
+        complexity_index = round((h11 + h21) / 2, 3)
+    stability_score = None
+    if verified is not None:
+        stability_score = 0.85 if verified else 0.45
+
+    summary = "Derived ratios and heuristic indicators computed for candidate."
+
+    analysis = {
+        "candidate_id": candidate.get("candidate_id"),
+        "dataset_id": dataset_id,
+        "score": score,
+        "verified_target": verified,
+        "features": feature_map,
+        "derived_metrics": derived,
+        "complexity_index": complexity_index,
+        "stability_score": stability_score,
+        "summary": summary,
+        "generated_at": datetime.utcnow().isoformat() + "Z"
+    }
+    return analysis
+
+
 @app.route('/api/export/<run_id>')
 def export_results(run_id):
     export_format = request.args.get('format', 'json').lower()
@@ -495,6 +551,79 @@ def export_gallery():
 
     bundle = _bundle_candidates(candidates, metadata)
     return send_file(bundle, mimetype='application/zip', as_attachment=True, download_name='gallery_selection.zip')
+
+
+@app.route('/api/analyze-candidate', methods=['POST'])
+def analyze_candidate():
+    params = request.get_json() or {}
+    candidate_id = params.get('candidate_id')
+    source = params.get('source', 'featured')
+    dataset_id = params.get('dataset_id')
+    seed = int(params.get('seed', 42))
+    top_n = int(params.get('top_n', 12))
+
+    if not candidate_id:
+        return jsonify({'error': 'candidate_id required'}), 400
+
+    candidate = None
+    if source == 'featured':
+        if not os.path.exists(FEATURED_PATH):
+            return jsonify({'error': 'Featured candidates not available'}), 404
+        with open(FEATURED_PATH, 'r') as f:
+            payload = json.load(f)
+        candidate = next((c for c in payload.get('candidates', []) if c.get('candidate_id') == candidate_id), None)
+    elif source == 'live':
+        if not dataset_id:
+            return jsonify({'error': 'dataset_id required for live analysis'}), 400
+        payload = _build_candidate_cards(dataset_id=dataset_id, seed=seed, top_n=top_n, n_candidates=5000)
+        candidate = next((c for c in payload.get('candidates', []) if c.get('candidate_id') == candidate_id), None)
+    else:
+        return jsonify({'error': 'Unsupported source'}), 400
+
+    if not candidate:
+        return jsonify({'error': 'Candidate not found'}), 404
+
+    analysis = _analyze_candidate(candidate)
+    analysis_file = _analysis_path(candidate_id)
+    with open(analysis_file, 'w') as f:
+        json.dump(analysis, f, indent=2)
+
+    return jsonify({'status': 'success', 'analysis': analysis})
+
+
+@app.route('/api/analysis/<candidate_id>')
+def get_analysis(candidate_id):
+    analysis_file = _analysis_path(candidate_id)
+    if not os.path.exists(analysis_file):
+        return jsonify({'error': 'Analysis not found'}), 404
+    with open(analysis_file, 'r') as f:
+        analysis = json.load(f)
+    return jsonify({'status': 'success', 'analysis': analysis})
+
+
+@app.route('/api/analysis/<candidate_id>/bundle')
+def download_analysis_bundle(candidate_id):
+    analysis_file = _analysis_path(candidate_id)
+    if not os.path.exists(analysis_file):
+        return jsonify({'error': 'Analysis not found'}), 404
+
+    with open(analysis_file, 'r') as f:
+        analysis = json.load(f)
+
+    candidates = [analysis]
+    metadata = {
+        "type": "candidate-analysis",
+        "candidate_id": candidate_id,
+        "generated_at": analysis.get("generated_at")
+    }
+    bundle = io.BytesIO()
+    with zipfile.ZipFile(bundle, 'w', zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr('analysis.json', json.dumps(analysis, indent=2))
+        archive.writestr('analysis.csv', _candidates_to_csv(candidates))
+        archive.writestr('summary.md', f"# Analysis {candidate_id}\n\n{analysis.get('summary')}\n")
+        archive.writestr('metadata.json', json.dumps(metadata, indent=2))
+    bundle.seek(0)
+    return send_file(bundle, mimetype='application/zip', as_attachment=True, download_name=f'analysis_{candidate_id}.zip')
 
 
 @app.route('/api/score-custom', methods=['POST'])

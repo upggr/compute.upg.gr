@@ -105,6 +105,15 @@
                         <h3>Topological Profile</h3>
                         <div id="modal-details-content" class="details-grid"></div>
                     </div>
+                    <div class="analysis-panel">
+                        <div class="analysis-header">
+                            <h3>On-Demand Analysis</h3>
+                            <button id="run-analysis" class="btn btn-primary">Run Analysis</button>
+                        </div>
+                        <p id="analysis-status" class="note">Click “Run Analysis” to compute geometric indicators and export a report.</p>
+                        <div id="analysis-results" class="details-grid"></div>
+                        <a id="analysis-download" class="btn btn-secondary" style="display: none;">Download Analysis Bundle</a>
+                    </div>
                     <div class="share-row">
                         <span class="share-label">Share</span>
                         <a id="share-link" class="share-pill" target="_blank" rel="noopener">Open full renderer</a>
@@ -513,6 +522,9 @@
         renderFieldCanvas(candidate);
         renderWebGL(candidate);
         modalDetails.innerHTML = '';
+        document.getElementById('analysis-status').textContent = '';
+        document.getElementById('analysis-results').innerHTML = '';
+        document.getElementById('analysis-download').style.display = 'none';
 
         const renderUrl = `${window.location.origin}/render.html?candidate_id=${candidate.candidate_id}&dataset_id=${candidate.dataset_id}&seed=${candidate.viz_seed}`;
         const shareLink = document.getElementById('share-link');
@@ -534,6 +546,52 @@
                 window.open(shareUrl, '_blank', 'noopener,noreferrer');
             };
         });
+
+        document.getElementById('run-analysis').onclick = async () => {
+            const status = document.getElementById('analysis-status');
+            const results = document.getElementById('analysis-results');
+            const download = document.getElementById('analysis-download');
+            status.textContent = 'Running analysis...';
+            results.innerHTML = '';
+            download.style.display = 'none';
+
+            const response = await fetch('/api/analyze-candidate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    candidate_id: candidate.candidate_id,
+                    dataset_id: candidate.dataset_id,
+                    seed: candidate.viz_seed,
+                    top_n: document.getElementById('gallery-top-n').value,
+                    source: document.getElementById('gallery-view').value
+                })
+            });
+
+            const data = await response.json();
+            if (data.status !== 'success') {
+                status.textContent = data.error || 'Analysis failed.';
+                return;
+            }
+
+            const analysis = data.analysis;
+            status.textContent = analysis.summary || 'Analysis complete.';
+            const blocks = [
+                ['Complexity index', analysis.complexity_index],
+                ['Stability score', analysis.stability_score],
+                ['h11/h21 ratio', analysis.derived_metrics?.h11_h21_ratio],
+                ['h21/h11 ratio', analysis.derived_metrics?.h21_h11_ratio],
+                ['|Euler|', analysis.derived_metrics?.euler_abs]
+            ];
+            results.innerHTML = blocks.map(([label, value]) => `
+                <div class="detail-item">
+                    <span>${label}</span>
+                    <strong>${value !== null && value !== undefined ? value : 'N/A'}</strong>
+                </div>
+            `).join('');
+
+            download.href = `/api/analysis/${candidate.candidate_id}/bundle`;
+            download.style.display = 'inline-block';
+        };
 
         fetch(`/api/candidate/${candidate.candidate_id}?dataset_id=${candidate.dataset_id}`)
             .then(response => response.json())

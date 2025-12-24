@@ -44,6 +44,15 @@
             <div class="renderer-shell">
                 <canvas id="render-canvas" class="renderer-canvas"></canvas>
             </div>
+            <div class="analysis-panel">
+                <div class="analysis-header">
+                    <h2>On-Demand Analysis</h2>
+                    <button id="render-analysis" class="btn btn-primary">Run Analysis</button>
+                </div>
+                <p id="render-analysis-status" class="note">Click “Run Analysis” to compute geometric indicators and export a report.</p>
+                <div id="render-analysis-results" class="details-grid"></div>
+                <a id="render-analysis-download" class="btn btn-secondary" style="display: none;">Download Analysis Bundle</a>
+            </div>
             <div class="share-row">
                 <span class="share-label">Share</span>
                 <button class="share-icon" data-share="facebook" aria-label="Share on Facebook">
@@ -75,6 +84,56 @@
     document.getElementById('render-candidate').textContent = candidateId || 'Sample candidate';
     document.getElementById('render-dataset').textContent = datasetId || 'Not specified';
     document.getElementById('render-seed').textContent = seedParam;
+
+    document.getElementById('render-analysis').addEventListener('click', async () => {
+        const status = document.getElementById('render-analysis-status');
+        const results = document.getElementById('render-analysis-results');
+        const download = document.getElementById('render-analysis-download');
+        status.textContent = 'Running analysis...';
+        results.innerHTML = '';
+        download.style.display = 'none';
+
+        if (!candidateId) {
+            status.textContent = 'Candidate not specified.';
+            return;
+        }
+
+        const response = await fetch('/api/analyze-candidate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                candidate_id: candidateId,
+                dataset_id: datasetId,
+                seed: seedParam,
+                source: 'featured'
+            })
+        });
+
+        const data = await response.json();
+        if (data.status !== 'success') {
+            status.textContent = data.error || 'Analysis failed.';
+            return;
+        }
+
+        const analysis = data.analysis;
+        status.textContent = analysis.summary || 'Analysis complete.';
+        const blocks = [
+            ['Complexity index', analysis.complexity_index],
+            ['Stability score', analysis.stability_score],
+            ['h11/h21 ratio', analysis.derived_metrics?.h11_h21_ratio],
+            ['h21/h11 ratio', analysis.derived_metrics?.h21_h11_ratio],
+            ['|Euler|', analysis.derived_metrics?.euler_abs]
+        ];
+        results.innerHTML = blocks.map(([label, value]) => `
+            <div class="detail-item">
+                <span>${label}</span>
+                <strong>${value !== null && value !== undefined ? value : 'N/A'}</strong>
+            </div>
+        `).join('');
+
+        download.href = `/api/analysis/${candidateId}/bundle`;
+        download.style.display = 'inline-block';
+    });
 
     function getThemeColors() {
         const styles = getComputedStyle(document.documentElement);

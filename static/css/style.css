@@ -901,6 +901,23 @@ html[data-theme="dark"] .compat-pill {
     border-radius: 16px;
 }
 
+/* Analysis panel */
+.analysis-panel {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    border-radius: 12px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.analysis-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
 .disclaimer {
     padding: var(--spacing-md);
     background-color: #fff9e6;

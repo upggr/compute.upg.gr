@@ -38,6 +38,19 @@ This is applied computation and AI tooling designed to accelerate discovery in t
 - **Use Case:** Yukawa coupling structures for realistic model building
 - **Source:** Based on hep-th/0507229 and related work
 
+### 4. Information Density Ranking
+- **Total:** 474 million (same underlying KS dataset)
+- **Target:** High information density manifolds (top 10% by composite score)
+- **Use Case:** Finding geometries with efficient topological encoding that may correlate with phenomenological viability and vacuum stability
+- **Metrics:**
+  - **Hodge Entropy**: Shannon entropy over normalized Hodge numbers
+  - **Topological Efficiency**: |χ| / (h¹¹ + h²¹) ratio
+  - **Moduli Compactness**: Inverse of total moduli count
+  - **Hodge Balance**: Symmetry of the Hodge diamond
+  - **Flux Density**: Bousso-Polchinski inspired flux vacua count using tadpole constraint (χ/24)
+  - **Vacuum Stability**: KKLT/LVS inspired stability likelihood (tadpole headroom + moduli balance)
+- **Customizable**: Tune component weights via `/api/info-density/weights` endpoint
+
 ## Key Features
 
 ### Universal ML-Guided Search
@@ -81,7 +94,7 @@ for ds in datasets:
 
 # Run ML-guided search on Kreuzer-Skarke database
 results = run_real_search(
-    dataset_id='kreuzer-skarke',  # or 'cy5-folds', 'heterotic'
+    dataset_id='kreuzer-skarke',  # or 'cy5-folds', 'heterotic', 'info-density'
     top_k=100,                    # Return top 100 candidates
     seed=42,                      # Random seed for reproducibility
     n_candidates=5000,            # Dataset size
@@ -108,7 +121,7 @@ gunicorn --bind 0.0.0.0:5102 --workers 4 app:app
 Visit `http://localhost:5102` to access the web interface with:
 - **Interactive Demo**: Choose dataset, customize parameters, view live results
 - **Run History**: All searches saved with localStorage persistence
-- **Dataset Selector**: Switch between Kreuzer-Skarke, CY5-Folds, and Heterotic datasets
+- **Dataset Selector**: Switch between Kreuzer-Skarke, CY5-Folds, Heterotic, and Information Density datasets
 
 ## How It Works
 
@@ -124,6 +137,7 @@ Extract topological and geometric features specific to each dataset:
 - **Kreuzer-Skarke**: h¹¹, h²¹, χ, Chern classes, triple intersections
 - **CY5-Folds**: h¹¹, h²¹, h³¹, Euler characteristic, Hodge sums
 - **Heterotic**: h¹¹, h²¹, hodge balance, number of generations
+- **Info-Density**: hodge entropy, topological efficiency, moduli compactness, vacuum proxy
 
 ### 3. ML Model Training
 - Random Forest classifier (100 estimators)
@@ -217,6 +231,55 @@ Retrieve results from a specific run
 
 ### `GET /api/sample-results?dataset_id=kreuzer-skarke`
 Get sample results for display (supports dataset_id parameter)
+
+### `GET /api/info-density/weights`
+Get current weights for the info-density composite score
+
+**Response:**
+```json
+{
+  "status": "success",
+  "weights": {
+    "entropy": 0.20,
+    "efficiency": 0.20,
+    "compactness": 0.15,
+    "balance": 0.10,
+    "flux_density": 0.20,
+    "vacuum_stability": 0.15
+  }
+}
+```
+
+### `POST /api/info-density/weights`
+Set custom weights for info-density ranking (partial updates supported)
+
+**Request:**
+```json
+{
+  "vacuum_stability": 0.40,
+  "flux_density": 0.30
+}
+```
+
+### `POST /api/info-density/weights/reset`
+Reset weights to defaults
+
+### `POST /api/export-physics`
+Export top-k candidates with comprehensive physics data for external analysis
+
+**Request:**
+```json
+{
+  "dataset_id": "info-density",
+  "top_k": 100,
+  "seed": 42,
+  "format": "json"
+}
+```
+
+Supported formats: `json`, `csv`, `numpy`
+
+Returns all physics invariants including tadpole charge (χ/24), flux density, vacuum stability - ready for your own vacuum energy calculations or flux analysis
 
 ## Deployment
 

@@ -8,7 +8,7 @@ import hashlib
 from datetime import datetime
 from cy_search import run_search, get_sample_results  # Demo implementation
 from cy_search_real import run_real_search, list_available_datasets, CYSearchEngine  # Real implementation
-from datasets_registry import DatasetRegistry
+from datasets_registry import DatasetRegistry, get_info_density_dataset
 
 app = Flask(__name__)
 
@@ -231,6 +231,12 @@ def _build_candidate_cards(dataset_id, seed=42, top_n=12, n_candidates=5000):
                 ("h21", result.get("h21")),
                 ("balance", round(result.get("hodge_balance", 0), 3))
             ]
+        elif dataset_id == 'info-density':
+            feature_pairs = [
+                ("h11", result.get("h11")),
+                ("h21", result.get("h21")),
+                ("info_ρ", round(result.get("info_density", 0), 3))
+            ]
         else:
             feature_pairs = [
                 ("h11", result.get("h11")),
@@ -305,6 +311,18 @@ def candidate_detail(candidate_id):
                 invariants.append({"label": "Hodge balance", "value": round(raw.get("hodge_balance", 0), 3)})
             if "n_generations" in raw:
                 invariants.append({"label": "Generations", "value": raw.get("n_generations")})
+            if "info_density" in raw:
+                invariants.append({"label": "Info density", "value": round(raw.get("info_density", 0), 4)})
+            if "hodge_entropy" in raw:
+                invariants.append({"label": "Hodge entropy", "value": round(raw.get("hodge_entropy", 0), 4)})
+            if "topo_efficiency" in raw:
+                invariants.append({"label": "Topo efficiency", "value": round(raw.get("topo_efficiency", 0), 4)})
+            if "flux_density" in raw:
+                invariants.append({"label": "Flux density", "value": round(raw.get("flux_density", 0), 4)})
+            if "vacuum_stability" in raw:
+                invariants.append({"label": "Vacuum stability", "value": round(raw.get("vacuum_stability", 0), 4)})
+            if "tadpole_charge" in raw:
+                invariants.append({"label": "Tadpole (χ/24)", "value": round(raw.get("tadpole_charge", 0), 2)})
 
             detail.update({
                 "invariants": invariants,
@@ -637,6 +655,231 @@ def download_analysis_bundle(candidate_id):
         archive.writestr('metadata.json', json.dumps(metadata, indent=2))
     bundle.seek(0)
     return send_file(bundle, mimetype='application/zip', as_attachment=True, download_name=f'analysis_{candidate_id}.zip')
+
+
+@app.route('/api/info-density/weights', methods=['GET', 'POST'])
+def info_density_weights():
+    """
+    Get or set custom weights for the info-density composite score.
+
+    GET: Returns current weights
+    POST: Set new weights (partial update supported)
+
+    Accepts JSON payload for POST:
+    {
+        "entropy": 0.20,
+        "efficiency": 0.20,
+        "compactness": 0.15,
+        "balance": 0.10,
+        "flux_density": 0.20,
+        "vacuum_stability": 0.15
+    }
+
+    All weights should sum to 1.0 for normalized scoring.
+    """
+    dataset = get_info_density_dataset()
+
+    if request.method == 'GET':
+        return jsonify({
+            'status': 'success',
+            'weights': dataset.weights,
+            'default_weights': dataset.DEFAULT_WEIGHTS
+        })
+
+    # POST - update weights
+    try:
+        new_weights = request.get_json() or {}
+
+        # Validate weight keys
+        valid_keys = set(dataset.DEFAULT_WEIGHTS.keys())
+        invalid_keys = set(new_weights.keys()) - valid_keys
+        if invalid_keys:
+            return jsonify({
+                'status': 'error',
+                'message': f'Invalid weight keys: {invalid_keys}. Valid keys: {valid_keys}'
+            }), 400
+
+        # Validate weight values
+        for key, value in new_weights.items():
+            if not isinstance(value, (int, float)) or value < 0:
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Weight "{key}" must be a non-negative number'
+                }), 400
+
+        # Update weights
+        dataset.set_weights(new_weights)
+
+        # Check if weights sum to ~1.0 (warn but don't error)
+        total = sum(dataset.weights.values())
+        warning = None
+        if abs(total - 1.0) > 0.01:
+            warning = f'Weights sum to {total:.3f}, not 1.0. Results may not be normalized.'
+
+        response = {
+            'status': 'success',
+            'message': 'Weights updated',
+            'weights': dataset.weights
+        }
+        if warning:
+            response['warning'] = warning
+
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/info-density/weights/reset', methods=['POST'])
+def reset_info_density_weights():
+    """Reset info-density weights to defaults"""
+    dataset = get_info_density_dataset()
+    dataset.weights = dataset.DEFAULT_WEIGHTS.copy()
+    return jsonify({
+        'status': 'success',
+        'message': 'Weights reset to defaults',
+        'weights': dataset.weights
+    })
+
+
+@app.route('/api/export-physics', methods=['POST'])
+def export_physics_data():
+    """
+    Export top-k candidates with all physics data for external analysis.
+
+    Designed for researchers who want to run their own computations on
+    the ranked candidates (vacuum energy calculations, flux analysis, etc.)
+
+    Accepts JSON payload:
+    {
+        "dataset_id": "info-density",
+        "top_k": 100,
+        "seed": 42,
+        "n_candidates": 5000,
+        "format": "json"  // or "csv", "numpy"
+    }
+
+    Returns comprehensive physics data including:
+    - All Hodge numbers and derived invariants
+    - Tadpole charge (χ/24) for D3 brane counting
+    - Flux density and vacuum stability metrics
+    - ML ranking score
+    """
+    try:
+        params = request.get_json() or {}
+        dataset_id = params.get('dataset_id', 'info-density')
+        top_k = int(params.get('top_k', 100))
+        seed = int(params.get('seed', 42))
+        n_candidates = int(params.get('n_candidates', 5000))
+        export_format = params.get('format', 'json').lower()
+
+        # Run search
+        results = run_real_search(
+            top_k=top_k,
+            seed=seed,
+            n_candidates=n_candidates,
+            verify=True,
+            dataset_id=dataset_id
+        )
+
+        # Build physics export payload
+        candidates_data = []
+        for r in results['top_results']:
+            candidate = {
+                'rank': r.get('rank'),
+                'h11': r.get('h11'),
+                'h21': r.get('h21'),
+                'euler_characteristic': r.get('euler_char'),
+                'ml_score': r.get('score'),
+                'verified_target': r.get('verified_target')
+            }
+
+            # Add dataset-specific physics fields
+            if dataset_id == 'info-density':
+                candidate.update({
+                    'tadpole_charge': r.get('tadpole_charge'),  # χ/24
+                    'hodge_entropy': r.get('hodge_entropy'),
+                    'topo_efficiency': r.get('topo_efficiency'),
+                    'moduli_compactness': r.get('moduli_compactness'),
+                    'hodge_balance': r.get('hodge_balance'),
+                    'flux_density': r.get('flux_density'),
+                    'vacuum_stability': r.get('vacuum_stability'),
+                    'info_density': r.get('info_density')
+                })
+            elif dataset_id == 'heterotic':
+                candidate.update({
+                    'hodge_balance': r.get('hodge_balance'),
+                    'n_generations': r.get('n_generations')
+                })
+            elif dataset_id == 'cy5-folds':
+                candidate['h31'] = r.get('h31')
+
+            candidates_data.append(candidate)
+
+        export_payload = {
+            'metadata': {
+                'dataset_id': dataset_id,
+                'dataset_name': results['run_metadata']['dataset'],
+                'total_candidates_searched': results['run_metadata']['total_candidates'],
+                'top_k': top_k,
+                'seed': seed,
+                'timestamp': results['run_metadata']['timestamp'],
+                'precision_at_k': results['performance_metrics']['precision_at_k'],
+                'checksum': results['run_metadata']['dataset_checksum']
+            },
+            'candidates': candidates_data
+        }
+
+        # Add weights if info-density
+        if dataset_id == 'info-density':
+            export_payload['metadata']['weights'] = get_info_density_dataset().weights
+
+        # Format response
+        if export_format == 'json':
+            return jsonify({'status': 'success', 'export': export_payload})
+
+        elif export_format == 'csv':
+            if not candidates_data:
+                return jsonify({'status': 'error', 'message': 'No candidates to export'}), 400
+
+            headers = list(candidates_data[0].keys())
+            lines = [','.join(headers)]
+            for c in candidates_data:
+                row = [str(c.get(h, '')) for h in headers]
+                lines.append(','.join(row))
+
+            response = Response('\n'.join(lines), mimetype='text/csv')
+            response.headers['Content-Disposition'] = f'attachment; filename=physics_export_{dataset_id}.csv'
+            return response
+
+        elif export_format == 'numpy':
+            # Return as JSON with array structure suitable for np.array()
+            if not candidates_data:
+                return jsonify({'status': 'error', 'message': 'No candidates to export'}), 400
+
+            numeric_keys = ['h11', 'h21', 'euler_characteristic', 'ml_score']
+            if dataset_id == 'info-density':
+                numeric_keys.extend(['tadpole_charge', 'hodge_entropy', 'topo_efficiency',
+                                   'moduli_compactness', 'hodge_balance', 'flux_density',
+                                   'vacuum_stability', 'info_density'])
+
+            array_data = []
+            for c in candidates_data:
+                row = [float(c.get(k, 0) or 0) for k in numeric_keys]
+                array_data.append(row)
+
+            return jsonify({
+                'status': 'success',
+                'columns': numeric_keys,
+                'data': array_data,
+                'usage': 'import numpy as np; data = np.array(response["data"])'
+            })
+
+        else:
+            return jsonify({'status': 'error', 'message': f'Unknown format: {export_format}'}), 400
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @app.route('/api/score-custom', methods=['POST'])

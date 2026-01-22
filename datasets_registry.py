@@ -173,6 +173,174 @@ class CY5FoldsDataset(BaseDataset):
         }
 
 
+class InformationDensityDataset(BaseDataset):
+    """
+    Information Density ranking for Calabi-Yau manifolds.
+
+    Treats CY manifolds as "information compression" structures and ranks them
+    by how efficiently they encode topological complexity. This is a proxy metric
+    inspired by the idea that phenomenologically viable geometries may act as
+    optimal "filters" between UV and IR scales.
+
+    The information density metric combines:
+    - Hodge entropy: Shannon entropy over normalized Hodge numbers
+    - Topological efficiency: |χ| / (h11 + h21) ratio
+    - Moduli compactness: inverse of total moduli count
+    - Flux vacua density: based on tadpole constraint and Bousso-Polchinski
+    - Vacuum stability proxy: likelihood of stable dS/AdS vacuum
+
+    Target: High information density candidates (top 10% by composite score)
+
+    Supports custom weights via set_weights() for tuning the composite score.
+    """
+
+    # Default weights for composite score
+    DEFAULT_WEIGHTS = {
+        'entropy': 0.20,
+        'efficiency': 0.20,
+        'compactness': 0.15,
+        'balance': 0.10,
+        'flux_density': 0.20,
+        'vacuum_stability': 0.15
+    }
+
+    def __init__(self, weights: Optional[Dict[str, float]] = None):
+        self.weights = weights or self.DEFAULT_WEIGHTS.copy()
+
+    def set_weights(self, weights: Dict[str, float]):
+        """Set custom weights for the composite score components"""
+        self.weights.update(weights)
+
+    def get_metadata(self) -> DatasetMetadata:
+        return DatasetMetadata(
+            name="Information Density Ranking",
+            description="Ranks CY manifolds by information-theoretic complexity. Searches for geometries with high 'information density' - efficient topological encoding that may correlate with phenomenological viability and vacuum stability.",
+            total_count=473800776,  # Same underlying KS dataset
+            feature_dim=10,
+            target_description="High information density manifolds (top 10%)",
+            typical_runtime_5k=5.5,
+            source_url="http://hep.itp.tuwien.ac.at/~kreuzer/CY/"
+        )
+
+    def generate_candidates(self, n_candidates: int, seed: int) -> np.ndarray:
+        """Generate candidates with information density features"""
+        np.random.seed(seed)
+
+        # Base Hodge numbers (from KS-like distribution)
+        h11 = np.random.randint(1, 300, size=n_candidates)
+        h21 = np.random.randint(1, 300, size=n_candidates)
+
+        # Euler characteristic: χ = 2(h11 - h21) for CY3
+        euler = 2 * (h11 - h21)
+        euler_abs = np.abs(euler)
+
+        # === Information Density Features ===
+        h_total = h11 + h21 + 1e-10
+
+        # 1. Hodge entropy: Shannon entropy of normalized Hodge numbers
+        p11 = h11 / h_total
+        p21 = h21 / h_total
+        hodge_entropy = -(p11 * np.log(p11 + 1e-10) + p21 * np.log(p21 + 1e-10))
+        hodge_entropy_norm = hodge_entropy / np.log(2)  # Normalize to [0, 1]
+
+        # 2. Topological efficiency: curvature info per modulus
+        topo_efficiency = euler_abs / (h_total + 1e-10)
+
+        # 3. Moduli compactness: prefer fewer moduli
+        moduli_compactness = 1.0 / (1 + np.log1p(h_total))
+
+        # 4. Hodge balance: symmetry of the Hodge diamond
+        hodge_balance = 1.0 - np.abs(h11 - h21) / (h_total + 1e-10)
+
+        # === Physics-grounded Vacuum Metrics ===
+
+        # 5. Flux vacua density (Bousso-Polchinski / KKLT inspired)
+        #    Number of flux vacua ~ (2πL)^(2K) / K! where:
+        #    - K = h21 + 1 (number of 3-cycles for flux, complex structure moduli + dilaton)
+        #    - L = tadpole charge = χ/24 (D3 tadpole cancellation condition)
+        #    Higher density = more vacua to search = harder to find SM, but more "information"
+        #
+        #    We compute log of density normalized to [0, 1]:
+        #    log(N_flux) ~ 2K * log(2π * χ/24) - log(K!)
+        #    Using Stirling: log(K!) ~ K*log(K) - K
+        K = h21 + 1
+        L = np.maximum(euler_abs / 24.0, 1.0)  # Tadpole bound
+        log_flux_density = 2 * K * np.log(2 * np.pi * L + 1e-10) - (K * np.log(K + 1e-10) - K)
+        # Normalize to [0, 1] using sigmoid
+        flux_density_norm = 1.0 / (1.0 + np.exp(-log_flux_density / 100))
+
+        # 6. Vacuum stability proxy
+        #    Likelihood of finding stable (dS or AdS) vacuum based on:
+        #    - Small |χ| relative to moduli count (easier tadpole cancellation)
+        #    - Balanced h11/h21 (both Kähler and complex structure moduli for stabilization)
+        #    - Not too many moduli (easier to stabilize all of them)
+        #
+        #    Inspired by KKLT/LVS scenarios where stability requires:
+        #    - Enough flux (χ) to stabilize complex structure moduli
+        #    - Not so much that tadpole is violated
+        #    - h11 > 0 for Kähler moduli stabilization
+        tadpole_headroom = np.maximum(1.0 - euler_abs / (24 * h11 + 1e-10), 0)  # Room under tadpole
+        stabilization_ratio = np.minimum(h11, h21) / (np.maximum(h11, h21) + 1e-10)  # Balance
+        moduli_penalty = np.exp(-h_total / 200)  # Fewer moduli = easier stabilization
+        vacuum_stability = (0.4 * tadpole_headroom + 0.4 * stabilization_ratio + 0.2 * moduli_penalty)
+
+        # 7. Information density composite score (customizable weights)
+        w = self.weights
+        info_density = (
+            w['entropy'] * hodge_entropy_norm +
+            w['efficiency'] * np.tanh(topo_efficiency) +
+            w['compactness'] * moduli_compactness +
+            w['balance'] * hodge_balance +
+            w['flux_density'] * flux_density_norm +
+            w['vacuum_stability'] * vacuum_stability
+        )
+
+        candidates = np.column_stack([
+            h11, h21, euler_abs,
+            hodge_entropy_norm, topo_efficiency,
+            moduli_compactness, hodge_balance,
+            flux_density_norm, vacuum_stability, info_density
+        ])
+        return candidates.astype(np.float32)
+
+    def generate_labels(self, candidates: np.ndarray, seed: int) -> np.ndarray:
+        """Target: top 10% by information density score"""
+        info_density = candidates[:, 9]  # Last column is composite score
+        threshold = np.percentile(info_density, 90)
+        labels = (info_density >= threshold).astype(int)
+        return labels
+
+    def get_feature_names(self) -> List[str]:
+        return [
+            'h11', 'h21', 'euler_abs',
+            'hodge_entropy', 'topo_efficiency',
+            'moduli_compactness', 'hodge_balance',
+            'flux_density', 'vacuum_stability', 'info_density'
+        ]
+
+    def format_result(self, candidate: np.ndarray, score: float, verified: bool, rank: int) -> Dict[str, Any]:
+        (h11, h21, euler_abs, hodge_entropy, topo_efficiency,
+         moduli_compactness, hodge_balance, flux_density,
+         vacuum_stability, info_density) = candidate
+
+        return {
+            'rank': rank,
+            'h11': int(h11),
+            'h21': int(h21),
+            'euler_char': int(2 * (h11 - h21)),
+            'tadpole_charge': round(float(euler_abs) / 24, 2),  # χ/24 D3 tadpole
+            'hodge_entropy': round(float(hodge_entropy), 4),
+            'topo_efficiency': round(float(topo_efficiency), 4),
+            'moduli_compactness': round(float(moduli_compactness), 4),
+            'hodge_balance': round(float(hodge_balance), 4),
+            'flux_density': round(float(flux_density), 4),
+            'vacuum_stability': round(float(vacuum_stability), 4),
+            'info_density': round(float(info_density), 4),
+            'score': float(score),
+            'verified_target': bool(verified)
+        }
+
+
 class HeteroticDataset(BaseDataset):
     """Heterotic string compactifications on CY3-manifolds"""
 
@@ -272,3 +440,12 @@ class DatasetRegistry:
 DatasetRegistry.register('kreuzer-skarke', KreuzerSkarkeDataset())
 DatasetRegistry.register('cy5-folds', CY5FoldsDataset())
 DatasetRegistry.register('heterotic', HeteroticDataset())
+
+# Info-density dataset with default weights (can be customized via API)
+_info_density_dataset = InformationDensityDataset()
+DatasetRegistry.register('info-density', _info_density_dataset)
+
+
+def get_info_density_dataset() -> InformationDensityDataset:
+    """Get the info-density dataset instance for weight customization"""
+    return _info_density_dataset

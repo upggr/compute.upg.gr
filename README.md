@@ -290,6 +290,14 @@ docker build -t upg-strings .
 docker run -p 5102:5102 upg-strings
 ```
 
+### Coolify
+
+Use the repository `Dockerfile` for build and deploy.
+
+- No extra start command is needed.
+- The container now respects Coolify's injected `PORT` environment variable automatically.
+- If `PORT` is not set, it falls back to `5102` for local compatibility.
+
 ### Caprover
 
 The project is configured for automatic deployment with Caprover:

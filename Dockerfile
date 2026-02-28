@@ -20,5 +20,5 @@ RUN mkdir -p data/ks_cache
 # Expose port 5102
 EXPOSE 5102
 
-# Run with gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5102", "--workers", "4", "--timeout", "120", "app:app"]
+# Run with gunicorn (Coolify sets PORT dynamically)
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5102} --workers 4 --timeout 120 app:app"]

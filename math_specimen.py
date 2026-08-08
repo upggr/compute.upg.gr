@@ -13,8 +13,8 @@ import geometry_store
 
 
 SPECIMEN_FRAMING = (
-    'Citeable geometric specimen: Hodge class plus any stored construction metadata '
-    '(toric data, literature periods, mirror link when available).'
+    'This page is a citeable geometric specimen (Hodge class ± construction data), '
+    'not a proof of string theory.'
 )
 
 

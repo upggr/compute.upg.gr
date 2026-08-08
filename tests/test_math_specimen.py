@@ -47,7 +47,8 @@ def test_mathematics_tab_quintic_honesty_and_mirror():
     math_tab = tabs['mathematics']
     assert math_tab['id'] == 'mathematics'
     assert math_specimen.SPECIMEN_FRAMING in math_tab['specimen']['framing']
-    assert 'not a proof of string theory' in math_tab['specimen']['framing']
+    assert 'citeable geometric specimen' in math_tab['specimen']['framing'].lower()
+    assert 'proof of string theory' not in math_tab['specimen']['framing'].lower()
     assert math_tab['invariants']['h11'] == 1
     assert math_tab['invariants']['h21'] == 101
     assert math_tab['invariants']['euler_char'] == -200
@@ -92,5 +93,5 @@ def test_candidate_page_has_mathematics_tab(client):
     assert 'tab-found-badge' in html or 'FOUND' in html
     assert 'SPECIMEN FOUND' in html or 'found-banner-yes' in html
     assert 'citeable geometric specimen' in html.lower()
-    assert 'not a proof of string theory' in html
+    assert 'proof of string theory' not in html.lower()
     assert 'analysis-tab-found' in html

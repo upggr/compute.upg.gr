@@ -45,6 +45,9 @@
             <div class="detail-item"><span>Best rank seen</span><strong>{{ candidate.rank or '—' }}</strong></div>
             <div class="detail-item"><span>h¹¹</span><strong>{{ h11 if h11 is not none else '—' }}</strong></div>
             <div class="detail-item"><span>h²¹</span><strong>{{ h21 if h21 is not none else '—' }}</strong></div>
+            {% if h31 is not none %}
+            <div class="detail-item"><span>h³¹</span><strong>{{ h31 }}</strong></div>
+            {% endif %}
             <div class="detail-item"><span>χ</span><strong>{{ chi if chi is not none else '—' }}</strong></div>
             <div class="detail-item"><span>Times seen</span><strong>{{ candidate.times_seen or 1 }}</strong></div>
         </div>
@@ -82,7 +85,7 @@
                         <div class="hd-row"><span class="hd-cell muted">0</span><span class="hd-cell accent">{{ dossier.diamond.h11 }}</span><span class="hd-cell muted">0</span></div>
                         <div class="hd-row"><span class="hd-cell muted">0</span><span class="hd-cell muted">0</span></div>
                         <div class="hd-row"><span class="hd-cell">{{ dossier.diamond.h33 }}</span></div>
-                        <p class="note">Simplified CY3 Hodge diamond (corners + h¹¹ / h²¹).</p>
+                        <p class="note">{{ dossier.diamond.note }}</p>
                     </div>
                     <div>
                         <h3>Identities</h3>
@@ -118,6 +121,9 @@
                 <div class="details-grid">
                     <div class="detail-item"><span>Kähler moduli (h¹¹)</span><strong>{{ tabs.moduli.counts.kahler_moduli_h11 }}</strong></div>
                     <div class="detail-item"><span>Complex-structure (h²¹)</span><strong>{{ tabs.moduli.counts.complex_structure_moduli_h21 }}</strong></div>
+                    {% if tabs.moduli.counts.h31 is not none %}
+                    <div class="detail-item"><span>h³¹</span><strong>{{ tabs.moduli.counts.h31 }}</strong></div>
+                    {% endif %}
                     <div class="detail-item"><span>Total moduli</span><strong>{{ tabs.moduli.counts.total_moduli }}</strong></div>
                     <div class="detail-item"><span>Moduli compactness</span><strong>{{ tabs.moduli.counts.moduli_compactness }}</strong></div>
                     <div class="detail-item"><span>Hodge balance</span><strong>{{ tabs.moduli.counts.hodge_balance }}</strong></div>
@@ -125,6 +131,18 @@
                     <div class="detail-item"><span>Mirror χ</span><strong>{{ tabs.moduli.mirror.euler }}</strong></div>
                 </div>
                 <p class="note" style="margin-top: 0.75rem;">{{ tabs.moduli.mirror.note }}</p>
+                {% if tabs.moduli.mirror.partner %}
+                <p class="mirror-partner">
+                    Hodge mirror:
+                    {% if tabs.moduli.mirror.partner.on_board and tabs.moduli.mirror.partner.candidate_id %}
+                    <a href="/candidate/{{ tabs.moduli.mirror.partner.candidate_id }}">{{ tabs.moduli.mirror.partner.display }}</a>
+                    <span class="pill">on board</span>
+                    {% else %}
+                    <strong>{{ tabs.moduli.mirror.partner.display }}</strong>
+                    <span class="note">— not yet in the Hall of Fame</span>
+                    {% endif %}
+                </p>
+                {% endif %}
                 <ul class="meaning-list">
                     {% for line in tabs.moduli.meaning %}
                     <li>{{ line }}</li>
@@ -200,6 +218,13 @@
                     <div class="detail-item"><span>Hodge entropy</span><strong>{{ tabs.phenomenology.proxies.hodge_entropy }}</strong></div>
                     <div class="detail-item"><span>c₂·J proxy</span><strong>{{ tabs.phenomenology.proxies.c2_J_proxy }}</strong></div>
                 </div>
+                {% if tabs.phenomenology.indices.three_generation_target %}
+                <div class="callout callout-info" style="margin-top: 1rem;">
+                    <strong>Three-generation index:</strong> |χ|=6 ⇒ n_gen = |χ|/2 = 3.
+                    This is a necessary topological condition for heterotic net chirality —
+                    not a Standard Model vacuum by itself.
+                </div>
+                {% endif %}
                 {% if tabs.phenomenology.computed %}
                 <h3>Computed from topology</h3>
                 <ul class="identity-list">
@@ -521,12 +546,20 @@
                 ['Complexity index', analysis.complexity_index],
                 ['Stability proxy', analysis.stability_score],
                 ['Tadpole L', analysis.derived_metrics?.tadpole_L],
+                ['Generation index', analysis.derived_metrics?.n_generations],
+                ['log N_flux', analysis.derived_metrics?.log_N_flux],
+                ['N_flux ~', analysis.derived_metrics?.N_flux_est_sci],
                 ['Flux density', analysis.derived_metrics?.flux_density],
                 ['Hodge balance', analysis.derived_metrics?.hodge_balance]
             ];
             results.innerHTML = blocks.map(([label, value]) => `
                 <div class="detail-item"><span>${label}</span><strong>${value ?? 'N/A'}</strong></div>
             `).join('');
+            if (analysis.tabs?.certificates?.checks) {
+                const passed = analysis.tabs.certificates.checks.filter(c => c.ok).length;
+                const total = analysis.tabs.certificates.checks.length;
+                status.textContent = `${analysis.summary || 'Analysis complete.'} (tabs bundle: ${passed}/${total} checks)`;
+            }
             download.href = `/api/analysis/${encodeURIComponent(candidateId)}/bundle`;
             download.style.display = 'inline-block';
         } catch (err) {
@@ -583,8 +616,29 @@
     function newQuiz() {
         const A = 10 + Math.floor(Math.random() * 40);
         const B = 10 + Math.floor(Math.random() * 40);
-        const ans = 2 * (A - B);
-        quizEl.innerHTML = `If h¹¹=${A} and h²¹=${B}, what is χ? <button type="button" class="btn btn-secondary btn-small" id="lab-reveal">Reveal</button> <span id="lab-ans" hidden><code>${ans}</code> via χ=2(h¹¹−h²¹).</span>`;
+        const kind = Math.floor(Math.random() * 4);
+        let prompt = '';
+        let ansHtml = '';
+        if (kind === 0) {
+            const ans = 2 * (A - B);
+            prompt = `If h¹¹=${A} and h²¹=${B}, what is χ?`;
+            ansHtml = `<code>${ans}</code> via χ=2(h¹¹−h²¹).`;
+        } else if (kind === 1) {
+            const chi = 2 * (A - B);
+            const L = Math.abs(chi) / 24;
+            prompt = `If χ=${chi}, what is the tadpole budget L = |χ|/24?`;
+            ansHtml = `<code>${L.toFixed(4)}</code>`;
+        } else if (kind === 2) {
+            const chi = 2 * (A - B);
+            const nGen = Math.abs(chi) / 2;
+            prompt = `If χ=${chi}, what is the net generation index n_gen = |χ|/2?`;
+            ansHtml = `<code>${nGen}</code> (heterotic index sketch).`;
+        } else {
+            const K = B + 1;
+            prompt = `If h²¹=${B}, what is the flux lattice dimension proxy K = h²¹+1?`;
+            ansHtml = `<code>${K}</code> (used in Stirling log N_flux estimates).`;
+        }
+        quizEl.innerHTML = `${prompt} <button type="button" class="btn btn-secondary btn-small" id="lab-reveal">Reveal</button> <span id="lab-ans" hidden>${ansHtml}</span>`;
         document.getElementById('lab-reveal')?.addEventListener('click', () => {
             document.getElementById('lab-ans').hidden = false;
         });

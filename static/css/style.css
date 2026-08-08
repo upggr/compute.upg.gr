@@ -1574,6 +1574,20 @@ html[data-theme="light"] .analysis-tab.is-active {
     background: rgba(109, 183, 255, 0.08);
 }
 
+.mirror-partner {
+    margin: 0.75rem 0 0;
+}
+
+.mirror-partner a {
+    color: #e8f3ff;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+html[data-theme="light"] .mirror-partner a {
+    color: var(--primary-dark, #0b3d6e);
+}
+
 html:not([data-theme="light"]) .analysis-tab,
 html[data-theme="dark"] .analysis-tab {
     color: #b8c7d9;

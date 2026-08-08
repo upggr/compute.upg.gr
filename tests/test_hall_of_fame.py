@@ -123,3 +123,29 @@ def test_featured_api_reads_hall_of_fame(client, hof_db):
     data = r.get_json()
     assert data['source'] == 'hall_of_fame'
     assert any(c['candidate_id'] == 'kreuzer-skarke-xyz' for c in data['candidates'])
+
+
+def test_ensure_textbook_seeds(hof_db):
+    featured = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                            'data', 'featured_candidates.json')
+    if not os.path.exists(featured):
+        featured = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                'static', 'data', 'featured_candidates.json')
+    # Pretend board already has something
+    hall_of_fame.upsert_candidate({
+        'candidate_id': 'existing',
+        'dataset_id': 'kreuzer-skarke',
+        'h11': 10, 'h21': 5, 'euler_char': 10,
+        'score': 0.1, 'verified_target': True,
+        'features': [], 'raw': {}, 'tags': [],
+    }, db_path=hof_db)
+    n = hall_of_fame.ensure_featured_by_tags(
+        featured_path=featured,
+        canonical_id_fn=app_module.canonical_id,
+        db_path=hof_db,
+        required_tags=['textbook', 'curated'],
+    )
+    assert n >= 3
+    listed = hall_of_fame.list_candidates(db_path=hof_db)
+    assert any((c.get('h11'), c.get('h21')) == (1, 101) for c in listed)
+    assert any((c.get('h11'), c.get('h21')) == (101, 1) for c in listed)

@@ -15,8 +15,9 @@ COPY hall_of_fame.py .
 COPY physics_dossier.py .
 COPY templates/ templates/
 COPY static/ static/
+COPY data/ data/
 
-# Create data directory for KS database cache
+# Create data directory for KS database cache (also holds baked seed JSON)
 RUN mkdir -p data/ks_cache
 
 # Expose port 5102

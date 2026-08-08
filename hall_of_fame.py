@@ -16,7 +16,18 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 DEFAULT_DB_PATH = os.path.join('static', 'data', 'hall_of_fame.sqlite')
-FEATURED_SEED_PATH = os.path.join('static', 'data', 'featured_candidates.json')
+FEATURED_SEED_PATH = os.path.join('data', 'featured_candidates.json')
+# Legacy path kept for older checkouts / local copies under static/data.
+_LEGACY_FEATURED = os.path.join('static', 'data', 'featured_candidates.json')
+
+
+def resolve_featured_path(featured_path: Optional[str] = None) -> str:
+    path = featured_path or FEATURED_SEED_PATH
+    if os.path.exists(path):
+        return path
+    if os.path.exists(_LEGACY_FEATURED):
+        return _LEGACY_FEATURED
+    return path
 
 
 def _utcnow() -> str:
@@ -209,8 +220,12 @@ def upsert_candidate(record: Dict[str, Any], db_path: str = DEFAULT_DB_PATH) -> 
             keep_score = score if better_score else float(existing['score'])
             keep_rank = record.get('rank') if better_score else existing['best_rank']
             keep_verified = 1 if (verified or existing['verified']) else 0
-            # Prefer richer payload when improving.
-            use_new_payload = better_score or better_verified
+            # Prefer richer payload when improving, or when forcing textbook seeds.
+            force_payload = bool(record.get('force_payload')) or (
+                'textbook' in (record.get('tags') or [])
+                or 'curated' in (record.get('tags') or [])
+            )
+            use_new_payload = better_score or better_verified or force_payload
             conn.execute(
                 '''
                 UPDATE hall_of_fame SET
@@ -340,14 +355,41 @@ def seed_from_featured(
         count = conn.execute('SELECT COUNT(*) AS n FROM hall_of_fame').fetchone()['n']
     if count > 0:
         return 0
+    return ensure_featured_by_tags(
+        featured_path=featured_path,
+        canonical_id_fn=canonical_id_fn,
+        db_path=db_path,
+        required_tags=None,
+    )
+
+
+def ensure_featured_by_tags(
+    featured_path: str = FEATURED_SEED_PATH,
+    canonical_id_fn=None,
+    db_path: str = DEFAULT_DB_PATH,
+    required_tags: Optional[List[str]] = None,
+) -> int:
+    """Upsert featured JSON entries.
+
+    If ``required_tags`` is set, only entries that include at least one of those
+    tags are imported (used to push textbook/curated seeds into a non-empty DB).
+    If ``required_tags`` is None, import every featured candidate.
+    """
+    init_db(db_path)
+    featured_path = resolve_featured_path(featured_path)
     if not os.path.exists(featured_path):
         return 0
 
     with open(featured_path, 'r') as f:
         payload = json.load(f)
 
+    required = set(required_tags or [])
     seeded = 0
     for item in payload.get('candidates', []):
+        tags = list(item.get('tags') or [])
+        if required and not (required & set(tags)):
+            continue
+
         dataset_id = item.get('dataset_id') or 'kreuzer-skarke'
         feature_map = {k: v for k, v in item.get('features') or []}
         record = {
@@ -357,9 +399,11 @@ def seed_from_featured(
             'euler_char': feature_map.get('χ', feature_map.get('euler_char')),
             'hodge_balance': feature_map.get('balance'),
         }
-        # Derive euler when missing for KS-like datasets.
         if record['euler_char'] is None and record['h11'] is not None and record['h21'] is not None:
-            record['euler_char'] = int(2 * (record['h11'] - record['h21']))
+            if dataset_id == 'cy5-folds' and record['h31'] is not None:
+                record['euler_char'] = int(6 + 6 * (record['h11'] - record['h21'] + record['h31']))
+            else:
+                record['euler_char'] = int(2 * (record['h11'] - record['h21']))
 
         candidate_id = item.get('candidate_id')
         if canonical_id_fn is not None:
@@ -367,6 +411,15 @@ def seed_from_featured(
                 candidate_id = canonical_id_fn(dataset_id, record)
             except Exception:
                 candidate_id = item.get('candidate_id')
+
+        raw = dict(record)
+        # Attach curated construction keys into raw when provided on the seed.
+        for key in (
+            'ambient', 'weight_system', 'hypersurface_equation', 'favourable',
+            'polytope_id',
+        ):
+            if item.get(key) is not None:
+                raw[key] = item[key]
 
         upsert_candidate(
             {
@@ -380,11 +433,11 @@ def seed_from_featured(
                 'score': item.get('score'),
                 'rank': item.get('rank'),
                 'verified_target': bool(item.get('verified_target')),
-                'last_run_id': 'seed-featured',
+                'last_run_id': item.get('last_run_id') or 'seed-featured',
                 'summary': item.get('summary'),
                 'features': item.get('features') or [],
-                'raw': record,
-                'tags': list(set((item.get('tags') or []) + ['featured-seed'])),
+                'raw': raw,
+                'tags': list(set(tags + ['featured-seed'])),
                 'viz_seed': item.get('viz_seed'),
             },
             db_path=db_path,

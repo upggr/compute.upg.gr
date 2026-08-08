@@ -8,7 +8,9 @@ manifold.
 
 from __future__ import annotations
 
+import json
 import math
+import os
 from typing import Any, Dict, List, Optional, Tuple
 
 
@@ -89,9 +91,13 @@ def dataset_target_check(dataset_id: str, h11: int, h21: int, euler: int) -> Dic
         rule = 'h^{1,1} ≈ h^{2,1} (balance ≥ 0.9)'
         detail = f'balance={balance:.3f}'
     elif dataset_id == 'info-density':
-        ok = True
+        ok = False
         rule = 'top decile by information-density composite (run-dependent)'
-        detail = 'proxy scalars shown below; percentile needs a full ranking run'
+        detail = (
+            'Cannot certify from Hodge numbers alone — percentile requires a '
+            'full ranking run. Proxies (entropy, compactness, flux density) '
+            'are shown for guidance only.'
+        )
     else:
         ok = abs(euler) < 100
         rule = '|χ| < 100'
@@ -165,36 +171,57 @@ def build_dossier(
         'h21': h21_i,
         'h31': h31_i,
         'euler': euler,
+        'kind': 'cy5' if dataset_id == 'cy5-folds' else 'cy3',
         # Simplified CY3 Hodge diamond corners commonly quoted in intros:
         # h^{0,0}=1, h^{3,0}=1, h^{1,1}, h^{2,1}, and symmetries.
         'h00': 1,
         'h30': 1,
         'h03': 1,
         'h33': 1,
+        'note': (
+            'CY5: showing h¹¹ / h²¹ / h³¹ only — full fivefold Hodge diamond '
+            'needs more Hodge numbers than we store.'
+            if dataset_id == 'cy5-folds' else
+            'Simplified CY3 Hodge diamond (corners + h¹¹ / h²¹).'
+        ),
     }
 
-    identities = [
-        {
-            'name': 'Euler characteristic (CY3)',
-            'tex': r'\chi = 2(h^{1,1} - h^{2,1})',
-            'value': euler if dataset_id != 'cy5-folds' else None,
-        },
-        {
-            'name': 'D3 tadpole charge',
-            'tex': r'L = |\chi|/24',
-            'value': scalars['tadpole_L'],
-        },
-        {
-            'name': 'Mirror map (Hodge)',
-            'tex': r'(h^{1,1}, h^{2,1}) \mapsto (h^{2,1}, h^{1,1})',
-            'value': f"({int(scalars['mirror_h11'])}, {int(scalars['mirror_h21'])})",
-        },
-        {
-            'name': 'Flux vacua proxy (log-density)',
-            'tex': r'\log N_{\mathrm{flux}} \sim 2K\log(2\pi L) - \log K!\quad(K=h^{2,1}+1)',
-            'value': scalars['flux_density'],
-        },
-    ]
+    if dataset_id == 'cy5-folds':
+        identities = [
+            {
+                'name': 'Euler characteristic (CY5)',
+                'tex': r'\chi = 6 + 6(h^{1,1} - h^{2,1} + h^{3,1})',
+                'value': euler,
+            },
+            {
+                'name': 'D3 tadpole charge (formal)',
+                'tex': r'L = |\chi|/24',
+                'value': scalars['tadpole_L'],
+            },
+        ]
+    else:
+        identities = [
+            {
+                'name': 'Euler characteristic (CY3)',
+                'tex': r'\chi = 2(h^{1,1} - h^{2,1})',
+                'value': euler,
+            },
+            {
+                'name': 'D3 tadpole charge',
+                'tex': r'L = |\chi|/24',
+                'value': scalars['tadpole_L'],
+            },
+            {
+                'name': 'Mirror map (Hodge)',
+                'tex': r'(h^{1,1}, h^{2,1}) \mapsto (h^{2,1}, h^{1,1})',
+                'value': f"({int(scalars['mirror_h11'])}, {int(scalars['mirror_h21'])})",
+            },
+            {
+                'name': 'Flux vacua proxy (log-density)',
+                'tex': r'\log N_{\mathrm{flux}} \sim 2K\log(2\pi L) - \log K!\quad(K=h^{2,1}+1)',
+                'value': scalars['flux_density'],
+            },
+        ]
 
     return {
         'ok': True,
@@ -332,9 +359,9 @@ def stabilization_map(h11: int, h21: int) -> List[Dict[str, Any]]:
     ]
 
 
-# Famous constructions keyed by (dataset_id, h11, h21). Only cite when unique-
-# enough textbook examples exist — never invent polytopes for arbitrary Hodge.
-KNOWN_CONSTRUCTIONS: Dict[Tuple[str, int, int], Dict[str, Any]] = {
+# Famous constructions: loaded from static JSON when present; tiny built-in
+# fallback keeps quintic/mirror/bicubic working without the data file.
+_KNOWN_FALLBACK: Dict[Tuple[str, int, int], Dict[str, Any]] = {
     ('kreuzer-skarke', 1, 101): {
         'name': 'Quintic threefold in ℂP⁴',
         'ambient': 'P^4',
@@ -367,12 +394,55 @@ KNOWN_CONSTRUCTIONS: Dict[Tuple[str, int, int], Dict[str, Any]] = {
     },
 }
 
+_KNOWN_CACHE: Optional[Dict[Tuple[str, int, int], Dict[str, Any]]] = None
+KNOWN_CONSTRUCTIONS_PATH = os.path.join('data', 'known_constructions.json')
+_LEGACY_KNOWN_PATH = os.path.join('static', 'data', 'known_constructions.json')
+
+
+def load_known_constructions(
+    path: Optional[str] = None,
+    *,
+    force_reload: bool = False,
+) -> Dict[Tuple[str, int, int], Dict[str, Any]]:
+    """Load curated construction classes from JSON (with built-in fallback)."""
+    global _KNOWN_CACHE
+    if _KNOWN_CACHE is not None and not force_reload:
+        return _KNOWN_CACHE
+
+    candidates = []
+    if path:
+        candidates.append(path)
+    candidates.extend([KNOWN_CONSTRUCTIONS_PATH, _LEGACY_KNOWN_PATH])
+
+    loaded: Dict[Tuple[str, int, int], Dict[str, Any]] = dict(_KNOWN_FALLBACK)
+    for candidate_path in candidates:
+        try:
+            with open(candidate_path, 'r', encoding='utf-8') as fh:
+                payload = json.load(fh)
+            for item in payload.get('constructions') or []:
+                ds = item.get('dataset_id') or 'kreuzer-skarke'
+                h11 = item.get('h11')
+                h21 = item.get('h21')
+                if h11 is None or h21 is None:
+                    continue
+                entry = {k: v for k, v in item.items() if k not in ('dataset_id', 'h11', 'h21')}
+                loaded[(ds, int(h11), int(h21))] = entry
+            break
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            continue
+
+    _KNOWN_CACHE = loaded
+    return loaded
+
+
+# Back-compat alias used by tests / callers that expect a mapping.
+KNOWN_CONSTRUCTIONS = _KNOWN_FALLBACK
+
 
 def lookup_known_construction(
     dataset_id: str, h11: int, h21: int
 ) -> Optional[Dict[str, Any]]:
-    return KNOWN_CONSTRUCTIONS.get((dataset_id, int(h11), int(h21)))
-
+    return load_known_constructions().get((dataset_id, int(h11), int(h21)))
 
 def construction_workplan(
     dataset_id: str, h11: int, h21: int, euler: int, h31: Optional[int] = None
@@ -590,6 +660,7 @@ def build_tabs(
     *,
     construction: Optional[Dict[str, Any]] = None,
     tags: Optional[List] = None,
+    mirror_partner: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Organize dossier scalars into analysis tabs with honesty labels."""
     if not dossier.get('ok'):
@@ -604,6 +675,19 @@ def build_tabs(
     c2 = second_chern_proxy(h11, h21)
     stab = stabilization_map(h11, h21)
 
+    mirror_block = {
+        'h11': int(s['mirror_h11']),
+        'h21': int(s['mirror_h21']),
+        'euler': int(s['mirror_euler']),
+        'note': 'Mirror swaps h¹¹ ↔ h²¹ and sends χ → −χ at the Hodge level.',
+        'partner': mirror_partner,
+    }
+    if dataset_id == 'cy5-folds':
+        mirror_block['note'] = (
+            'CY5 mirror maps are richer than a simple (h¹¹,h²¹) swap; '
+            'Hodge-level swap below is only a partial guide.'
+        )
+
     moduli = {
         'id': 'moduli',
         'title': 'Moduli',
@@ -616,16 +700,12 @@ def build_tabs(
         'counts': {
             'kahler_moduli_h11': h11,
             'complex_structure_moduli_h21': h21,
+            'h31': dossier.get('h31'),
             'total_moduli': int(s['total_moduli']),
             'moduli_compactness': s['moduli_compactness'],
             'hodge_balance': s['hodge_balance'],
         },
-        'mirror': {
-            'h11': int(s['mirror_h11']),
-            'h21': int(s['mirror_h21']),
-            'euler': int(s['mirror_euler']),
-            'note': 'Mirror swaps h¹¹ ↔ h²¹ and sends χ → −χ at the Hodge level.',
-        },
+        'mirror': mirror_block,
         'stabilization': stab,
         'meaning': [
             'h¹¹ counts independent Kähler (size) deformations of even cycles.',

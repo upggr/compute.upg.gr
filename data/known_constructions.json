@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "note": "Textbook construction classes keyed by (dataset_id, h11, h21). These are class-level examples — many distinct geometries can share the same Hodge numbers.",
+  "constructions": [
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 1,
+      "h21": 101,
+      "name": "Quintic threefold in ℂP⁴",
+      "ambient": "P^4",
+      "weight_system": [1, 1, 1, 1, 1],
+      "hypersurface_equation": "Generic degree-5 hypersurface ∑_{|α|=5} c_α x^α = 0",
+      "favourable": true,
+      "reference": "Candelas–Horowitz–Strominger–Witten; Greene–Plesser mirror",
+      "note": "Textbook example. Many distinct quintics share (h¹¹,h²¹)=(1,101)."
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 101,
+      "h21": 1,
+      "name": "Mirror quintic",
+      "ambient": "Toric mirror of P^4[5] (Greene–Plesser orbifold / KS dual)",
+      "weight_system": [1, 1, 1, 1, 1],
+      "hypersurface_equation": "Mirror family of the quintic (orbifold + resolution)",
+      "favourable": true,
+      "reference": "Greene–Plesser; Candelas–de la Ossa–Green–Parkes",
+      "note": "Hodge mirror of the quintic: (h¹¹,h²¹)=(101,1), χ=+200."
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 2,
+      "h21": 83,
+      "name": "Bicubic in P²×P²",
+      "ambient": "P^2 × P^2",
+      "weight_system": null,
+      "hypersurface_equation": "Bidegree (3,3) hypersurface",
+      "favourable": true,
+      "reference": "Classic CICY / toric hypersurface example",
+      "note": "Pedagogical example with h¹¹=2, h²¹=83, χ=−162."
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 1,
+      "h21": 149,
+      "name": "CICY P⁵[2,4]",
+      "ambient": "P^5",
+      "weight_system": null,
+      "hypersurface_equation": "Complete intersection of a quadric and a quartic in P^5",
+      "favourable": true,
+      "reference": "CICY list / Hubsch",
+      "note": "Standard complete-intersection threefold class."
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 1,
+      "h21": 73,
+      "name": "CICY P⁵[3,3]",
+      "ambient": "P^5",
+      "weight_system": null,
+      "hypersurface_equation": "Complete intersection of two cubics in P^5",
+      "favourable": true,
+      "reference": "CICY list",
+      "note": "Another classic CICY with h¹¹=1."
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 2,
+      "h21": 86,
+      "name": "Hypersurface in P³×P¹",
+      "ambient": "P^3 × P^1",
+      "weight_system": null,
+      "hypersurface_equation": "Bidegree (4,2) hypersurface (common pedagogical example)",
+      "favourable": true,
+      "reference": "Toric / CICY pedagogy",
+      "note": "Class-level ambient sketch; confirm weights before phenomenological use."
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 1,
+      "h21": 103,
+      "name": "Weighted octic WP⁴[1,1,1,1,4]",
+      "ambient": "WP^4[1,1,1,1,4]",
+      "weight_system": [1, 1, 1, 1, 4],
+      "hypersurface_equation": "Degree-8 hypersurface in weighted projective space",
+      "favourable": true,
+      "reference": "Weighted hypersurface catalogs",
+      "note": "Famous weighted projective example near the quintic locus in Hodge space."
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 4,
+      "h21": 68,
+      "name": "Tetraquadric in (P¹)⁴",
+      "ambient": "P^1 × P^1 × P^1 × P^1",
+      "weight_system": null,
+      "hypersurface_equation": "Multidegree (2,2,2,2) hypersurface",
+      "favourable": true,
+      "reference": "Classic CICY / toric example",
+      "note": "Often used in mirror-symmetry and Picard–Fuchs pedagogy."
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 3,
+      "h21": 243,
+      "name": "Elliptic fibration over P² (large CS)",
+      "ambient": "Toric / Weierstrass model over P^2 (class)",
+      "weight_system": null,
+      "hypersurface_equation": "Weierstrass elliptic fibration class (not a unique equation)",
+      "favourable": null,
+      "reference": "Elliptic CY3 literature",
+      "note": "Illustrative large-h²¹ class; equation depends on section choice."
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 19,
+      "h21": 19,
+      "name": "Self-mirror Hodge locus (χ=0)",
+      "ambient": "Various (self-mirror Hodge numbers)",
+      "weight_system": null,
+      "hypersurface_equation": null,
+      "favourable": null,
+      "reference": "Mirror symmetry / χ=0 locus",
+      "note": "h¹¹=h²¹ ⇒ χ=0. Many distinct geometries; listed as a Hodge-class landmark only."
+    },
+    {
+      "dataset_id": "cy5-folds",
+      "h11": 140,
+      "h21": 62,
+      "name": "Example CI5F configuration class",
+      "ambient": "Complete-intersection fivefold (example)",
+      "weight_system": null,
+      "hypersurface_equation": "Example only — configuration matrix not unique for these Hodge numbers",
+      "favourable": null,
+      "reference": "CI5F / cymetric catalogs",
+      "note": "Pedagogical placeholder for featured cy5 (140,62,18); attach a real config matrix in raw when available.",
+      "example_config_hint": "Store ambient + multi-degree matrix in raw_json to replace this hint."
+    },
+    {
+      "dataset_id": "heterotic",
+      "h11": 73,
+      "h21": 70,
+      "name": "Three-generation index candidate (χ=6)",
+      "ambient": "Any CY3 with these Hodge numbers + stable bundle",
+      "weight_system": null,
+      "hypersurface_equation": null,
+      "favourable": null,
+      "reference": "Heterotic index theorem (net chirality |χ|/2)",
+      "note": "Topology gives n_gen=3 when |χ|=6. Still needs a concrete geometry and holomorphic bundle."
+    }
+  ]
+}

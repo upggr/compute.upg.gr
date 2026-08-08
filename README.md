@@ -334,7 +334,7 @@ Scales to:
 ### Dataset Expansion
 - [ ] Integrate actual CYTools library for full KS database access
 - [ ] Add F-theory compactification datasets
-- [ ] Include mirror symmetry pair databases
+- [x] Include mirror symmetry pair databases (Hodge-level mirror link on candidate pages + textbook seeds)
 - [ ] Support flux compactification vacua
 
 ### ML Enhancements
@@ -346,7 +346,8 @@ Scales to:
 ### Features
 - [ ] User-definable target criteria
 - [ ] Automated algebraic geometry verification
-- [ ] Mirror symmetry detection
+- [x] Mirror symmetry detection (Hodge swap + Hall of Fame deep-link)
+- [x] Hall of Fame gallery export + shareable candidate dossiers with analysis tabs
 - [ ] Real-time progress tracking for long-running searches
 - [ ] Batch processing API
 

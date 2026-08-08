@@ -118,3 +118,48 @@ def test_three_generation_index():
     assert d['euler_char'] == 6
     assert tabs['phenomenology']['indices']['n_generations'] == 3
     assert tabs['phenomenology']['indices']['three_generation_target'] is True
+
+def test_info_density_target_not_auto_pass():
+    d = physics_dossier.build_dossier('info-density', 38, 12)
+    target = next(c for c in d['checks'] if c['id'] == 'dataset_target')
+    assert target['ok'] is False
+    assert 'ranking run' in target['detail']
+
+
+def test_cy5_diamond_kind():
+    d = physics_dossier.build_dossier('cy5-folds', 140, 62, h31=18)
+    assert d['ok']
+    assert d['diamond']['kind'] == 'cy5'
+    assert d['h31'] == 18
+    assert 'CY5' in d['diamond']['note']
+
+
+def test_known_constructions_json_loads():
+    physics_dossier.load_known_constructions(force_reload=True)
+    c = physics_dossier.lookup_known_construction('kreuzer-skarke', 4, 68)
+    assert c is not None
+    assert 'Tetraquadric' in c['name']
+
+
+def test_mirror_partner_in_tabs():
+    d = physics_dossier.build_dossier('kreuzer-skarke', 1, 101)
+    partner = {
+        'h11': 101, 'h21': 1, 'euler_char': 200,
+        'candidate_id': 'demo', 'on_board': True, 'display': 'mirror',
+    }
+    tabs = physics_dossier.build_tabs(d, mirror_partner=partner)
+    assert tabs['moduli']['mirror']['partner']['on_board'] is True
+    assert tabs['moduli']['mirror']['h11'] == 101
+
+
+def test_analyze_includes_tabs():
+    # Mirror what _analyze_candidate attaches without importing Flask app.
+    d = physics_dossier.build_dossier('kreuzer-skarke', 38, 12, euler_char=52, verified_target=True)
+    construction = physics_dossier.construction_payload(
+        'kreuzer-skarke', 'demo', h11=38, h21=12, euler_char=52,
+    )
+    tabs = physics_dossier.build_tabs(d, construction=construction, tags=['verified'])
+    assert tabs['ok']
+    assert 'moduli' in tabs
+    assert tabs['phenomenology']['indices']['n_generations'] == 26
+    assert tabs['fluxes']['budget']['log_N_flux'] is not None

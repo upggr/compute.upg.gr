@@ -31,7 +31,7 @@ CANDIDATE_CACHE_MAXSIZE = 64
 # Bounded LRU cache: the key includes user-controlled params, so an unbounded
 # dict here grows without limit as callers vary the seed.
 CANDIDATE_CACHE = OrderedDict()
-FEATURED_PATH = os.path.join('static', 'data', 'featured_candidates.json')
+FEATURED_PATH = os.path.join('data', 'featured_candidates.json')
 HALL_OF_FAME_PATH = os.path.join('static', 'data', 'hall_of_fame.sqlite')
 
 
@@ -102,6 +102,13 @@ hall_of_fame.seed_from_featured(
     canonical_id_fn=canonical_id,
     db_path=HALL_OF_FAME_PATH,
 )
+# Always ensure textbook/curated seeds exist even when the board is already populated.
+hall_of_fame.ensure_featured_by_tags(
+    featured_path=FEATURED_PATH,
+    canonical_id_fn=canonical_id,
+    db_path=HALL_OF_FAME_PATH,
+    required_tags=['textbook', 'curated'],
+)
 
 
 @app.route('/')
@@ -166,10 +173,42 @@ def candidate_page(candidate_id):
         verified_target=candidate.get('verified_target'),
     )
     tabs = None
+    mirror_partner = None
     if dossier.get('ok'):
         h11 = dossier['h11']
         h21 = dossier['h21']
         chi = dossier['euler_char']
+        # Resolve Hodge-mirror partner on the board (CY3-style swap).
+        if dataset_id != 'cy5-folds' and h11 is not None and h21 is not None:
+            mirror_record = {
+                'h11': int(h21),
+                'h21': int(h11),
+                'euler_char': int(-chi) if chi is not None else int(2 * (h21 - h11)),
+            }
+            try:
+                mirror_cid = canonical_id(dataset_id, mirror_record)
+            except ValueError:
+                mirror_cid = None
+            mirror_hit = hall_of_fame.get_candidate(mirror_cid, db_path=HALL_OF_FAME_PATH) if mirror_cid else None
+            if mirror_hit is None:
+                for item in hall_of_fame.list_candidates(
+                    dataset_id=dataset_id, limit=500, db_path=HALL_OF_FAME_PATH
+                ):
+                    if item.get('h11') == mirror_record['h11'] and item.get('h21') == mirror_record['h21']:
+                        mirror_hit = item
+                        break
+            mirror_partner = {
+                'h11': mirror_record['h11'],
+                'h21': mirror_record['h21'],
+                'euler_char': mirror_record['euler_char'],
+                'candidate_id': (mirror_hit or {}).get('candidate_id') or mirror_cid,
+                'on_board': bool(mirror_hit),
+                'display': (
+                    f"h¹¹={mirror_record['h11']} · h²¹={mirror_record['h21']} · "
+                    f"χ={mirror_record['euler_char']}"
+                ),
+            }
+
         construction = physics_dossier.construction_payload(
             dataset_id=dataset_id,
             candidate_id=candidate_id,
@@ -186,6 +225,7 @@ def candidate_page(candidate_id):
             dossier,
             construction=construction,
             tags=candidate.get('tags'),
+            mirror_partner=mirror_partner,
         )
 
     neighbors = []
@@ -242,6 +282,7 @@ def candidate_page(candidate_id):
         display_title=display_title,
         h11=h11,
         h21=h21,
+        h31=h31,
         chi=chi,
         dossier=dossier if dossier.get('ok') else None,
         tabs=tabs if tabs and tabs.get('ok') else None,
@@ -926,6 +967,27 @@ def _analyze_candidate(candidate):
         verified_target=verified,
     )
 
+    construction = None
+    tabs = None
+    if dossier.get('ok'):
+        construction = physics_dossier.construction_payload(
+            dataset_id=dataset_id,
+            candidate_id=candidate.get('candidate_id') or 'unknown',
+            raw=candidate.get('raw'),
+            features=candidate.get('features'),
+            tags=candidate.get('tags'),
+            summary=candidate.get('summary'),
+            h11=dossier['h11'],
+            h21=dossier['h21'],
+            h31=dossier.get('h31'),
+            euler_char=dossier['euler_char'],
+        )
+        tabs = physics_dossier.build_tabs(
+            dossier,
+            construction=construction,
+            tags=candidate.get('tags'),
+        )
+
     def ratio(a, b):
         if a is None or b in (None, 0):
             return None
@@ -939,6 +1001,10 @@ def _analyze_candidate(candidate):
     }
     if dossier.get('ok'):
         derived.update(dossier.get('scalars') or {})
+        if tabs and tabs.get('ok'):
+            derived['n_generations'] = tabs['phenomenology']['indices']['n_generations']
+            derived['log_N_flux'] = tabs['fluxes']['budget'].get('log_N_flux')
+            derived['N_flux_est_sci'] = tabs['fluxes']['budget'].get('N_flux_est_sci')
 
     complexity_index = None
     if h11 is not None and h21 is not None:
@@ -951,6 +1017,9 @@ def _analyze_candidate(candidate):
 
     passed = sum(1 for c in dossier.get('checks', []) if c.get('ok'))
     total = len(dossier.get('checks') or [])
+    if tabs and tabs.get('ok'):
+        passed = sum(1 for c in tabs['certificates']['checks'] if c.get('ok'))
+        total = len(tabs['certificates']['checks'])
     summary = (
         f"Topological certificate: {passed}/{total} necessary checks passed. "
         f"{dossier.get('caveat', '')}"
@@ -968,6 +1037,8 @@ def _analyze_candidate(candidate):
         "complexity_index": complexity_index,
         "stability_score": stability_score,
         "dossier": dossier if dossier.get('ok') else None,
+        "tabs": tabs if tabs and tabs.get('ok') else None,
+        "construction": construction,
         "summary": summary,
         "generated_at": _utcnow_iso()
     }

@@ -62,15 +62,25 @@ def test_mathematics_tab_quintic_honesty_and_mirror():
     assert '#mathematics' in math_tab['cite']['deep_links']['mathematics']
     assert '#certificates' in math_tab['cite']['deep_links']['certificates']
     assert '@misc{' in math_tab['cite']['bibtex']
+    assert math_tab['found'] is True
+    assert math_tab['found_badge'] == 'FOUND'
+    assert math_tab['match']['headline'] == 'SPECIMEN FOUND'
+    assert math_tab['match']['reasons']
 
 
 def test_mathematics_pending_periods_non_quintic():
-    d = physics_dossier.build_dossier('kreuzer-skarke', 38, 12)
-    tabs = physics_dossier.build_tabs(d)
+    d = physics_dossier.build_dossier('kreuzer-skarke', 99, 50)
+    construction = physics_dossier.construction_payload(
+        'kreuzer-skarke', 'bare-test', h11=99, h21=50, euler_char=98,
+    )
+    tabs = physics_dossier.build_tabs(d, construction=construction, tags=[])
     math_tab = tabs['mathematics']
     assert math_tab['enumerative']['periods_status'] == 'pending'
     assert 'CYTools' in math_tab['enumerative']['handoff']
     assert math_tab['mirror_symmetry']['level'] == 'hodge_swap_only'
+    assert math_tab['found'] is False
+    assert math_tab['found_badge'] is None
+    assert math_tab['match']['headline'] == 'Specimen pending'
 
 
 def test_candidate_page_has_mathematics_tab(client):
@@ -79,5 +89,7 @@ def test_candidate_page_has_mathematics_tab(client):
     html = r.data.decode('utf-8')
     assert 'data-tab="mathematics"' in html
     assert 'tab-mathematics' in html
-    assert 'Citeable geometric specimen' in html or 'citeable geometric specimen' in html
+    assert 'tab-found-badge' in html or 'FOUND' in html
+    assert 'SPECIMEN FOUND' in html or 'found-banner-yes' in html
     assert 'not a proof of string theory' in html
+    assert 'analysis-tab-found' in html

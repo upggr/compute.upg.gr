@@ -1461,6 +1461,92 @@ html[data-theme="dark"] tr.exact-match {
     background-color: rgba(79, 191, 117, 0.16);
 }
 
+/* Candidate analysis tabs */
+.analysis-tabs {
+    margin-top: 1rem;
+}
+
+.analysis-tablist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.35rem;
+    margin-bottom: 1rem;
+}
+
+.analysis-tab {
+    appearance: none;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary, #9aa7b8);
+    font: inherit;
+    font-size: 0.92rem;
+    font-weight: 600;
+    padding: 0.45rem 0.75rem;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+}
+
+.analysis-tab:hover,
+.analysis-tab:focus-visible {
+    color: var(--text-primary, #e8eef7);
+    background: rgba(109, 183, 255, 0.08);
+    outline: none;
+}
+
+.analysis-tab.is-active {
+    color: #e8f3ff;
+    background: rgba(109, 183, 255, 0.14);
+    border-color: var(--border-color);
+    border-bottom-color: transparent;
+}
+
+html[data-theme="light"] .analysis-tab.is-active {
+    color: var(--primary-dark, #0b3d6e);
+    background: rgba(26, 84, 144, 0.08);
+}
+
+.analysis-tabpanel {
+    padding: 0.25rem 0 0.5rem;
+}
+
+.honesty-label {
+    font-size: 0.92rem;
+    color: var(--text-secondary, #9aa7b8);
+    margin: 0 0 1rem;
+    line-height: 1.45;
+}
+
+.honesty-label .pill {
+    margin-right: 0.35rem;
+    vertical-align: middle;
+}
+
+.meaning-list {
+    margin: 0.75rem 0 0;
+    padding-left: 1.2rem;
+    color: var(--text-secondary, #9aa7b8);
+}
+
+.meaning-list li {
+    margin: 0.4rem 0;
+}
+
+.unavailable-list li {
+    color: var(--text-secondary, #9aa7b8);
+}
+
+html:not([data-theme="light"]) .analysis-tab,
+html[data-theme="dark"] .analysis-tab {
+    color: #b8c7d9;
+}
+
+html:not([data-theme="light"]) .analysis-tab.is-active,
+html[data-theme="dark"] .analysis-tab.is-active {
+    color: #ffffff;
+}
+
 /* Candidate dossier / landscape / student lab */
 .dossier-grid {
     display: grid;

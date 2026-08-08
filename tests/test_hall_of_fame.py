@@ -97,6 +97,13 @@ def test_candidate_page_renders(client, hof_db):
     assert r.status_code == 200
     assert cid.encode() in r.data
     assert b'Copy link' in r.data
+    assert b'analysis-tab' in r.data
+    assert b'data-tab="moduli"' in r.data
+    assert b'data-tab="fluxes"' in r.data
+    assert b'data-tab="construction"' in r.data
+    assert b'data-tab="certificates"' in r.data
+    assert b'Open interactive renderer' not in r.data
+    assert b'Loading analysis' in r.data
 
 
 def test_featured_api_reads_hall_of_fame(client, hof_db):

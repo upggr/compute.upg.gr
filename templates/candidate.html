@@ -53,11 +53,220 @@
         {% endif %}
     </section>
 
-    {% if dossier %}
+    {% if dossier and tabs %}
+    <section class="section" id="dossier">
+        <h2>Analysis</h2>
+        <p class="note">
+            Exact identities, moduli counts, and tadpole budgets from Hodge data —
+            plus honest proxies. Tabs label what is exact vs proxy vs unavailable.
+        </p>
+
+        <div class="analysis-tabs" data-analysis-tabs>
+            <div class="analysis-tablist" role="tablist" aria-label="Candidate analyses">
+                <button type="button" class="analysis-tab is-active" role="tab" aria-selected="true" aria-controls="tab-overview" id="tabbtn-overview" data-tab="overview">Overview</button>
+                <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-moduli" id="tabbtn-moduli" data-tab="moduli">Moduli</button>
+                <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-fluxes" id="tabbtn-fluxes" data-tab="fluxes">Fluxes</button>
+                <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-phenomenology" id="tabbtn-phenomenology" data-tab="phenomenology">Phenomenology</button>
+                <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-construction" id="tabbtn-construction" data-tab="construction">Construction</button>
+                <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-certificates" id="tabbtn-certificates" data-tab="certificates">Certificates</button>
+            </div>
+
+            <div class="analysis-tabpanel is-active" role="tabpanel" id="tab-overview" aria-labelledby="tabbtn-overview" data-tab-panel="overview">
+                <p class="honesty-label"><span class="pill">exact + proxy</span> {{ tabs.overview.honesty }}</p>
+                <div class="dossier-grid">
+                    <div class="hodge-diamond" aria-label="Hodge diamond">
+                        <div class="hd-row"><span class="hd-cell">{{ dossier.diamond.h00 }}</span></div>
+                        <div class="hd-row"><span class="hd-cell muted">0</span><span class="hd-cell muted">0</span></div>
+                        <div class="hd-row"><span class="hd-cell muted">0</span><span class="hd-cell accent">{{ dossier.diamond.h11 }}</span><span class="hd-cell muted">0</span></div>
+                        <div class="hd-row"><span class="hd-cell accent">{{ dossier.diamond.h30 }}</span><span class="hd-cell accent">{{ dossier.diamond.h21 }}</span><span class="hd-cell accent">{{ dossier.diamond.h21 }}</span><span class="hd-cell accent">{{ dossier.diamond.h03 }}</span></div>
+                        <div class="hd-row"><span class="hd-cell muted">0</span><span class="hd-cell accent">{{ dossier.diamond.h11 }}</span><span class="hd-cell muted">0</span></div>
+                        <div class="hd-row"><span class="hd-cell muted">0</span><span class="hd-cell muted">0</span></div>
+                        <div class="hd-row"><span class="hd-cell">{{ dossier.diamond.h33 }}</span></div>
+                        <p class="note">Simplified CY3 Hodge diamond (corners + h¹¹ / h²¹).</p>
+                    </div>
+                    <div>
+                        <h3>Identities</h3>
+                        <ul class="identity-list">
+                            {% for item in dossier.identities %}
+                            <li>
+                                <strong>{{ item.name }}</strong>
+                                <code class="tex">{{ item.tex }}</code>
+                                {% if item.value is not none %}<span class="pill">→ {{ item.value }}</span>{% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="details-grid">
+                            <div class="detail-item"><span>Tadpole L</span><strong>{{ tabs.overview.scalars_highlight.tadpole_L }}</strong></div>
+                            <div class="detail-item"><span>Total moduli</span><strong>{{ tabs.overview.scalars_highlight.total_moduli }}</strong></div>
+                            <div class="detail-item"><span>Hodge balance</span><strong>{{ tabs.overview.scalars_highlight.hodge_balance }}</strong></div>
+                            <div class="detail-item"><span>Flux density proxy</span><strong>{{ tabs.overview.scalars_highlight.flux_density }}</strong></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="analysis-header" style="margin-top: 1.25rem;">
+                    <h3>Auto analysis</h3>
+                </div>
+                <p id="analysis-status" class="note">Loading analysis…</p>
+                <div id="analysis-results" class="details-grid"></div>
+                <a id="analysis-download" class="btn btn-secondary" style="display:none; margin-top: 0.75rem;">Download analysis bundle</a>
+            </div>
+
+            <div class="analysis-tabpanel" role="tabpanel" id="tab-moduli" aria-labelledby="tabbtn-moduli" data-tab-panel="moduli" hidden>
+                <p class="honesty-label"><span class="pill">exact counts · proxy meaning</span> {{ tabs.moduli.honesty }}</p>
+                <div class="details-grid">
+                    <div class="detail-item"><span>Kähler moduli (h¹¹)</span><strong>{{ tabs.moduli.counts.kahler_moduli_h11 }}</strong></div>
+                    <div class="detail-item"><span>Complex-structure (h²¹)</span><strong>{{ tabs.moduli.counts.complex_structure_moduli_h21 }}</strong></div>
+                    <div class="detail-item"><span>Total moduli</span><strong>{{ tabs.moduli.counts.total_moduli }}</strong></div>
+                    <div class="detail-item"><span>Moduli compactness</span><strong>{{ tabs.moduli.counts.moduli_compactness }}</strong></div>
+                    <div class="detail-item"><span>Hodge balance</span><strong>{{ tabs.moduli.counts.hodge_balance }}</strong></div>
+                    <div class="detail-item"><span>Mirror (h¹¹, h²¹)</span><strong>({{ tabs.moduli.mirror.h11 }}, {{ tabs.moduli.mirror.h21 }})</strong></div>
+                    <div class="detail-item"><span>Mirror χ</span><strong>{{ tabs.moduli.mirror.euler }}</strong></div>
+                </div>
+                <p class="note" style="margin-top: 0.75rem;">{{ tabs.moduli.mirror.note }}</p>
+                <ul class="meaning-list">
+                    {% for line in tabs.moduli.meaning %}
+                    <li>{{ line }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="analysis-tabpanel" role="tabpanel" id="tab-fluxes" aria-labelledby="tabbtn-fluxes" data-tab-panel="fluxes" hidden>
+                <p class="honesty-label"><span class="pill">exact budget · proxy density</span> {{ tabs.fluxes.honesty }}</p>
+                <div class="details-grid">
+                    <div class="detail-item"><span>χ</span><strong>{{ tabs.fluxes.budget.euler_char }}</strong></div>
+                    <div class="detail-item"><span>Tadpole L = |χ|/24</span><strong>{{ tabs.fluxes.budget.tadpole_L }}</strong></div>
+                    <div class="detail-item"><span>Tadpole headroom</span><strong>{{ tabs.fluxes.budget.tadpole_headroom }}</strong></div>
+                    <div class="detail-item"><span>K = h²¹+1</span><strong>{{ tabs.fluxes.budget.K_proxy }}</strong></div>
+                    <div class="detail-item"><span>Flux density proxy</span><strong>{{ tabs.fluxes.budget.flux_density_proxy }}</strong></div>
+                </div>
+                <h3>Constraints</h3>
+                <ul class="identity-list">
+                    {% for c in tabs.fluxes.constraints %}
+                    <li>
+                        <strong>{{ c.name }}</strong>
+                        <span class="pill">{{ c.status }}</span>
+                        <code class="tex">{{ c.tex }}</code>
+                        {% if c.detail %}<div class="note">{{ c.detail }}</div>{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                <h3>For a full flux scan we would need</h3>
+                <ul class="meaning-list">
+                    {% for req in tabs.fluxes.requires_for_full_scan %}
+                    <li>{{ req }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="analysis-tabpanel" role="tabpanel" id="tab-phenomenology" aria-labelledby="tabbtn-phenomenology" data-tab-panel="phenomenology" hidden>
+                <p class="honesty-label"><span class="pill">proxies only</span> {{ tabs.phenomenology.honesty }}</p>
+                {% if tabs.phenomenology.dataset_target %}
+                <div class="check-list" style="margin-bottom: 1rem;">
+                    <div class="{{ 'check-pass' if tabs.phenomenology.dataset_target.ok else 'check-fail' }}" style="display:flex; gap:0.75rem; padding:0.65rem 0.75rem; border-radius:10px; border:1px solid var(--border-color);">
+                        <span class="check-mark">{{ 'PASS' if tabs.phenomenology.dataset_target.ok else 'FAIL' }}</span>
+                        <div>
+                            <strong>{{ tabs.phenomenology.dataset_target.label }}</strong>
+                            <div class="note"><code>{{ tabs.phenomenology.dataset_target.rule }}</code> — {{ tabs.phenomenology.dataset_target.detail }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="details-grid">
+                    <div class="detail-item"><span>Hodge balance</span><strong>{{ tabs.phenomenology.proxies.hodge_balance }}</strong></div>
+                    <div class="detail-item"><span>Vacuum stability proxy</span><strong>{{ tabs.phenomenology.proxies.vacuum_stability_proxy }}</strong></div>
+                    <div class="detail-item"><span>Topo efficiency</span><strong>{{ tabs.phenomenology.proxies.topo_efficiency }}</strong></div>
+                    <div class="detail-item"><span>Hodge entropy</span><strong>{{ tabs.phenomenology.proxies.hodge_entropy }}</strong></div>
+                </div>
+                {% if tabs.phenomenology.tags %}
+                <p style="margin-top: 1rem;">
+                    {% for tag in tabs.phenomenology.tags %}
+                    <span class="candidate-tag">{{ tag }}</span>
+                    {% endfor %}
+                </p>
+                {% endif %}
+                <h3>Not computed from Hodge numbers</h3>
+                <ul class="meaning-list unavailable-list">
+                    {% for item in tabs.phenomenology.not_computed %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="analysis-tabpanel" role="tabpanel" id="tab-construction" aria-labelledby="tabbtn-construction" data-tab-panel="construction" hidden>
+                <p class="honesty-label"><span class="pill">metadata only</span> {{ tabs.construction.honesty }}</p>
+                {% if tabs.construction.summary %}
+                <p>{{ tabs.construction.summary }}</p>
+                {% endif %}
+                <div class="details-grid">
+                    <div class="detail-item"><span>Dataset</span><strong>{{ tabs.construction.dataset_id }}</strong></div>
+                    <div class="detail-item"><span>Candidate id</span><strong><code>{{ tabs.construction.candidate_id }}</code></strong></div>
+                    <div class="detail-item"><span>Raw field keys</span><strong>{{ tabs.construction.raw_keys|join(', ') if tabs.construction.raw_keys else '—' }}</strong></div>
+                </div>
+                {% if tabs.construction.feature_map %}
+                <h3>Stored features</h3>
+                <div class="details-grid">
+                    {% for key, val in tabs.construction.feature_map.items() %}
+                    <div class="detail-item"><span>{{ key }}</span><strong>{{ val }}</strong></div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% if tabs.construction.present_geometry %}
+                <h3>Construction data present</h3>
+                <div class="details-grid">
+                    {% for key, val in tabs.construction.present_geometry.items() %}
+                    <div class="detail-item"><span>{{ key }}</span><strong><code>{{ val }}</code></strong></div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="callout callout-warning" style="margin-top: 1rem;">
+                    No polytope vertices, triangulation, or hypersurface equation is stored for this entry.
+                    Hodge numbers alone do not determine a unique geometry.
+                </p>
+                {% endif %}
+                <h3>How one would reconstruct</h3>
+                <p>{{ tabs.construction.reconstruct_howto }}</p>
+                {% if tabs.construction.source_url %}
+                <p class="note">Dataset source: <a href="{{ tabs.construction.source_url }}" rel="noopener noreferrer" target="_blank">{{ tabs.construction.source_url }}</a></p>
+                {% endif %}
+                <h3>Unavailable (extension points)</h3>
+                <ul class="meaning-list unavailable-list">
+                    {% for u in tabs.construction.unavailable %}
+                    <li><strong>{{ u.label }}</strong> — {{ u.reason }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="analysis-tabpanel" role="tabpanel" id="tab-certificates" aria-labelledby="tabbtn-certificates" data-tab-panel="certificates" hidden>
+                <p class="honesty-label"><span class="pill">certificates · not theorems</span> {{ tabs.certificates.honesty }}</p>
+                <h3>Necessary checks</h3>
+                <ul class="check-list">
+                    {% for check in tabs.certificates.checks %}
+                    <li class="{{ 'check-pass' if check.ok else 'check-fail' }}">
+                        <span class="check-mark">{{ 'PASS' if check.ok else 'FAIL' }}</span>
+                        <div>
+                            <strong>{{ check.label }}</strong>
+                            <div class="note"><code>{{ check.rule }}</code> — {{ check.detail }}</div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <h3>Identity certificates</h3>
+                <ul class="identity-list">
+                    {% for item in tabs.certificates.identities %}
+                    <li>
+                        <strong>{{ item.name }}</strong>
+                        <code class="tex">{{ item.tex }}</code>
+                        {% if item.value is not none %}<span class="pill">→ {{ item.value }}</span>{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </section>
+    {% elif dossier %}
     <section class="section" id="dossier">
         <h2>Topological certificate</h2>
         <p class="note">Necessary identities and search-target checks. Pass/fail is falsifiable from the numbers above.</p>
-
         <div class="dossier-grid">
             <div class="hodge-diamond" aria-label="Hodge diamond">
                 <div class="hd-row"><span class="hd-cell">{{ dossier.diamond.h00 }}</span></div>
@@ -67,22 +276,8 @@
                 <div class="hd-row"><span class="hd-cell muted">0</span><span class="hd-cell accent">{{ dossier.diamond.h11 }}</span><span class="hd-cell muted">0</span></div>
                 <div class="hd-row"><span class="hd-cell muted">0</span><span class="hd-cell muted">0</span></div>
                 <div class="hd-row"><span class="hd-cell">{{ dossier.diamond.h33 }}</span></div>
-                <p class="note">Simplified CY3 Hodge diamond (corners + h¹¹ / h²¹).</p>
             </div>
-
             <div>
-                <h3>Identities</h3>
-                <ul class="identity-list">
-                    {% for item in dossier.identities %}
-                    <li>
-                        <strong>{{ item.name }}</strong>
-                        <code class="tex">{{ item.tex }}</code>
-                        {% if item.value is not none %}<span class="pill">→ {{ item.value }}</span>{% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-
-                <h3>Necessary checks</h3>
                 <ul class="check-list">
                     {% for check in dossier.checks %}
                     <li class="{{ 'check-pass' if check.ok else 'check-fail' }}">
@@ -95,23 +290,6 @@
                     {% endfor %}
                 </ul>
             </div>
-        </div>
-
-        <h3>Physics proxies</h3>
-        <p class="note">Same family of scalars used in the information-density ranking (proxies, not a vacuum existence proof).</p>
-        <div class="details-grid">
-            <div class="detail-item"><span>Tadpole L=|χ|/24</span><strong>{{ dossier.scalars.tadpole_L }}</strong></div>
-            <div class="detail-item"><span>Hodge entropy</span><strong>{{ dossier.scalars.hodge_entropy }}</strong></div>
-            <div class="detail-item"><span>Topo efficiency</span><strong>{{ dossier.scalars.topo_efficiency }}</strong></div>
-            <div class="detail-item"><span>Hodge balance</span><strong>{{ dossier.scalars.hodge_balance }}</strong></div>
-            <div class="detail-item"><span>Flux density proxy</span><strong>{{ dossier.scalars.flux_density }}</strong></div>
-            <div class="detail-item"><span>Vacuum stability proxy</span><strong>{{ dossier.scalars.vacuum_stability }}</strong></div>
-            <div class="detail-item"><span>Mirror (h¹¹,h²¹)</span><strong>({{ dossier.scalars.mirror_h11|int }}, {{ dossier.scalars.mirror_h21|int }})</strong></div>
-            <div class="detail-item"><span>Mirror χ</span><strong>{{ dossier.scalars.mirror_euler|int }}</strong></div>
-        </div>
-
-        <div class="analysis-header" style="margin-top: 1.25rem;">
-            <h3>Analysis</h3>
         </div>
         <p id="analysis-status" class="note">Loading analysis…</p>
         <div id="analysis-results" class="details-grid"></div>
@@ -193,6 +371,35 @@
     const h21 = Number({{ h21 if h21 is not none else 'null' }});
     const chi = Number({{ chi if chi is not none else 'null' }});
     const neighbors = {{ neighbors|tojson }};
+
+    // Analysis tabs
+    const tabRoot = document.querySelector('[data-analysis-tabs]');
+    if (tabRoot) {
+        const buttons = Array.from(tabRoot.querySelectorAll('[role="tab"]'));
+        const panels = Array.from(tabRoot.querySelectorAll('[data-tab-panel]'));
+        function activateTab(name) {
+            buttons.forEach((btn) => {
+                const on = btn.dataset.tab === name;
+                btn.classList.toggle('is-active', on);
+                btn.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            panels.forEach((panel) => {
+                const on = panel.dataset.tabPanel === name;
+                panel.classList.toggle('is-active', on);
+                panel.hidden = !on;
+            });
+            if (history.replaceState) {
+                history.replaceState(null, '', '#' + name);
+            }
+        }
+        buttons.forEach((btn) => {
+            btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+        });
+        const fromHash = (location.hash || '').replace(/^#/, '');
+        if (fromHash && buttons.some((b) => b.dataset.tab === fromHash)) {
+            activateTab(fromHash);
+        }
+    }
 
     const copyBtn = document.getElementById('copy-share');
     const shareInput = document.getElementById('share-url');

@@ -156,18 +156,33 @@ def candidate_page(candidate_id):
     if chi is None:
         chi = features.get('χ', features.get('euler_char'))
 
+    dataset_id = candidate.get('dataset_id') or 'kreuzer-skarke'
     dossier = physics_dossier.build_dossier(
-        dataset_id=candidate.get('dataset_id') or 'kreuzer-skarke',
+        dataset_id=dataset_id,
         h11=h11,
         h21=h21,
         h31=h31,
         euler_char=chi,
         verified_target=candidate.get('verified_target'),
     )
+    tabs = None
     if dossier.get('ok'):
         h11 = dossier['h11']
         h21 = dossier['h21']
         chi = dossier['euler_char']
+        construction = physics_dossier.construction_payload(
+            dataset_id=dataset_id,
+            candidate_id=candidate_id,
+            raw=candidate.get('raw'),
+            features=candidate.get('features'),
+            tags=candidate.get('tags'),
+            summary=candidate.get('summary'),
+        )
+        tabs = physics_dossier.build_tabs(
+            dossier,
+            construction=construction,
+            tags=candidate.get('tags'),
+        )
 
     neighbors = []
     if h11 is not None and h21 is not None:
@@ -225,6 +240,7 @@ def candidate_page(candidate_id):
         h21=h21,
         chi=chi,
         dossier=dossier if dossier.get('ok') else None,
+        tabs=tabs if tabs and tabs.get('ok') else None,
         neighbors=neighbors,
         og_title=og_title,
         og_description=og_description,

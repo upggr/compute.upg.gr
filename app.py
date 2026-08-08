@@ -12,6 +12,9 @@ from cy_search_real import run_real_search, list_available_datasets, CYSearchEng
 from datasets_registry import DatasetRegistry, get_info_density_dataset
 import hall_of_fame
 import physics_dossier
+import physics_extensions
+import job_store
+import threading
 
 app = Flask(__name__)
 
@@ -66,6 +69,7 @@ IDENTITY_FIELDS = {
     'cy5-folds': ('h11', 'h21', 'h31', 'euler_char'),
     'heterotic': ('h11', 'h21', 'euler_char'),
     'info-density': ('h11', 'h21', 'euler_char'),
+    'f-theory-elliptic': ('h11', 'h21', 'euler_char'),
 }
 
 
@@ -349,15 +353,8 @@ def run_demo():
         "verify": true,
         "n_candidates": 5000,
         "dataset_id": "kreuzer-skarke",  # or "cy5-folds", "heterotic"
-        "use_real": true
-    }
-
-    Returns:
-    {
-        "status": "success",
-        "run_id": "...",
-        "message": "Demo completed",
-        "results_url": "/api/results/..."
+        "use_real": true,
+        "async": false   # if true, return job_id and poll /api/jobs/<id>
     }
     """
     try:
@@ -368,12 +365,64 @@ def run_demo():
         n_candidates = _bounded_int(params.get('n_candidates'), 5000, 10, MAX_N_CANDIDATES)
         dataset_id = params.get('dataset_id', 'kreuzer-skarke')
         use_real = params.get('use_real', True)  # Default to real implementation
+        async_mode = bool(params.get('async') or params.get('async_mode'))
 
         if not _is_known_dataset(dataset_id):
             return jsonify({
                 'status': 'error',
                 'message': f'Unknown dataset: {dataset_id}'
             }), 400
+
+        if async_mode:
+            job_id = job_store.create_job(stage='queued')
+
+            def _worker():
+                try:
+                    job_store.update_job(job_id, status='running', percent=5, stage='init')
+                    job_store.update_job(job_id, percent=20, stage='generate_candidates')
+                    if use_real:
+                        job_store.update_job(job_id, percent=40, stage='train_and_rank')
+                        results = run_real_search(
+                            top_k=top_k,
+                            seed=seed,
+                            n_candidates=n_candidates,
+                            verify=verify,
+                            dataset_id=dataset_id,
+                        )
+                    else:
+                        job_store.update_job(job_id, percent=40, stage='demo_search')
+                        results = run_search(top_k=top_k, seed=seed, verify=verify)
+                    job_store.update_job(job_id, percent=85, stage='persist')
+                    run_id = _save_results(results)
+                    payload = {
+                        'status': 'success',
+                        'run_id': run_id,
+                        'results': results,
+                        'results_url': f'/api/results/{run_id}',
+                    }
+                    job_store.update_job(
+                        job_id,
+                        status='completed',
+                        percent=100,
+                        stage='done',
+                        result=payload,
+                    )
+                except Exception as exc:
+                    job_store.update_job(
+                        job_id,
+                        status='failed',
+                        percent=100,
+                        stage='error',
+                        error=str(exc),
+                    )
+
+            threading.Thread(target=_worker, daemon=True).start()
+            return jsonify({
+                'status': 'accepted',
+                'job_id': job_id,
+                'progress_url': f'/api/jobs/{job_id}',
+                'message': 'Job queued; poll progress_url until status=completed',
+            }), 202
 
         # Run the search - use real implementation by default
         if use_real:
@@ -405,6 +454,107 @@ def run_demo():
             'status': 'error',
             'message': str(e)
         }), 500
+
+
+@app.route('/api/jobs/<job_id>')
+def get_job_progress(job_id):
+    """Poll progress for an async /api/run-demo job."""
+    job = job_store.get_job(job_id)
+    if not job:
+        return jsonify({'status': 'error', 'message': 'Job not found'}), 404
+    return jsonify({
+        'status': 'success',
+        'job': {
+            'job_id': job['job_id'],
+            'status': job['status'],
+            'percent': job['percent'],
+            'stage': job.get('stage'),
+            'error': job.get('error'),
+            'result': job.get('result') if job['status'] == 'completed' else None,
+        },
+    })
+
+
+@app.route('/api/batch', methods=['POST'])
+def batch_api():
+    """Bounded batch of identify / search jobs (max 50)."""
+    params = request.get_json() or {}
+    jobs = params.get('jobs') or params.get('requests') or []
+    if not isinstance(jobs, list) or not jobs:
+        return jsonify({'status': 'error', 'message': 'Provide a non-empty jobs array'}), 400
+    if len(jobs) > 50:
+        return jsonify({'status': 'error', 'message': 'Too many jobs (max 50)'}), 400
+
+    results = []
+    for idx, job in enumerate(jobs):
+        if not isinstance(job, dict):
+            results.append({'index': idx, 'status': 'error', 'message': 'job must be an object'})
+            continue
+        kind = (job.get('type') or job.get('op') or 'identify').lower()
+        try:
+            if kind == 'identify':
+                # Reuse identify logic via internal call shape
+                with app.test_request_context(
+                    '/api/identify',
+                    method='POST',
+                    json=job.get('params') or job,
+                ):
+                    resp = identify()
+                    payload = resp.get_json() if hasattr(resp, 'get_json') else resp[0].get_json()
+                    status_code = resp.status_code if hasattr(resp, 'status_code') else resp[1]
+                results.append({
+                    'index': idx,
+                    'type': 'identify',
+                    'status': 'success' if status_code < 400 else 'error',
+                    'http_status': status_code,
+                    'result': payload,
+                })
+            elif kind == 'search':
+                with app.test_request_context(
+                    '/api/search',
+                    method='POST',
+                    json=job.get('params') or job,
+                ):
+                    resp = search_candidates()
+                    payload = resp.get_json() if hasattr(resp, 'get_json') else resp[0].get_json()
+                    status_code = resp.status_code if hasattr(resp, 'status_code') else resp[1]
+                results.append({
+                    'index': idx,
+                    'type': 'search',
+                    'status': 'success' if status_code < 400 else 'error',
+                    'http_status': status_code,
+                    'result': payload,
+                })
+            else:
+                results.append({
+                    'index': idx,
+                    'status': 'error',
+                    'message': f'Unsupported job type: {kind} (use identify|search)',
+                })
+        except Exception as exc:
+            results.append({'index': idx, 'type': kind, 'status': 'error', 'message': str(exc)})
+
+    return jsonify({
+        'status': 'success',
+        'count': len(results),
+        'results': results,
+    })
+
+
+@app.route('/api/toy-soft', methods=['POST'])
+def toy_soft_api():
+    """Illustrative soft-parameter card — not derived from any CY."""
+    params = request.get_json() or {}
+    try:
+        card = physics_extensions.toy_soft_parameter_card(
+            A0=float(params.get('A0', 0.0)),
+            m12=float(params.get('m12', params.get('m1_2', 500.0))),
+            tan_beta=float(params.get('tan_beta', params.get('tanb', 10.0))),
+            m0=float(params.get('m0', 500.0)),
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify({'status': 'error', 'message': str(exc)}), 400
+    return jsonify({'status': 'success', 'soft_toy_card': card})
 
 
 @app.route('/api/results/<run_id>')
@@ -916,10 +1066,28 @@ def _export_candidates(results):
 
 def _make_export_payload(results, schema_name):
     metadata = results.get("run_metadata", {})
+    candidates = []
+    for cand in _export_candidates(results):
+        enriched = dict(cand)
+        # Attach curated / sample geometry when Hodge matches.
+        try:
+            pack = physics_extensions.lookup_geometry_pack(
+                metadata.get('dataset_id') or cand.get('dataset_id') or 'kreuzer-skarke',
+                int(cand.get('h11')),
+                int(cand.get('h21')),
+                cand.get('h31'),
+            )
+            if pack:
+                enriched = physics_extensions.merge_geometry_into_raw(enriched, pack)
+        except (TypeError, ValueError):
+            pass
+        if schema_name.startswith('cytools'):
+            enriched.update(physics_extensions.cytools_candidate_fields(enriched))
+        candidates.append(enriched)
     return {
         "schema": schema_name,
         "run_metadata": metadata,
-        "candidates": _export_candidates(results)
+        "candidates": candidates,
     }
 
 

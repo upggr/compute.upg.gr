@@ -209,6 +209,29 @@
       "bundle_note": "Topology only: |χ|/2 = 3 generations. Needs a stable holomorphic vector bundle — not invented here.",
       "note": "χ=2(89−92)=−6 ⇒ n_gen=3 index target. Bundle / monad data still required.",
       "reference": "Heterotic index theorem / monad literature"
+    },
+    {
+      "dataset_id": "f-theory-elliptic",
+      "h11": 2,
+      "h21": 272,
+      "name": "Elliptic CY3 class WP[1,1,1,6,9] deg 18",
+      "ambient": "WP^4[1,1,1,6,9]",
+      "weight_system": [1, 1, 1, 6, 9],
+      "hypersurface_equation": "Degree-18 hypersurface (standard elliptic fibration example)",
+      "configuration_matrix": null,
+      "note": "Literature elliptic CY3 Hodge class used as an F-theory PROXY seed. Not a resolved Weierstrass / Tate model database entry.",
+      "reference": "Candelas–Font / F-theory elliptic CY reviews; WP[1,1,1,6,9]"
+    },
+    {
+      "dataset_id": "f-theory-elliptic",
+      "h11": 272,
+      "h21": 2,
+      "name": "Mirror of WP[1,1,1,6,9] elliptic class",
+      "ambient": "Toric / mirror of elliptic WP11169 class",
+      "hypersurface_equation": null,
+      "configuration_matrix": null,
+      "note": "Hodge mirror of the (2,272) elliptic class — pedagogical F-theory proxy only.",
+      "reference": "Mirror symmetry of elliptic CY3 hypersurface class"
     }
   ]
 }

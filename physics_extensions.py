@@ -14,7 +14,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 GEOMETRY_PACK_PATH = os.path.join('data', 'geometry_pack.json')
 _LEGACY_GEOMETRY_PACK = os.path.join('static', 'data', 'geometry_pack.json')
+KS_SAMPLE_PATH = os.path.join('data', 'ks_geometry_sample.json')
 _PACK_CACHE: Optional[Dict[str, Any]] = None
+_KS_SAMPLE_CACHE: Optional[Dict[str, Any]] = None
 
 
 def _load_pack(path: Optional[str] = None, *, force_reload: bool = False) -> Dict[str, Any]:
@@ -38,15 +40,46 @@ def _load_pack(path: Optional[str] = None, *, force_reload: bool = False) -> Dic
     return empty
 
 
+def _load_ks_sample(*, force_reload: bool = False) -> Dict[str, Any]:
+    global _KS_SAMPLE_CACHE
+    if _KS_SAMPLE_CACHE is not None and not force_reload:
+        return _KS_SAMPLE_CACHE
+    try:
+        with open(KS_SAMPLE_PATH, 'r', encoding='utf-8') as fh:
+            _KS_SAMPLE_CACHE = json.load(fh)
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        _KS_SAMPLE_CACHE = {'version': 0, 'polytopes': []}
+    return _KS_SAMPLE_CACHE
+
+
 def reload_geometry_pack() -> Dict[str, Any]:
     """Clear cache and reload geometry pack from disk (tests / hot reload)."""
+    global _KS_SAMPLE_CACHE
+    _KS_SAMPLE_CACHE = None
+    _load_ks_sample(force_reload=True)
     return _load_pack(force_reload=True)
+
+
+def lookup_ks_sample(
+    dataset_id: str, h11: int, h21: int
+) -> Optional[Dict[str, Any]]:
+    """Return a labeled KS polytope representative from the sidecar sample."""
+    if dataset_id not in ('kreuzer-skarke', 'info-density', 'heterotic'):
+        return None
+    sample = _load_ks_sample()
+    for item in sample.get('polytopes') or []:
+        if int(item.get('h11', -1)) != int(h11) or int(item.get('h21', -1)) != int(h21):
+            continue
+        return item
+    return None
+
 
 def lookup_geometry_pack(
     dataset_id: str, h11: int, h21: int, h31: Optional[int] = None
 ) -> Optional[Dict[str, Any]]:
-    """Return curated geometry blob for a Hodge key, if present."""
+    """Return curated geometry blob for a Hodge key, merged with KS sample vertices."""
     pack = _load_pack()
+    found: Optional[Dict[str, Any]] = None
     for item in pack.get('geometries') or []:
         if (item.get('dataset_id') or 'kreuzer-skarke') != dataset_id:
             continue
@@ -54,8 +87,36 @@ def lookup_geometry_pack(
             continue
         if h31 is not None and item.get('h31') is not None and int(item['h31']) != int(h31):
             continue
-        return item
-    return None
+        found = dict(item)
+        break
+
+    ks = lookup_ks_sample(dataset_id, h11, h21)
+    if ks:
+        if found is None:
+            found = dict(ks)
+        else:
+            # Prefer textbook ambient / equations; fill missing vertices from sample.
+            for key in (
+                'polytope_vertices',
+                'vertex_matrix',
+                'vertex_count',
+                'facet_count',
+                'point_count',
+                'dual_point_count',
+                'geometry_status',
+                'uniqueness',
+                'source_slice',
+            ):
+                if found.get(key) is None and ks.get(key) is not None:
+                    found[key] = ks[key]
+            if not found.get('polytope_vertices') and ks.get('polytope_vertices'):
+                found['polytope_vertices'] = ks['polytope_vertices']
+                found['vertex_matrix'] = ks.get('vertex_matrix') or ks['polytope_vertices']
+            note_bits = [found.get('note'), ks.get('note')]
+            found['note'] = ' '.join(n for n in note_bits if n)
+            found.setdefault('geometry_status', ks.get('geometry_status', 'representative'))
+            found.setdefault('uniqueness', ks.get('uniqueness'))
+    return found
 
 
 def flux_lattice_miniscan(h21: int, tadpole_L: float, *, max_k: int = 5) -> Dict[str, Any]:
@@ -152,6 +213,61 @@ def orientifold_tadpole_sketch(euler: int) -> Dict[str, Any]:
     }
 
 
+def quintic_orientifold_curated(h11: int, h21: int) -> Optional[Dict[str, Any]]:
+    """Curated IIB O3/O7 sketch for the quintic / mirror-quintic class only."""
+    if not ((h11, h21) in ((1, 101), (101, 1))):
+        return None
+    chi = 2 * (int(h11) - int(h21))
+    L = abs(chi) / 24.0
+    return {
+        'status': 'curated_example',
+        'applies_to': f'quintic class (h11,h21)=({h11},{h21})',
+        'base_L': round(L, 6),
+        'tex': (
+            r'N_{D3}+\tfrac12 N_{\mathrm{flux}}'
+            r'=\tfrac{\chi(X)}{24}+\tfrac{\chi(D_{O7})}{12}+Q_{O3}'
+        ),
+        'components': [
+            {
+                'id': 'chi_term',
+                'label': 'χ(X)/24 for this Hodge class',
+                'value': round(L, 6),
+                'status': 'exact_for_class',
+            },
+            {
+                'id': 'o7_schematic',
+                'label': 'O7 divisor contribution (schematic)',
+                'value': None,
+                'status': 'literature_schematic',
+                'detail': (
+                    'Standard IIB O3/O7 setups on the quintic class introduce an '
+                    'anti-holomorphic involution and O7 loci; χ(D_O7)/12 is not '
+                    'fixed by Hodge numbers alone.'
+                ),
+            },
+            {
+                'id': 'o3_schematic',
+                'label': 'O3 plane charge sum (schematic)',
+                'value': None,
+                'status': 'literature_schematic',
+                'detail': (
+                    'O3 charges depend on fixed-point loci of the involution. '
+                    'Shown as an explicit unknown — not a vacuum census.'
+                ),
+            },
+        ],
+        'note': (
+            'CURATED EXAMPLE for the quintic / mirror-quintic Hodge class only, '
+            'following the schematic IIB O3–O7 tadpole used in the string-pheno '
+            'literature. Not a general algorithm for arbitrary KS polytopes.'
+        ),
+        'references': [
+            'IIB orientifold tadpole reviews (e.g. Blumenhagen–Cvetic–Lüst–Weigand)',
+            'Candelas–Horowitz–Strominger–Witten quintic compactification',
+        ],
+    }
+
+
 def periods_structure_full(h21: int) -> Dict[str, Any]:
     """Symbolic period / Picard–Fuchs structure from Hodge data."""
     K = int(h21) + 1
@@ -175,6 +291,61 @@ def periods_structure_full(h21: int) -> Dict[str, Any]:
             'Period integrals are not evaluated numerically here. '
             'We give the exact dimensions and the standard special-geometry identities.'
         ),
+    }
+
+
+def quintic_periods_literature(h11: int, h21: int) -> Optional[Dict[str, Any]]:
+    """Candelas–de la Ossa–Green–Parkes style PF content for quintic / mirror.
+
+    Numerical period values are NOT computed as physical outputs — we expose
+    the published operator / special-point structure and a clearly labeled
+    toy evaluation of the classical PF monodromy parameter.
+    """
+    if (h11, h21) not in ((1, 101), (101, 1)):
+        return None
+    # Mirror-family coordinate z; PF for the mirror quintic (CdOGP):
+    # θ^4 ϖ − 5z (5θ+1)(5θ+2)(5θ+3)(5θ+4) ϖ = 0
+    # with θ = z d/dz. Large-complex-structure / Fermat / conifold special points.
+    z_toy = 1.0 / 5.0**5  # famous conifold locus z = 5^{-5} in standard normalization
+    return {
+        'status': 'literature_curated',
+        'applies_to': f'quintic / mirror-quintic class (h11,h21)=({h11},{h21})',
+        'picard_fuchs_order': 4 if h21 == 1 else 102,
+        'mirror_family_pf_tex': (
+            r'\theta^4\varpi - 5z(5\theta+1)(5\theta+2)(5\theta+3)(5\theta+4)\varpi = 0'
+            r',\quad \theta=z\frac{d}{dz}'
+        ),
+        'special_points': [
+            {
+                'id': 'large_complex_structure',
+                'z': 0,
+                'note': 'LCS point; classical period expansion in z',
+            },
+            {
+                'id': 'conifold',
+                'z': '5^{-5}',
+                'z_float_toy': z_toy,
+                'note': (
+                    'Standard conifold locus in the one-parameter mirror family '
+                    '(toy float shown for the published closed form 5^{-5} only).'
+                ),
+            },
+            {
+                'id': 'fermat_gorris',
+                'note': 'Fermat / Gepner-like orbifold point in the mirror family',
+            },
+        ],
+        'yukawa_tex': r'Y_{zzz} \propto 1/(1-5^5 z) \quad\text{(mirror family; published)}',
+        'honesty': (
+            'Literature-backed formulas for the one-parameter mirror-quintic family '
+            '(Candelas–de la Ossa–Green–Parkes). Not a numerical period engine for '
+            'arbitrary KS polytopes. The float 5^{-5} is the known closed-form locus, '
+            'not a fitted vacuum.'
+        ),
+        'references': [
+            'Candelas, de la Ossa, Green, Parkes, Nucl. Phys. B359 (1991) 21',
+            'Greene–Plesser mirror construction',
+        ],
     }
 
 
@@ -215,6 +386,68 @@ def soft_terms_symbolic() -> Dict[str, Any]:
             'gauge kinetic functions, and a mediation model. Formulas are shown '
             'so the missing inputs are explicit.'
         ),
+    }
+
+
+def toy_soft_parameter_card(
+    A0: float = 0.0,
+    m12: float = 500.0,
+    tan_beta: float = 10.0,
+    m0: float = 500.0,
+) -> Dict[str, Any]:
+    """Illustrative mSUGRA-style soft pattern from user inputs.
+
+    NOT derived from any Calabi–Yau geometry on this site.
+    """
+    a0 = float(A0)
+    m_half = float(m12)
+    tb = float(tan_beta)
+    m_0 = float(m0)
+    # Purely algebraic illustrative relations — not RGE-evolved physical masses.
+    return {
+        'status': 'toy_illustrative',
+        'honesty': (
+            'Illustrative MSSM soft pattern from user-chosen A0, m1/2, tanβ, m0. '
+            'NOT derived from this CY, NOT RGE-evolved, NOT physical GeV predictions.'
+        ),
+        'inputs': {
+            'A0': a0,
+            'm12': m_half,
+            'tan_beta': tb,
+            'm0': m_0,
+            'units': 'user-chosen illustrative units (often called GeV in textbooks)',
+        },
+        'symbolic_outputs': [
+            {'name': 'scalar_mass_proxy', 'tex': r'm_0', 'value': m_0},
+            {'name': 'gaugino_mass_proxy', 'tex': r'm_{1/2}', 'value': m_half},
+            {'name': 'A_term_proxy', 'tex': r'A_0', 'value': a0},
+            {
+                'name': 'higgsino_mu_proxy',
+                'tex': r'\mu_{\mathrm{toy}}\sim m_{1/2}',
+                'value': m_half,
+            },
+            {
+                'name': 'Bmu_proxy',
+                'tex': r'B\mu_{\mathrm{toy}}\sim m_{1/2}^2',
+                'value': m_half * m_half,
+            },
+            {
+                'name': 'tan_beta',
+                'tex': r'\tan\beta',
+                'value': tb,
+            },
+        ],
+        'yukawa_texture_placeholder': {
+            'status': 'generation_indices_only',
+            'matrix_shape': [3, 3],
+            'note': (
+                'Yukawa texture shown as generation-index placeholders Y_{ij}; '
+                'no numerical SM Yukawas are claimed.'
+            ),
+            'Y_u_tex': r'Y^u_{ij},\ i,j=1,2,3',
+            'Y_d_tex': r'Y^d_{ij},\ i,j=1,2,3',
+            'Y_e_tex': r'Y^e_{ij},\ i,j=1,2,3',
+        },
     }
 
 
@@ -338,6 +571,13 @@ def merge_geometry_into_raw(
         'triangulation_id': 'triangulation_id',
         'polytope_id': 'polytope_id',
         'configuration_matrix': 'configuration_matrix',
+        'geometry_status': 'geometry_status',
+        'uniqueness': 'geometry_uniqueness',
+        'vertex_count': 'vertex_count',
+        'facet_count': 'facet_count',
+        'point_count': 'point_count',
+        'dual_point_count': 'dual_point_count',
+        'source_slice': 'ks_source_slice',
     }
     for src, dst in mapping.items():
         val = pack.get(src)
@@ -350,4 +590,38 @@ def merge_geometry_into_raw(
         out['geometry_name'] = pack['name']
     if pack.get('note') and 'geometry_note' not in out:
         out['geometry_note'] = pack['note']
+    if out.get('polytope_vertices') or out.get('vertex_matrix'):
+        out.setdefault('geometry_status', pack.get('geometry_status') or 'representative')
+    else:
+        out.setdefault('geometry_status', 'pending')
     return out
+
+
+def cytools_candidate_fields(raw: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Fields for cytools-candidates-v1 export adapters."""
+    raw = raw or {}
+    vertices = raw.get('polytope_vertices') or raw.get('vertex_matrix')
+    status = raw.get('geometry_status')
+    if vertices and not status:
+        status = 'representative'
+    if not vertices:
+        status = status or 'pending'
+    payload = {
+        'h11': raw.get('h11'),
+        'h21': raw.get('h21'),
+        'h31': raw.get('h31'),
+        'euler_char': raw.get('euler_char'),
+        'geometry_status': status,
+    }
+    if vertices:
+        payload['polytope_vertices'] = vertices
+        payload['vertex_matrix'] = raw.get('vertex_matrix') or vertices
+        payload['uniqueness'] = raw.get('geometry_uniqueness') or (
+            'one polytope with these Hodge numbers; not unique'
+        )
+    else:
+        payload['note'] = (
+            'Hodge-only export; attach a KS polytope vertex matrix + triangulation '
+            'before CYTools toric constructions.'
+        )
+    return payload

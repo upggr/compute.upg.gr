@@ -103,6 +103,11 @@ def dataset_target_check(dataset_id: str, h11: int, h21: int, euler: int) -> Dic
             'full ranking run. Proxies (entropy, compactness, flux density) '
             'are shown for guidance only.'
         )
+    elif dataset_id == 'f-theory-elliptic':
+        ok = h11 <= 10 or (h11, h21) in ((2, 272), (272, 2), (19, 19))
+        rule = 'elliptic-friendly proxy (h¹¹≤10 or literature elliptic seed)'
+        rule_tex = r'h^{1,1}\le 10\ \text{or literature elliptic seed}'
+        detail = f'h¹¹={h11}, h²¹={h21} (proxy — not a Weierstrass model DB)'
     else:
         ok = abs(euler) < 100
         rule = '|χ| < 100'
@@ -755,7 +760,9 @@ def construction_payload(
         'polytope_id', 'polytope_hash', 'polytope_vertices', 'vertex_matrix',
         'triangulation', 'triangulation_id', 'hypersurface_equation',
         'weight_system', 'favourable', 'ambient', 'configuration_matrix',
-        'geometry_name', 'geometry_note',
+        'geometry_name', 'geometry_note', 'geometry_status', 'geometry_uniqueness',
+        'vertex_count', 'facet_count', 'point_count', 'dual_point_count',
+        'ks_source_slice',
     )
 
     def _present_from(src: Dict[str, Any]) -> Dict[str, Any]:
@@ -928,9 +935,22 @@ def build_tabs(
         readiness = scan_readiness(construction, h11, h21, euler)
     miniscan = physics_extensions.flux_lattice_miniscan(h21, s['tadpole_L'])
     orientifold = physics_extensions.orientifold_tadpole_sketch(euler)
+    quintic_o3 = physics_extensions.quintic_orientifold_curated(h11, h21)
+    if quintic_o3:
+        orientifold = quintic_o3
     soft = physics_extensions.soft_terms_symbolic()
+    soft_toy = physics_extensions.toy_soft_parameter_card()
     yukawas = physics_extensions.yukawa_structure(h11, h21, dataset_id)
     gauge = physics_extensions.gauge_embedding_sketch(dataset_id, euler)
+    periods_literature = physics_extensions.quintic_periods_literature(h11, h21)
+    if periods_literature:
+        periods_full = dict(periods_full)
+        periods_full['literature'] = periods_literature
+        periods_full['status'] = 'literature_curated'
+        periods_full['note'] = periods_literature['honesty']
+        periods_full['mirror_family_pf_tex'] = periods_literature['mirror_family_pf_tex']
+        periods_full['special_points'] = periods_literature['special_points']
+        periods_full['references'] = periods_literature['references']
 
     mirror_block = {
         'h11': int(s['mirror_h11']),
@@ -1011,6 +1031,7 @@ def build_tabs(
         'periods_full': periods_full,
         'lattice_miniscan': miniscan,
         'orientifold': orientifold,
+        'quintic_periods_literature': periods_literature,
         'readiness': readiness,
         'constraints': [
             {
@@ -1083,6 +1104,7 @@ def build_tabs(
             if dataset_id == 'heterotic' else None
         ),
         'soft_terms': soft,
+        'soft_toy_card': soft_toy,
         'yukawas': yukawas,
         'gauge': gauge,
         'dataset_target': next(

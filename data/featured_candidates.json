@@ -595,6 +595,55 @@
       "hypersurface_equation": "Degree-8 hypersurface in weighted projective space",
       "favourable": true,
       "viz_seed": 50008
+    },
+    {
+      "candidate_id": "f-theory-elliptic-wp11169",
+      "dataset_id": "f-theory-elliptic",
+      "dataset_name": "F-theory elliptic proxies",
+      "rank": 0,
+      "score": 0.999,
+      "verified_target": true,
+      "features": [
+        ["h11", 2],
+        ["h21", 272],
+        ["χ", -540]
+      ],
+      "tags": [
+        "f-theory",
+        "elliptic",
+        "literature",
+        "pedagogical",
+        "verified"
+      ],
+      "summary": "Literature elliptic CY3 class: degree-18 hypersurface in WP[1,1,1,6,9] (h11,h21)=(2,272). Proxy seed — not a full Weierstrass DB row.",
+      "ambient": "WP^4[1,1,1,6,9]",
+      "weight_system": [1, 1, 1, 6, 9],
+      "hypersurface_equation": "Degree-18 hypersurface (famous elliptic fibration example)",
+      "favourable": true,
+      "viz_seed": 60001
+    },
+    {
+      "candidate_id": "f-theory-elliptic-mirror-wp11169",
+      "dataset_id": "f-theory-elliptic",
+      "dataset_name": "F-theory elliptic proxies",
+      "rank": 0,
+      "score": 0.998,
+      "verified_target": true,
+      "features": [
+        ["h11", 272],
+        ["h21", 2],
+        ["χ", 540]
+      ],
+      "tags": [
+        "f-theory",
+        "elliptic",
+        "literature",
+        "mirror",
+        "pedagogical",
+        "verified"
+      ],
+      "summary": "Hodge mirror of the WP[1,1,1,6,9] elliptic CY3 class (272,2). Pedagogical F-theory proxy seed.",
+      "viz_seed": 60002
     }
   ]
 }

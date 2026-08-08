@@ -438,6 +438,104 @@ class HeteroticDataset(BaseDataset):
         }
 
 
+class FTheoryEllipticDataset(BaseDataset):
+    """Honest F-theory *proxy* dataset — not a Weierstrass-model database.
+
+    Features combine CY3 Hodge numbers with pedagogical elliptic-fibration
+    flags. Featured seeds use literature elliptic CY3 Hodge pairs
+    (e.g. WP[1,1,1,6,9] degree-18 with (h11,h21)=(2,272)).
+    """
+
+    # Literature / textbook elliptic CY3 Hodge pairs (class-level).
+    FEATURED_SEEDS = [
+        # Famous elliptic CY3: hypersurface of degree 18 in WP[1,1,1,6,9]
+        {'h11': 2, 'h21': 272, 'base_label': 'P2', 'tag': 'literature_elliptic'},
+        {'h11': 272, 'h21': 2, 'base_label': 'mirror', 'tag': 'literature_elliptic_mirror'},
+        # Self-mirror / balanced elliptic-friendly Hodge (proxy)
+        {'h11': 19, 'h21': 19, 'base_label': 'self-mirror-proxy', 'tag': 'pedagogical_proxy'},
+    ]
+
+    def get_metadata(self) -> DatasetMetadata:
+        return DatasetMetadata(
+            name="F-theory elliptic proxies",
+            description=(
+                "Pedagogical F-theory search surface using elliptic-fibration "
+                "proxy features on CY3 Hodge data. NOT a full Weierstrass / "
+                "Tate-model database — targets geometries with elliptic-friendly "
+                "Hodge patterns suitable for F-theory model-building sketches."
+            ),
+            total_count=50000,  # proxy corpus size, not a published Weierstrass census
+            feature_dim=7,
+            target_description="Elliptic-friendly proxies (low h11 base-like or literature seeds)",
+            typical_runtime_5k=5.0,
+            source_url="https://arxiv.org/abs/hep-th/9603161",
+        )
+
+    def generate_candidates(self, n_candidates: int, seed: int) -> np.ndarray:
+        np.random.seed(seed)
+        # Mix literature seeds with synthetic elliptic-like Hodge draws.
+        h11 = np.random.randint(1, 120, size=n_candidates)
+        h21 = np.random.randint(1, 400, size=n_candidates)
+        # Force-inject a few literature seeds at the front for reproducibility.
+        for i, seed_row in enumerate(self.FEATURED_SEEDS):
+            if i < n_candidates:
+                h11[i] = seed_row['h11']
+                h21[i] = seed_row['h21']
+        euler = 2 * (h11 - h21)
+        euler_abs = np.abs(euler)
+        # Proxy: "base-like" when h11 is small (few Kähler classes — common in
+        # elliptic CY3 with rigid fiber + base contributions).
+        elliptic_flag = (h11 <= 10).astype(np.float32)
+        # Mordell–Weil rank is unknown; use a bounded random proxy in [0, 3].
+        mw_rank_proxy = np.random.randint(0, 4, size=n_candidates).astype(np.float32)
+        base_h11_proxy = np.minimum(h11, 10).astype(np.float32)
+        candidates = np.column_stack([
+            h11, h21, euler_abs, elliptic_flag, mw_rank_proxy, base_h11_proxy,
+            euler_abs / (h11 + h21 + 1e-10),
+        ])
+        return candidates.astype(np.float32)
+
+    def generate_labels(self, candidates: np.ndarray, seed: int) -> np.ndarray:
+        """Target: elliptic-friendly proxy — small h11 or literature seed Hodge."""
+        h11 = candidates[:, 0]
+        h21 = candidates[:, 1]
+        elliptic_flag = candidates[:, 3]
+        lit = np.zeros(len(candidates), dtype=bool)
+        for seed_row in self.FEATURED_SEEDS:
+            lit |= (h11 == seed_row['h11']) & (h21 == seed_row['h21'])
+        labels = ((elliptic_flag > 0.5) | lit).astype(int)
+        return labels
+
+    def get_feature_names(self) -> List[str]:
+        return [
+            'h11', 'h21', 'euler_abs', 'elliptic_flag',
+            'mw_rank_proxy', 'base_h11_proxy', 'topo_efficiency',
+        ]
+
+    def format_result(self, candidate: np.ndarray, score: float, verified: bool, rank: int) -> Dict[str, Any]:
+        h11, h21, euler_abs, elliptic_flag, mw_rank, base_h11, topo_eff = candidate
+        h11_i, h21_i = int(h11), int(h21)
+        euler_i = int(2 * (h11_i - h21_i))
+        return {
+            'rank': rank,
+            'h11': h11_i,
+            'h21': h21_i,
+            'euler_char': euler_i,
+            'score': float(score),
+            'verified_target': bool(verified),
+            'tadpole_L': round(abs(euler_i) / 24.0, 4),
+            'elliptic_fibration_flag': bool(elliptic_flag > 0.5),
+            'mordell_weil_rank_proxy': int(mw_rank),
+            'base_h11_proxy': int(base_h11),
+            'topo_efficiency': float(topo_eff),
+            'honesty': (
+                'F-theory elliptic PROXY features — not a Weierstrass equation '
+                'or resolved elliptic fibration database.'
+            ),
+            'picard_fuchs_order': h21_i + 1,
+        }
+
+
 class DatasetRegistry:
     """Central registry for all available datasets"""
 
@@ -476,6 +574,7 @@ class DatasetRegistry:
 DatasetRegistry.register('kreuzer-skarke', KreuzerSkarkeDataset())
 DatasetRegistry.register('cy5-folds', CY5FoldsDataset())
 DatasetRegistry.register('heterotic', HeteroticDataset())
+DatasetRegistry.register('f-theory-elliptic', FTheoryEllipticDataset())
 
 # Info-density dataset with default weights (can be customized via API)
 _info_density_dataset = InformationDensityDataset()

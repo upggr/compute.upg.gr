@@ -13,7 +13,7 @@ for rare targets, with sub-second runtime.
 import numpy as np
 import time
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 import warnings
@@ -104,6 +104,11 @@ def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_
     """
     start_time = time.time()
 
+    if top_k < 1:
+        raise ValueError("top_k must be >= 1")
+    if n_candidates < 10:
+        raise ValueError("n_candidates must be >= 10")
+
     # Get dataset
     dataset = DatasetRegistry.get_dataset(dataset_id)
     metadata = dataset.get_metadata()
@@ -140,7 +145,10 @@ def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_
     rank_time = time.time() - rank_start
 
     # Step 5: Get top-k results
-    top_indices = np.argsort(scores)[::-1][:top_k]
+    # Never request more than the test set holds, otherwise precision is
+    # divided by a k larger than the number of ranked rows.
+    effective_k = min(top_k, len(X_test))
+    top_indices = np.argsort(scores)[::-1][:effective_k]
     top_scores = scores[top_indices]
     top_labels = y_test[top_indices]
     top_candidates = X_test[top_indices]
@@ -149,7 +157,7 @@ def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_
     verify_start = time.time()
     if verify:
         true_positives = top_labels.sum()
-        precision = true_positives / top_k
+        precision = true_positives / effective_k if effective_k else 0.0
 
         total_targets = y_test.sum()
         recall = true_positives / total_targets if total_targets > 0 else 0
@@ -177,7 +185,7 @@ def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_
     # Build results
     results = {
         "run_metadata": {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "dataset": metadata.name,
             "dataset_id": dataset_id,
             "dataset_description": metadata.description,
@@ -195,7 +203,8 @@ def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_
             "recall_at_k": round(recall, 4) if recall is not None else None,
             "time_to_first_hit": time_to_first_hit,
             "verified_count": int(true_positives),
-            "total_top_k": top_k,
+            "total_top_k": effective_k,
+            "requested_top_k": top_k,
             "baseline_random_precision": round(y_test.mean(), 4)
         },
         "timing": {
@@ -209,8 +218,9 @@ def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_
         "top_results": []
     }
 
-    # Add top results
-    for idx in range(min(20, len(top_indices))):
+    # Add top results (all of them: previously capped at 20, which silently
+    # contradicted a requested top_k of 100)
+    for idx in range(len(top_indices)):
         result = dataset.format_result(
             candidate=top_candidates[idx],
             score=top_scores[idx],

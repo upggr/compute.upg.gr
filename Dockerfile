@@ -14,9 +14,12 @@ COPY datasets_registry.py .
 COPY hall_of_fame.py .
 COPY physics_dossier.py .
 COPY physics_extensions.py .
+COPY job_store.py .
+COPY ml_roadmap.py .
 COPY templates/ templates/
 COPY static/ static/
 COPY data/ data/
+COPY scripts/ scripts/
 
 # Create data directory for KS database cache (also holds baked seed JSON)
 RUN mkdir -p data/ks_cache

@@ -269,22 +269,47 @@
                     </figure>
                 </div>
                 <p class="note">{{ tabs.fluxes.periods_full.note }}</p>
+                {% if tabs.fluxes.periods_full.mirror_family_pf_tex %}
+                <h4>Quintic / mirror literature (CdOGP)</h4>
+                <div class="tex tex-display">{{ tabs.fluxes.periods_full.mirror_family_pf_tex }}</div>
+                {% if tabs.fluxes.periods_full.special_points %}
+                <ul class="identity-list">
+                    {% for sp in tabs.fluxes.periods_full.special_points %}
+                    <li>
+                        <strong>{{ sp.id }}</strong>
+                        {% if sp.z is defined %}<span class="pill">z={{ sp.z }}</span>{% endif %}
+                        {% if sp.z_float_toy is defined %}<span class="note">toy float={{ sp.z_float_toy }}</span>{% endif %}
+                        <div class="note">{{ sp.note }}</div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if tabs.fluxes.periods_full.references %}
+                <p class="note">Refs: {{ tabs.fluxes.periods_full.references | join('; ') }}</p>
+                {% endif %}
+                {% endif %}
                 {% endif %}
                 {% if tabs.fluxes.orientifold %}
                 <h3>Orientifold / O3–O7 tadpole</h3>
+                {% if tabs.fluxes.orientifold.status == 'curated_example' %}
+                <p class="honesty-label"><span class="pill">curated quintic example</span> {{ tabs.fluxes.orientifold.note }}</p>
+                {% endif %}
                 <div class="tex tex-display">{{ tabs.fluxes.orientifold.tex }}</div>
                 <ul class="check-list readiness-list">
                     {% for c in tabs.fluxes.orientifold.components %}
-                    <li class="{{ 'check-pass' if c.status == 'exact' else 'check-fail' }}">
+                    <li class="{{ 'check-pass' if c.status in ['exact', 'exact_for_class'] else 'check-fail' }}">
                         <span class="check-mark">{{ c.status }}</span>
                         <div>
                             <strong>{{ c.label }}</strong>
-                            <div class="note">{% if c.value is not none %}value={{ c.value }}{% else %}unknown{% endif %}</div>
+                            <div class="note">{% if c.value is not none %}value={{ c.value }}{% else %}unknown{% endif %}{% if c.detail %} — {{ c.detail }}{% endif %}</div>
                         </div>
                     </li>
                     {% endfor %}
                 </ul>
                 <p class="note">{{ tabs.fluxes.orientifold.note }}</p>
+                {% if tabs.fluxes.orientifold.references %}
+                <p class="note">Refs: {{ tabs.fluxes.orientifold.references | join('; ') }}</p>
+                {% endif %}
                 {% endif %}
                 {% if tabs.fluxes.lattice_miniscan %}
                 <h3>Toy flux-lattice enumeration</h3>
@@ -379,6 +404,26 @@
                     </figure>
                     {% endfor %}
                 </div>
+                {% endif %}
+                {% if tabs.phenomenology.soft_toy_card %}
+                <h3>Toy soft-parameter card</h3>
+                <p class="honesty-label"><span class="pill">illustrative · not from this CY</span> {{ tabs.phenomenology.soft_toy_card.honesty }}</p>
+                <form id="toy-soft-form" class="toy-soft-form" style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:end; margin:0.75rem 0;">
+                    <label>A0 <input name="A0" type="number" step="any" value="{{ tabs.phenomenology.soft_toy_card.inputs.A0 }}"></label>
+                    <label>m1/2 <input name="m12" type="number" step="any" value="{{ tabs.phenomenology.soft_toy_card.inputs.m12 }}"></label>
+                    <label>m0 <input name="m0" type="number" step="any" value="{{ tabs.phenomenology.soft_toy_card.inputs.m0 }}"></label>
+                    <label>tanβ <input name="tan_beta" type="number" step="any" value="{{ tabs.phenomenology.soft_toy_card.inputs.tan_beta }}"></label>
+                    <button type="submit" class="btn btn-secondary">Update toy card</button>
+                </form>
+                <div id="toy-soft-out" class="details-grid">
+                    {% for term in tabs.phenomenology.soft_toy_card.symbolic_outputs %}
+                    <div class="detail-item"><span>{{ term.name }}</span><strong>{{ term.value }}</strong></div>
+                    {% endfor %}
+                </div>
+                {% if tabs.phenomenology.soft_toy_card.yukawa_texture_placeholder %}
+                <p class="note">{{ tabs.phenomenology.soft_toy_card.yukawa_texture_placeholder.note }}</p>
+                <div class="tex tex-display">{{ tabs.phenomenology.soft_toy_card.yukawa_texture_placeholder.Y_u_tex }}, {{ tabs.phenomenology.soft_toy_card.yukawa_texture_placeholder.Y_d_tex }}, {{ tabs.phenomenology.soft_toy_card.yukawa_texture_placeholder.Y_e_tex }}</div>
+                {% endif %}
                 {% endif %}
                 {% if tabs.phenomenology.yukawas %}
                 <h3>Yukawa structure</h3>
@@ -977,6 +1022,30 @@
     }
     document.getElementById('lab-quiz-btn')?.addEventListener('click', newQuiz);
     newQuiz();
+
+    const toyForm = document.getElementById('toy-soft-form');
+    if (toyForm) {
+        toyForm.addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const fd = new FormData(toyForm);
+            const body = Object.fromEntries(fd.entries());
+            try {
+                const r = await fetch('/api/toy-soft', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                const data = await r.json();
+                const out = document.getElementById('toy-soft-out');
+                if (!out || !data.soft_toy_card) return;
+                out.innerHTML = (data.soft_toy_card.symbolic_outputs || []).map(
+                    (t) => `<div class="detail-item"><span>${t.name}</span><strong>${t.value}</strong></div>`
+                ).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        });
+    }
 
     // 3D
     const canvas = document.getElementById('candidate-canvas');

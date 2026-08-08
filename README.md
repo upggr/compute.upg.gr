@@ -51,6 +51,13 @@ This is applied computation and AI tooling designed to accelerate discovery in t
   - **Vacuum Stability**: KKLT/LVS inspired stability likelihood (tadpole headroom + moduli balance)
 - **Customizable**: Tune component weights via `/api/info-density/weights` endpoint
 
+### 5. F-theory elliptic proxies
+- **Total:** pedagogical proxy corpus (not a Weierstrass census)
+- **Target:** Elliptic-friendly Hodge patterns (low h¹¹ or literature elliptic seeds)
+- **Use Case:** F-theory model-building sketches with honest proxy features
+- **Honesty:** Not a full elliptic fibration / Tate-model database
+- **Source:** Literature elliptic CY3 Hodge classes (e.g. WP[1,1,1,6,9])
+
 ## Key Features
 
 ### Universal ML-Guided Search
@@ -333,15 +340,17 @@ Scales to:
 
 ### Dataset Expansion
 - [ ] Integrate actual CYTools library for full KS database access
-- [ ] Add F-theory compactification datasets
+- [x] Add F-theory compactification datasets (elliptic **proxy** dataset + literature seeds; not a Weierstrass DB)
 - [x] Include mirror symmetry pair databases (Hodge-level mirror link on candidate pages + textbook seeds)
 - [ ] Support flux compactification vacua
+- [x] Sidecar KS geometry sample (`data/ks_geometry_sample.json`) with real HF/Kreuzer vertices for textbook + HoF Hodge pairs
 
 ### ML Enhancements
 - [ ] Graph neural networks for geometric learning
 - [ ] Transfer learning across datasets
 - [ ] Active learning for efficient labeling
 - [ ] Ensemble methods combining multiple models
+- [x] Baseline geometry featurizer / ML roadmap stubs (`ml_roadmap.py`) — no fake trained GNNs
 
 ### Features
 - [ ] User-definable target criteria
@@ -349,8 +358,8 @@ Scales to:
 - [x] Mirror symmetry detection (Hodge swap + Hall of Fame deep-link)
 - [x] Hall of Fame gallery export + shareable candidate dossiers with analysis tabs
 - [x] Server-side export bundle for gallery selections (`POST /api/export-gallery` → ZIP of selected candidates; `/api/analysis/<id>/bundle` for full analysis tabs JSON)
-- [ ] Real-time progress tracking for long-running searches
-- [ ] Batch processing API
+- [x] Real-time progress tracking for long-running searches (`POST /api/run-demo` with `async:true` → `GET /api/jobs/<id>`)
+- [x] Batch processing API (`POST /api/batch`, ≤50 identify/search jobs)
 
 ## What Makes upg-strings Unique
 

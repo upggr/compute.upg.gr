@@ -33,6 +33,7 @@ data/ks_cache/
 static/data/*.json
 static/data/*.csv
 static/data/hall_of_fame.sqlite*
+static/data/jobs.sqlite*
 !static/data/results_topk.csv
 !static/data/metrics.json
 !static/data/repro.md

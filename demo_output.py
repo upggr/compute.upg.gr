@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """
-Quick test to demonstrate the real CY-Search performance
+Illustrative console output for CY-Search.
+
+WARNING: This script is NOT a test and performs NO computation. Every number
+below is hardcoded sample text for demonstration purposes only -- it does not
+measure anything and will never fail.
+
+For real measured numbers run:      python cy_search_real.py
+For the actual test suite run:      python -m pytest tests/
 """
 
-# We'll run a simplified version without imports to show the concept
 import sys
 import os
 

@@ -346,7 +346,8 @@
             top_k: parseInt(document.getElementById('top_k').value),
             seed: parseInt(document.getElementById('seed').value),
             verify: document.getElementById('verify').checked,
-            use_real: true
+            use_real: true,
+            async: true
         };
 
         // UI updates
@@ -355,7 +356,7 @@
         statusDiv.style.display = 'block';
         document.getElementById('current-results').style.display = 'none';
         statusText.textContent = `Searching ${params.n_candidates.toLocaleString()} Calabi-Yau manifolds...`;
-        progressFill.style.width = '30%';
+        progressFill.style.width = '5%';
 
         try {
             const response = await fetch('/api/run-demo', {
@@ -365,13 +366,52 @@
             });
 
             const data = await response.json();
-            progressFill.style.width = '100%';
-
-            if (data.status === 'success') {
+            if (data.status === 'accepted' && data.job_id) {
+                let done = false;
+                while (!done) {
+                    await new Promise(r => setTimeout(r, 400));
+                    const pr = await fetch(data.progress_url || `/api/jobs/${data.job_id}`);
+                    const pj = await pr.json();
+                    const job = pj.job || {};
+                    progressFill.style.width = `${job.percent || 10}%`;
+                    statusText.textContent = `Stage: ${job.stage || '...'} (${Math.round(job.percent || 0)}%)`;
+                    if (job.status === 'completed') {
+                        done = true;
+                        progressFill.style.width = '100%';
+                        const result = job.result || {};
+                        if (result.status === 'success') {
+                            showResults(result.results, `Run type: search (${params.dataset_id})`, result.run_id);
+                            statusDiv.style.display = 'none';
+                            saveToHistory({
+                                run_id: result.run_id,
+                                timestamp: new Date().toISOString(),
+                                n_candidates: params.n_candidates,
+                                top_k: params.top_k,
+                                precision: result.results.performance_metrics.precision_at_k || 0,
+                                recall: result.results.performance_metrics.recall_at_k || 0,
+                                runtime: result.results.timing.total_runtime_seconds
+                            });
+                            btn.textContent = '✓ Search Complete!';
+                            setTimeout(() => {
+                                btn.disabled = false;
+                                btn.textContent = '🚀 Run Search';
+                            }, 2000);
+                        } else {
+                            statusText.textContent = 'Error: job completed without results';
+                            btn.disabled = false;
+                            btn.textContent = '🚀 Run Search';
+                        }
+                    } else if (job.status === 'failed') {
+                        done = true;
+                        statusText.textContent = 'Error: ' + (job.error || 'job failed');
+                        btn.disabled = false;
+                        btn.textContent = '🚀 Run Search';
+                    }
+                }
+            } else if (data.status === 'success') {
+                progressFill.style.width = '100%';
                 showResults(data.results, `Run type: search (${params.dataset_id})`, data.run_id);
                 statusDiv.style.display = 'none';
-
-                // Save to history
                 saveToHistory({
                     run_id: data.run_id,
                     timestamp: new Date().toISOString(),
@@ -381,7 +421,6 @@
                     recall: data.results.performance_metrics.recall_at_k || 0,
                     runtime: data.results.timing.total_runtime_seconds
                 });
-
                 btn.textContent = '✓ Search Complete!';
                 setTimeout(() => {
                     btn.disabled = false;

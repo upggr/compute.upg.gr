@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% set active_page = "candidates" %}
 
-{% block title %}Candidate Gallery - upg-strings{% endblock %}
-{% block description %}Browse ranked Calabi-Yau manifolds from featured examples or a live search. Verified means the geometry matches that dataset’s target rule.{% endblock %}
+{% block title %}Hall of Fame - upg-strings{% endblock %}
+{% block description %}Persistent board of verified Calabi-Yau geometries. Verified means the geometry matches that dataset’s target rule.{% endblock %}
 {% block og_tags %}
-    <meta property="og:title" content="Candidate Gallery - upg-strings">
-    <meta property="og:description" content="Browse ranked Calabi-Yau manifolds from featured examples or a live search. Verified means the geometry matches that dataset’s target rule.">
+    <meta property="og:title" content="Hall of Fame - upg-strings">
+    <meta property="og:description" content="Persistent board of verified Calabi-Yau geometries. Verified means the geometry matches that dataset’s target rule.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://compute.upg.gr/candidates.html">
 {% endblock %}
@@ -25,7 +25,7 @@
                 <div class="control-group">
                     <label for="gallery-view">Source</label>
                     <select id="gallery-view">
-                        <option value="featured" selected>Hall of fame</option>
+                        <option value="featured" selected>Hall of Fame</option>
                         <option value="live">Live search results</option>
                     </select>
                 </div>

@@ -1516,6 +1516,52 @@ html[data-theme="dark"] tr.exact-match {
     margin: 0.65rem 0;
 }
 
+.neighbor-list a {
+    color: var(--primary-color);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1.5px;
+}
+
+.neighbor-list a:hover,
+.neighbor-list a:focus-visible {
+    color: var(--primary-dark);
+    text-decoration-thickness: 2.5px;
+}
+
+html:not([data-theme="light"]) .neighbor-list a,
+html[data-theme="dark"] .neighbor-list a {
+    color: #e8f3ff;
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+html:not([data-theme="light"]) .neighbor-list a:hover,
+html:not([data-theme="light"]) .neighbor-list a:focus-visible,
+html[data-theme="dark"] .neighbor-list a:hover,
+html[data-theme="dark"] .neighbor-list a:focus-visible {
+    color: #ffffff;
+    text-decoration-thickness: 2.5px;
+}
+
+/* Content links on dark backgrounds: avoid low-contrast browser/default blues */
+html:not([data-theme="light"]) .section a:not(.btn),
+html[data-theme="dark"] .section a:not(.btn) {
+    color: #e8f3ff;
+}
+
+html:not([data-theme="light"]) .section a:not(.btn):hover,
+html:not([data-theme="light"]) .section a:not(.btn):focus-visible,
+html[data-theme="dark"] .section a:not(.btn):hover,
+html[data-theme="dark"] .section a:not(.btn):focus-visible {
+    color: #ffffff;
+}
+
+html:not([data-theme="light"]) .lookup-id-link:hover,
+html[data-theme="dark"] .lookup-id-link:hover {
+    color: #ffffff;
+}
+
 .identity-list .tex {
     display: block;
     margin: 0.25rem 0;

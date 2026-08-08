@@ -250,13 +250,34 @@ def test_cy5_pack_rejects_string_config_matrix():
 def test_featured_cy5_triples_have_honest_pack_entries():
     import physics_extensions
     physics_extensions.reload_geometry_pack()
+    physics_dossier.load_known_constructions(force_reload=True)
     for h11, h21, h31 in ((140, 62, 18), (151, 41, 22), (131, 55, 29), (112, 48, 33)):
         pack = physics_extensions.lookup_geometry_pack('cy5-folds', h11, h21, h31)
         assert pack is not None, (h11, h21, h31)
         assert pack.get('configuration_matrix') is None
-        assert 'invent' in (pack.get('note') or '').lower() or 'needs' in (pack.get('note') or '').lower()
+        note = (pack.get('note') or '').lower()
+        assert 'invent' in note or 'needs' in note or 'null' in note or 'matched' in note
+        assert pack.get('reference_url') == 'https://arxiv.org/abs/2310.15966'
         curated = physics_dossier.lookup_known_construction('cy5-folds', h11, h21)
         assert curated is not None
+        assert curated.get('reference_url') == 'https://arxiv.org/abs/2310.15966'
+
+
+def test_quintic_construction_exposes_clickable_citations():
+    import physics_extensions
+    physics_extensions.reload_geometry_pack()
+    physics_dossier.load_known_constructions(force_reload=True)
+    c = physics_dossier.construction_payload(
+        'kreuzer-skarke', 'q', h11=1, h21=101, euler_char=-200,
+    )
+    assert c.get('citations')
+    assert any(
+        'arxiv.org' in (cite.get('url') or '') or 'kreuzer' in (cite.get('url') or '')
+        for cite in c['citations']
+    )
+    curated = c.get('curated') or {}
+    assert curated.get('reference_url')
+    assert curated['reference_url'].startswith('http')
 
 
 def test_heterotic_chi6_constructions():

@@ -8,11 +8,20 @@
       "h21": 101,
       "name": "Quintic threefold in ℂP⁴",
       "ambient": "P^4",
-      "weight_system": [1, 1, 1, 1, 1],
+      "weight_system": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
       "hypersurface_equation": "Generic degree-5 hypersurface ∑_{|α|=5} c_α x^α = 0",
       "favourable": true,
-      "reference": "Candelas–Horowitz–Strominger–Witten; Greene–Plesser mirror",
-      "note": "Textbook example. Many distinct quintics share (h¹¹,h²¹)=(1,101)."
+      "reference": "Candelas–Horowitz–Strominger–Witten; Greene–Plesser mirror; Kreuzer–Skarke arXiv:hep-th/0002240",
+      "note": "Textbook example. Many distinct quintics share (h¹¹,h²¹)=(1,101). Flagship linking example on compute.upg.gr.",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240",
+      "showcase": true,
+      "showcase_note": "Flagship dossier for linking and citation. Class-level quintic example (many geometries share these Hodge numbers)."
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -20,11 +29,18 @@
       "h21": 1,
       "name": "Mirror quintic",
       "ambient": "Toric mirror of P^4[5] (Greene–Plesser orbifold / KS dual)",
-      "weight_system": [1, 1, 1, 1, 1],
+      "weight_system": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
       "hypersurface_equation": "Mirror family of the quintic (orbifold + resolution)",
       "favourable": true,
-      "reference": "Greene–Plesser; Candelas–de la Ossa–Green–Parkes",
-      "note": "Hodge mirror of the quintic: (h¹¹,h²¹)=(101,1), χ=+200."
+      "reference": "Greene–Plesser; Candelas–de la Ossa–Green–Parkes arXiv:hep-th/9309140",
+      "note": "Hodge mirror of the quintic: (h¹¹,h²¹)=(101,1), χ=+200.",
+      "reference_url": "https://arxiv.org/abs/hep-th/9309140"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -36,7 +52,8 @@
       "hypersurface_equation": "Bidegree (3,3) hypersurface",
       "favourable": true,
       "reference": "Classic CICY / toric hypersurface example",
-      "note": "Pedagogical example with h¹¹=2, h²¹=83, χ=−162."
+      "note": "Pedagogical example with h¹¹=2, h²¹=83, χ=−162.",
+      "reference_url": "http://hep.itp.tuwien.ac.at/~kreuzer/CY/"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -48,7 +65,8 @@
       "hypersurface_equation": "Complete intersection of a quadric and a quartic in P^5",
       "favourable": true,
       "reference": "CICY list / Hubsch",
-      "note": "Standard complete-intersection threefold class."
+      "note": "Standard complete-intersection threefold class.",
+      "reference_url": "http://hep.itp.tuwien.ac.at/~kreuzer/CY/"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -60,7 +78,8 @@
       "hypersurface_equation": "Complete intersection of two cubics in P^5",
       "favourable": true,
       "reference": "CICY list",
-      "note": "Another classic CICY with h¹¹=1."
+      "note": "Another classic CICY with h¹¹=1.",
+      "reference_url": "http://hep.itp.tuwien.ac.at/~kreuzer/CY/"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -72,7 +91,8 @@
       "hypersurface_equation": "Bidegree (4,2) hypersurface (common pedagogical example)",
       "favourable": true,
       "reference": "Toric / CICY pedagogy",
-      "note": "Class-level ambient sketch; confirm weights before phenomenological use."
+      "note": "Class-level ambient sketch; confirm weights before phenomenological use.",
+      "reference_url": "http://hep.itp.tuwien.ac.at/~kreuzer/CY/"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -80,11 +100,18 @@
       "h21": 103,
       "name": "Weighted octic WP⁴[1,1,1,1,4]",
       "ambient": "WP^4[1,1,1,1,4]",
-      "weight_system": [1, 1, 1, 1, 4],
+      "weight_system": [
+        1,
+        1,
+        1,
+        1,
+        4
+      ],
       "hypersurface_equation": "Degree-8 hypersurface in weighted projective space",
       "favourable": true,
       "reference": "Weighted hypersurface catalogs",
-      "note": "Famous weighted projective example near the quintic locus in Hodge space."
+      "note": "Famous weighted projective example near the quintic locus in Hodge space.",
+      "reference_url": "http://hep.itp.tuwien.ac.at/~kreuzer/CY/"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -96,7 +123,8 @@
       "hypersurface_equation": "Multidegree (2,2,2,2) hypersurface",
       "favourable": true,
       "reference": "Classic CICY / toric example",
-      "note": "Often used in mirror-symmetry and Picard–Fuchs pedagogy."
+      "note": "Often used in mirror-symmetry and Picard–Fuchs pedagogy.",
+      "reference_url": "http://hep.itp.tuwien.ac.at/~kreuzer/CY/"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -119,8 +147,9 @@
       "weight_system": null,
       "hypersurface_equation": null,
       "favourable": null,
-      "reference": "Mirror symmetry / χ=0 locus",
-      "note": "h¹¹=h²¹ ⇒ χ=0. Many distinct geometries; listed as a Hodge-class landmark only."
+      "reference": "Mirror symmetry / χ=0 locus; Kreuzer–Skarke arXiv:hep-th/0002240",
+      "note": "h¹¹=h²¹ ⇒ χ=0. Many distinct geometries; listed as a Hodge-class landmark only.",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
     },
     {
       "dataset_id": "cy5-folds",
@@ -131,8 +160,9 @@
       "weight_system": null,
       "hypersurface_equation": null,
       "favourable": null,
-      "reference": "CI5F / cymetric catalogs",
-      "note": "Featured Hodge triple only — a real CI5F configuration matrix from the database is still needed; do not invent one from Hodge numbers."
+      "reference": "Alawadhi–Angella–Leonardo–Schettini Gherardini arXiv:2310.15966 (CI5F census); featured HoF triple not matched in Dropbox cicy5f.json",
+      "note": "Featured Hodge triple only — Dropbox CI5F census (arXiv:2310.15966) has no matching matrix (h¹¹≤15 there). Do not invent a matrix from Hodge numbers.",
+      "reference_url": "https://arxiv.org/abs/2310.15966"
     },
     {
       "dataset_id": "cy5-folds",
@@ -143,8 +173,9 @@
       "weight_system": null,
       "hypersurface_equation": null,
       "favourable": null,
-      "reference": "CI5F / cymetric catalogs",
-      "note": "Featured Hodge triple only — a real CI5F configuration matrix from the database is still needed; do not invent one from Hodge numbers."
+      "reference": "Alawadhi–Angella–Leonardo–Schettini Gherardini arXiv:2310.15966 (CI5F census); featured HoF triple not matched in Dropbox cicy5f.json",
+      "note": "Featured Hodge triple only — Dropbox CI5F census (arXiv:2310.15966) has no matching matrix (h¹¹≤15 there). Do not invent a matrix from Hodge numbers.",
+      "reference_url": "https://arxiv.org/abs/2310.15966"
     },
     {
       "dataset_id": "cy5-folds",
@@ -155,8 +186,9 @@
       "weight_system": null,
       "hypersurface_equation": null,
       "favourable": null,
-      "reference": "CI5F / cymetric catalogs",
-      "note": "Featured Hodge triple only — a real CI5F configuration matrix from the database is still needed; do not invent one from Hodge numbers."
+      "reference": "Alawadhi–Angella–Leonardo–Schettini Gherardini arXiv:2310.15966 (CI5F census); featured HoF triple not matched in Dropbox cicy5f.json",
+      "note": "Featured Hodge triple only — Dropbox CI5F census (arXiv:2310.15966) has no matching matrix (h¹¹≤15 there). Do not invent a matrix from Hodge numbers.",
+      "reference_url": "https://arxiv.org/abs/2310.15966"
     },
     {
       "dataset_id": "cy5-folds",
@@ -167,8 +199,9 @@
       "weight_system": null,
       "hypersurface_equation": null,
       "favourable": null,
-      "reference": "CI5F / cymetric catalogs",
-      "note": "Featured Hodge triple only — a real CI5F configuration matrix from the database is still needed; do not invent one from Hodge numbers."
+      "reference": "Alawadhi–Angella–Leonardo–Schettini Gherardini arXiv:2310.15966 (CI5F census); featured HoF triple not matched in Dropbox cicy5f.json",
+      "note": "Featured Hodge triple only — Dropbox CI5F census (arXiv:2310.15966) has no matching matrix (h¹¹≤15 there). Do not invent a matrix from Hodge numbers.",
+      "reference_url": "https://arxiv.org/abs/2310.15966"
     },
     {
       "dataset_id": "heterotic",

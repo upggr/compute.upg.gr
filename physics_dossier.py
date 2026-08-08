@@ -661,6 +661,129 @@ def lookup_known_construction(
 ) -> Optional[Dict[str, Any]]:
     return load_known_constructions().get((dataset_id, int(h11), int(h21)))
 
+def honest_pipeline_checklist(
+    dataset_id: str,
+    h11: Optional[int],
+    h21: Optional[int],
+    present_geometry: Optional[Dict[str, Any]] = None,
+    *,
+    pack: Optional[Dict[str, Any]] = None,
+    stage: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Honest vertices → triangulation → intersections → periods checklist.
+
+    Never marks numerical periods filled unless a periods payload exists.
+    Quintic / mirror classes may mark intersections as literature/combinatorial
+    and periods as literature-only (CdOGP), without inventing CYTools dumps.
+    """
+    pg = dict(present_geometry or {})
+    if pack:
+        for key in (
+            'polytope_vertices', 'vertex_matrix', 'triangulation',
+            'intersections', 'periods', 'ambient',
+        ):
+            if pg.get(key) is None and pack.get(key) is not None:
+                pg[key] = pack[key]
+
+    inferred = stage or geometry_store.infer_stage(pg)
+    quintic_class = (
+        (dataset_id or '').startswith('kreuzer')
+        and h11 is not None
+        and h21 is not None
+        and (int(h11), int(h21)) in ((1, 101), (101, 1))
+    )
+    lit_periods = bool(
+        quintic_class or (pack or {}).get('periods_literature_pointer')
+    )
+    ix = pg.get('intersections')
+    ix_lit = isinstance(ix, dict) and str(ix.get('status') or '').startswith('literature')
+
+    labels = {
+        'vertices': 'Vertices',
+        'triangulated': 'Triangulation / ambient',
+        'intersections': 'Intersections',
+        'periods': 'Periods',
+    }
+    details = {
+        'vertices': (
+            'Curated / stored polytope vertices present.'
+            if geometry_store._has_vertices(pg)
+            else 'No vertex matrix stored yet (offline worker or pack).'
+        ),
+        'triangulated': (
+            (
+                'Ambient ℂP⁴ note: smooth projective ambient — no toric FRST required '
+                'for the textbook quintic class.'
+                if quintic_class and (h11, h21) == (1, 101)
+                else (
+                    'Greene–Plesser / mirror ambient note present.'
+                    if quintic_class
+                    else 'Triangulation or ambient resolution note present.'
+                )
+            )
+            if geometry_store._has_triangulation(pg) or geometry_store.stage_includes(
+                inferred, 'triangulated'
+            )
+            else 'Triangulation / ambient resolution still pending.'
+        ),
+        'intersections': (
+            (
+                'Literature / combinatorial only'
+                + (
+                    f" (κ(H³)={ix.get('triple_intersection_H3')})"
+                    if isinstance(ix, dict) and ix.get('triple_intersection_H3') is not None
+                    else ''
+                )
+                + ' — not a CYTools dump.'
+            )
+            if ix_lit
+            else (
+                'Offline intersection numbers stored.'
+                if geometry_store._has_intersections(pg)
+                else (
+                    'Combinatorial / symbolic only unless literature or offline dump '
+                    'is attached — Hodge numbers alone do not fix intersections.'
+                )
+            )
+        ),
+        'periods': (
+            (
+                'CdOGP literature formulas surfaced on the Fluxes tab '
+                '(Picard–Fuchs / special points). Not a numerical period engine.'
+            )
+            if lit_periods and not geometry_store._has_periods(pg)
+            else (
+                'Offline / stored period payload present.'
+                if geometry_store._has_periods(pg)
+                else 'Numerical periods pending offline worker — not invented here.'
+            )
+        ),
+    }
+
+    out: List[Dict[str, Any]] = []
+    for name in geometry_store.PIPELINE_STAGES:
+        filled = geometry_store.stage_includes(inferred, name)
+        # Literature periods are a showcase overlay, not a filled offline stage.
+        if name == 'periods' and lit_periods and not geometry_store._has_periods(pg):
+            filled = False
+            status = 'literature'
+        elif name == 'intersections' and ix_lit:
+            filled = True
+            status = 'literature'
+        elif filled:
+            status = 'have'
+        else:
+            status = 'pending'
+        out.append({
+            'stage': name,
+            'label': labels.get(name, name),
+            'filled': filled,
+            'status': status,
+            'detail': details[name],
+        })
+    return out
+
+
 def construction_workplan(
     dataset_id: str, h11: int, h21: int, euler: int, h31: Optional[int] = None
 ) -> List[Dict[str, str]]:
@@ -784,6 +907,7 @@ def construction_payload(
         'vertex_count', 'facet_count', 'point_count', 'dual_point_count',
         'ks_source_slice', 'geometry_source', 'geometry_db_id', 'periods',
         'orientifold', 'stage', 'intersections', 'pipeline_note',
+        'showcase', 'showcase_note', 'periods_literature_pointer',
     )
 
     def _present_from(src: Dict[str, Any]) -> Dict[str, Any]:
@@ -955,6 +1079,15 @@ def construction_payload(
         key = (label or '', url or '')
         if key in seen_cite:
             return
+        # Prefer URL'd citations: skip label-only duplicates of an existing URL row.
+        if not url:
+            for existing in citations:
+                if existing.get('url') and (
+                    (label and label == existing.get('label'))
+                    or (label and label in (existing.get('label') or ''))
+                    or ((existing.get('label') or '') in (label or ''))
+                ):
+                    return
         seen_cite.add(key)
         citations.append({
             'label': label or url or 'Reference',
@@ -1401,13 +1534,26 @@ def build_tabs(
                 'periods': pg.get('periods'),
             })
             pipeline = geometry_store.pipeline_note(stage)
-    stage_checklist = []
-    for name in geometry_store.PIPELINE_STAGES:
-        stage_checklist.append({
-            'stage': name,
-            'filled': geometry_store.stage_includes(stage, name),
-            'label': name,
-        })
+    pg = (construction or {}).get('present_geometry') or {}
+    stage_checklist = honest_pipeline_checklist(
+        dataset_id,
+        h11,
+        h21,
+        pg,
+        stage=stage,
+    )
+    # Prefer richer checklist also on Construction tab.
+    out_construction['pipeline_checklist'] = (
+        (construction or {}).get('pipeline_checklist') or stage_checklist
+    )
+    showcase = bool((construction or {}).get('showcase'))
+    showcase_note = (construction or {}).get('showcase_note')
+    if periods_literature:
+        showcase = showcase or (h11, h21) in ((1, 101), (101, 1))
+        showcase_note = showcase_note or (
+            'Flagship quintic / mirror class: CdOGP literature periods on Fluxes; '
+            'pipeline checklist is honest about what is curated vs offline-pending.'
+        )
 
     model_building = {
         'id': 'model-building',
@@ -1424,11 +1570,14 @@ def build_tabs(
         'exclusions': exclusions,
         'cards': cards,
         'model_cards': cards,  # alias for older callers
+        'showcase': showcase,
+        'showcase_note': showcase_note,
+        'periods_literature': periods_literature,
         'geometry_pipeline': {
             'stage': stage,
             'pipeline_note': pipeline or geometry_store.pipeline_note(stage),
             'checklist': stage_checklist,
-            'intersections': intersections_offline,
+            'intersections': intersections_offline or pg.get('intersections'),
         },
     }
 

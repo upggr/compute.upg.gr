@@ -368,6 +368,7 @@ Roadmap vs full CYTools: this is the **offline → DB → query** path. In-proce
 ### Dataset Expansion
 - [ ] Integrate actual CYTools library for full KS database access (offline worker path exists; not in web image)
 - [x] Offline geometry SQLite (`geometry_store.py`) seeded from KS sample + geometry pack; web queries only
+- [x] Model-building Phase 1: topological exclusions + literature cards + geometry pipeline stages (`/api/exclusions`, `/api/model-cards`, Model-building tab)
 - [x] Add F-theory compactification datasets (elliptic **proxy** dataset + literature seeds; not a Weierstrass DB)
 - [x] Include mirror symmetry pair databases (Hodge-level mirror link on candidate pages + textbook seeds)
 - [ ] Support flux compactification vacua

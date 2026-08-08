@@ -87,13 +87,26 @@ def test_lookup_prefers_richer_status(geom_db):
 
 def test_ingest_ks_sample_and_pack(geom_db):
     stats = geometry_store.seed_baked_geometry(db_path=geom_db)
-    assert stats['ks_sample'] >= 1
+    assert stats['ks_sample'] >= 19
     assert stats['geometry_pack'] >= 1
     hit = geometry_store.lookup_by_hodge(
         'kreuzer-skarke', 1, 101, db_path=geom_db,
     )
     assert hit is not None
     assert hit.get('polytope_vertices') or hit.get('vertex_matrix')
+    assert hit.get('reference')
+    assert hit.get('reference_url')
+
+
+def test_ingest_hof_landscape_pairs(geom_db):
+    geometry_store.seed_baked_geometry(db_path=geom_db)
+    for h11, h21 in ((58, 55), (97, 77), (104, 98), (12, 38), (3, 243)):
+        hit = geometry_store.lookup_by_hodge(
+            'kreuzer-skarke', h11, h21, db_path=geom_db,
+        )
+        assert hit is not None, (h11, h21)
+        assert hit.get('polytope_vertices') or hit.get('vertex_matrix')
+        assert hit.get('status') in ('representative', 'curated', 'unique')
 
 
 def test_get_by_candidate_id(geom_db):
@@ -151,6 +164,7 @@ def test_merge_prefers_db_vertices(geom_db):
 def test_construction_payload_uses_db(geom_db, monkeypatch):
     monkeypatch.setattr(geometry_store, 'DEFAULT_DB_PATH', geom_db)
     geometry_store.seed_baked_geometry(db_path=geom_db)
+    physics_dossier.load_known_constructions(force_reload=True)
     c = physics_dossier.construction_payload(
         dataset_id='kreuzer-skarke',
         candidate_id='test-quintic',
@@ -165,6 +179,14 @@ def test_construction_payload_uses_db(geom_db, monkeypatch):
     )
     present = c['present_geometry']
     assert present.get('polytope_vertices') or present.get('vertex_matrix')
+    assert c.get('citations')
+    assert any(
+        (cite.get('url') or '').startswith('http') for cite in c['citations']
+    )
+    curated = c.get('curated') or {}
+    assert curated.get('reference_url') or any(
+        'arxiv' in (cite.get('url') or '').lower() for cite in c['citations']
+    )
 
 
 def test_api_geometry_lookup_quintic(client):

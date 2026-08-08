@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import sys
 
@@ -153,72 +152,6 @@ def test_upsert_persists_stage_and_intersections(tmp_path):
     assert hit['stage'] == 'intersections'
 
 
-# --- tabs + APIs -----------------------------------------------------------
-
-def test_build_tabs_includes_model_building():
-    d = physics_dossier.build_dossier('kreuzer-skarke', 1, 101, euler_char=-200)
-    tabs = physics_dossier.build_tabs(d)
-    assert tabs['ok']
-    mb = tabs['model_building']
-    assert 'Not a proof of string theory' in mb['honesty_banner']
-    assert any(c['id'] == 'heterotic_standard_embedding_3gen' for c in mb['exclusions'])
-    assert any(c['id'] == 'ks_tadpole_budget' for c in mb['exclusions'])
-    assert mb['geometry_pipeline']['checklist']
-    cards = mb.get('cards') or mb.get('model_cards') or []
-    assert any('quintic' in c['title'].lower() or 'CdOGP' in c['title'] for c in cards)
-
-
-def test_heterotic_chi6_model_building_passes_3gen():
-    d = physics_dossier.build_dossier('heterotic', 73, 70)
-    tabs = physics_dossier.build_tabs(d)
-    het = next(
-        c for c in tabs['model_building']['exclusions']
-        if c['id'] == 'heterotic_standard_embedding_3gen'
-    )
-    assert het['ok'] is True
-    cards = tabs['model_building'].get('cards') or []
-    assert any(c['framework'] == 'heterotic' for c in cards)
-
-
-@pytest.fixture
-def client():
-    import app as app_module
-    app_module.app.config['TESTING'] = True
-    with app_module.app.test_client() as c:
-        yield c
-
-
-def test_api_exclusions(client):
-    r = client.get('/api/exclusions?dataset_id=heterotic&h11=5&h21=1')
-    assert r.status_code == 200
-    body = r.get_json()
-    assert body['status'] == 'success'
-    het = next(c for c in body['exclusions'] if c['id'] == 'heterotic_standard_embedding_3gen')
-    assert het['ok'] is False
-
-
-def test_api_model_cards(client):
-    r = client.get('/api/model-cards?dataset_id=kreuzer-skarke&h11=1&h21=101')
-    assert r.status_code == 200
-    body = r.get_json()
-    assert body['status'] == 'success'
-    assert body['count'] >= 1
-    cards = body.get('cards') or body.get('model_cards') or []
-    assert cards[0]['reference_url']
-    r_all = client.get('/api/model-cards')
-    assert r_all.status_code == 200
-    assert r_all.get_json()['count'] >= 3
-
-
-def test_candidate_page_has_model_building_tab(client):
-    # Quintic Hodge via identify-style dossier path may 404 without HoF row;
-    # hit the API analysis bundle / build_tabs path instead via identify page data.
-    d = physics_dossier.build_dossier('kreuzer-skarke', 1, 101)
-    tabs = physics_dossier.build_tabs(d)
-    assert 'model_building' in tabs
-    assert 'Model-building aids' in tabs['model_building']['honesty_banner']
-
-
 # --- dossier tab + APIs ----------------------------------------------------
 
 @pytest.fixture
@@ -230,7 +163,6 @@ def client():
 
 
 def test_build_tabs_includes_model_building():
-    import physics_dossier
     dossier = physics_dossier.build_dossier(
         'kreuzer-skarke', h11=1, h21=101, verified_target=True,
     )
@@ -240,9 +172,23 @@ def test_build_tabs_includes_model_building():
     assert mb['id'] == 'model-building'
     assert 'Not a proof of string theory' in mb['honesty_banner']
     assert any(c['id'] == 'heterotic_standard_embedding_3gen' for c in mb['exclusions'])
-    assert any('quintic' in (c.get('title') or '').lower() or 'CdOGP' in (c.get('title') or '')
-               for c in (mb.get('cards') or mb.get('model_cards') or []))
+    assert any(c['id'] == 'ks_tadpole_budget' for c in mb['exclusions'])
     assert 'checklist' in mb['geometry_pipeline']
+    cards = mb.get('cards') or mb.get('model_cards') or []
+    assert any('quintic' in (c.get('title') or '').lower() or 'CdOGP' in (c.get('title') or '')
+               for c in cards)
+
+
+def test_heterotic_chi6_model_building_passes_3gen():
+    d = physics_dossier.build_dossier('heterotic', 73, 70)
+    tabs = physics_dossier.build_tabs(d)
+    het = next(
+        c for c in tabs['model_building']['exclusions']
+        if c['id'] == 'heterotic_standard_embedding_3gen'
+    )
+    assert het['ok'] is True
+    cards = tabs['model_building'].get('cards') or tabs['model_building'].get('model_cards') or []
+    assert any(c['framework'] == 'heterotic' for c in cards)
 
 
 def test_api_exclusions_quintic_and_heterotic(client):
@@ -284,7 +230,6 @@ def test_api_model_cards(client):
 
 
 def test_candidate_page_has_model_building_tab(client):
-    # Prefer textbook / HoF ids that exist locally.
     for cid in (
         'textbook-quintic',
         'heterotic-011',

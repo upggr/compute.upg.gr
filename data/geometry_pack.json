@@ -8,28 +8,100 @@
       "h21": 101,
       "name": "Quintic threefold in P^4",
       "ambient": "P^4",
-      "weight_system": [1, 1, 1, 1, 1],
+      "weight_system": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
       "favourable": true,
       "polytope_id": "simplex-P4",
       "vertex_matrix": [
-        [1, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 1],
-        [-1, -1, -1, -1]
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1
+        ]
       ],
       "polytope_vertices": [
-        [1, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 1],
-        [-1, -1, -1, -1]
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1
+        ]
       ],
       "triangulation": "projective-ambient-P4 (unique smooth ambient; no toric FRST required)",
       "triangulation_id": "P4-ambient",
       "hypersurface_equation": "sum_{|alpha|=5} c_alpha x^alpha = 0  (generic quintic; Fermat: x0^5+...+x4^5=0)",
       "configuration_matrix": null,
-      "reference": "Candelas–Horowitz–Strominger–Witten"
+      "reference": "Candelas–Horowitz–Strominger–Witten; Kreuzer–Skarke arXiv:hep-th/0002240",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240",
+      "showcase": true,
+      "showcase_note": "Flagship linking example: textbook quintic class (h¹¹,h²¹)=(1,101). Share this dossier for citations — not a unique polytope proof.",
+      "stage": "intersections",
+      "note": "Showcase geometry pack for the quintic class. Vertices + ambient P^4 triangulation note are curated; triple intersection κ(H³)=5 is the classical literature value (combinatorial), not a CYTools dump. Periods: use CdOGP literature formulas on the Fluxes tab — no invented numerical period integrals.",
+      "intersections": {
+        "status": "literature_combinatorial",
+        "triple_intersection_H3": 5,
+        "honesty": "Classical triple intersection of the ambient hyperplane class on the quintic in P^4: κ(H,H,H)=5. Combinatorial/symbolic literature value only — not an offline CYTools intersection dump for a specific triangulation of a KS polytope.",
+        "reference": "Standard textbook quintic (CHSW / mirror symmetry notes)"
+      },
+      "periods_literature_pointer": {
+        "status": "literature_CdOGP",
+        "honesty": "Published Picard–Fuchs / special-point structure for the one-parameter mirror family (Candelas–de la Ossa–Green–Parkes). Surfaced on the candidate Fluxes tab — not a numerical period engine.",
+        "see_tab": "fluxes"
+      }
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -37,27 +109,84 @@
       "h21": 1,
       "name": "Mirror quintic (Greene–Plesser)",
       "ambient": "Orbifold of Fermat quintic / toric mirror",
-      "weight_system": [1, 1, 1, 1, 1],
+      "weight_system": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
       "favourable": true,
       "polytope_id": "mirror-quintic-GP",
       "vertex_matrix": [
-        [1, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 1],
-        [-1, -1, -1, -1]
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1
+        ]
       ],
       "polytope_vertices": [
-        [1, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 1],
-        [-1, -1, -1, -1]
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1
+        ]
       ],
       "triangulation": "Greene-Plesser orbifold resolution of Fermat quintic mirror family",
       "triangulation_id": "GP-mirror-quintic",
       "hypersurface_equation": "x0^5+x1^5+x2^5+x3^5+x4^5 - 5 psi x0 x1 x2 x3 x4 = 0 (mirror family)",
-      "reference": "Greene–Plesser; Candelas–de la Ossa–Green–Parkes"
+      "reference": "Greene–Plesser; Candelas–de la Ossa–Green–Parkes arXiv:hep-th/9309140",
+      "reference_url": "https://arxiv.org/abs/hep-th/9309140"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -68,13 +197,23 @@
       "weight_system": null,
       "favourable": true,
       "polytope_id": "cicy-P2xP2-33",
-      "configuration_matrix": [[3, 3], [1, 1]],
+      "configuration_matrix": [
+        [
+          3,
+          3
+        ],
+        [
+          1,
+          1
+        ]
+      ],
       "vertex_matrix": null,
       "polytope_vertices": null,
       "triangulation": "product of projective planes (smooth ambient)",
       "triangulation_id": "P2xP2",
       "hypersurface_equation": "bidegree (3,3) section of O(3,3) on P2 x P2",
-      "reference": "CICY lists"
+      "reference": "CICY lists; Kreuzer CY site",
+      "reference_url": "http://hep.itp.tuwien.ac.at/~kreuzer/CY/"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -84,11 +223,19 @@
       "ambient": "P1 x P1 x P1 x P1",
       "favourable": true,
       "polytope_id": "tetraquadric-P1^4",
-      "configuration_matrix": [[2, 2, 2, 2]],
+      "configuration_matrix": [
+        [
+          2,
+          2,
+          2,
+          2
+        ]
+      ],
       "triangulation": "product of P1 factors",
       "triangulation_id": "P1x4",
       "hypersurface_equation": "multidegree (2,2,2,2) hypersurface",
-      "reference": "Classic CICY / mirror symmetry pedagogy"
+      "reference": "Classic CICY / mirror symmetry pedagogy; Kreuzer CY site",
+      "reference_url": "http://hep.itp.tuwien.ac.at/~kreuzer/CY/"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -98,11 +245,19 @@
       "ambient": "P^5",
       "favourable": true,
       "polytope_id": "cicy-P5-24",
-      "configuration_matrix": [[2], [4]],
+      "configuration_matrix": [
+        [
+          2
+        ],
+        [
+          4
+        ]
+      ],
       "triangulation": "projective ambient P5",
       "triangulation_id": "P5",
       "hypersurface_equation": "complete intersection of quadric and quartic in P5",
-      "reference": "CICY / Hubsch"
+      "reference": "CICY / Hubsch; Kreuzer CY site",
+      "reference_url": "http://hep.itp.tuwien.ac.at/~kreuzer/CY/"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -112,11 +267,19 @@
       "ambient": "P^5",
       "favourable": true,
       "polytope_id": "cicy-P5-33",
-      "configuration_matrix": [[3], [3]],
+      "configuration_matrix": [
+        [
+          3
+        ],
+        [
+          3
+        ]
+      ],
       "triangulation": "projective ambient P5",
       "triangulation_id": "P5",
       "hypersurface_equation": "complete intersection of two cubics in P5",
-      "reference": "CICY lists"
+      "reference": "CICY lists; Kreuzer CY site",
+      "reference_url": "http://hep.itp.tuwien.ac.at/~kreuzer/CY/"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -124,13 +287,20 @@
       "h21": 103,
       "name": "Weighted octic WP4[1,1,1,1,4]",
       "ambient": "WP^4[1,1,1,1,4]",
-      "weight_system": [1, 1, 1, 1, 4],
+      "weight_system": [
+        1,
+        1,
+        1,
+        1,
+        4
+      ],
       "favourable": true,
       "polytope_id": "wp11114-deg8",
       "triangulation": "weighted projective ambient (stacky; resolve singularities as needed)",
       "triangulation_id": "WP11114",
       "hypersurface_equation": "degree-8 hypersurface in WP4[1,1,1,1,4]",
-      "reference": "Weighted hypersurface catalogs"
+      "reference": "Weighted hypersurface catalogs; Kreuzer CY site",
+      "reference_url": "http://hep.itp.tuwien.ac.at/~kreuzer/CY/"
     },
     {
       "dataset_id": "cy5-folds",
@@ -142,8 +312,9 @@
       "configuration_matrix": null,
       "hypersurface_equation": null,
       "triangulation": null,
-      "note": "Featured CI5F Hodge triple still needs a real configuration matrix from the CI5F DB; ambient/reference are pedagogical only — no invented matrix.",
-      "reference": "cymetric / CI5F"
+      "note": "Featured CI5F Hodge triple — Dropbox cicy5f.json (arXiv:2310.15966) was checked; no matching configuration matrix (that census has h¹¹≤15). Leaving matrix null; do not invent one from Hodge numbers.",
+      "reference": "Alawadhi–Angella–Leonardo–Schettini Gherardini arXiv:2310.15966 (CI5F census); featured HoF triple not matched in Dropbox cicy5f.json",
+      "reference_url": "https://arxiv.org/abs/2310.15966"
     },
     {
       "dataset_id": "cy5-folds",
@@ -155,8 +326,9 @@
       "configuration_matrix": null,
       "hypersurface_equation": null,
       "triangulation": null,
-      "note": "Featured CI5F Hodge triple still needs a real configuration matrix from the CI5F DB; ambient/reference are pedagogical only — no invented matrix.",
-      "reference": "cymetric / CI5F"
+      "note": "Featured CI5F Hodge triple — Dropbox cicy5f.json (arXiv:2310.15966) was checked; no matching configuration matrix (that census has h¹¹≤15). Leaving matrix null; do not invent one from Hodge numbers.",
+      "reference": "Alawadhi–Angella–Leonardo–Schettini Gherardini arXiv:2310.15966 (CI5F census); featured HoF triple not matched in Dropbox cicy5f.json",
+      "reference_url": "https://arxiv.org/abs/2310.15966"
     },
     {
       "dataset_id": "cy5-folds",
@@ -168,8 +340,9 @@
       "configuration_matrix": null,
       "hypersurface_equation": null,
       "triangulation": null,
-      "note": "Featured CI5F Hodge triple still needs a real configuration matrix from the CI5F DB; ambient/reference are pedagogical only — no invented matrix.",
-      "reference": "cymetric / CI5F"
+      "note": "Featured CI5F Hodge triple — Dropbox cicy5f.json (arXiv:2310.15966) was checked; no matching configuration matrix (that census has h¹¹≤15). Leaving matrix null; do not invent one from Hodge numbers.",
+      "reference": "Alawadhi–Angella–Leonardo–Schettini Gherardini arXiv:2310.15966 (CI5F census); featured HoF triple not matched in Dropbox cicy5f.json",
+      "reference_url": "https://arxiv.org/abs/2310.15966"
     },
     {
       "dataset_id": "cy5-folds",
@@ -181,8 +354,9 @@
       "configuration_matrix": null,
       "hypersurface_equation": null,
       "triangulation": null,
-      "note": "Featured CI5F Hodge triple still needs a real configuration matrix from the CI5F DB; ambient/reference are pedagogical only — no invented matrix.",
-      "reference": "cymetric / CI5F"
+      "note": "Featured CI5F Hodge triple — Dropbox cicy5f.json (arXiv:2310.15966) was checked; no matching configuration matrix (that census has h¹¹≤15). Leaving matrix null; do not invent one from Hodge numbers.",
+      "reference": "Alawadhi–Angella–Leonardo–Schettini Gherardini arXiv:2310.15966 (CI5F census); featured HoF triple not matched in Dropbox cicy5f.json",
+      "reference_url": "https://arxiv.org/abs/2310.15966"
     },
     {
       "dataset_id": "heterotic",
@@ -216,7 +390,13 @@
       "h21": 272,
       "name": "Elliptic CY3 class WP[1,1,1,6,9] deg 18",
       "ambient": "WP^4[1,1,1,6,9]",
-      "weight_system": [1, 1, 1, 6, 9],
+      "weight_system": [
+        1,
+        1,
+        1,
+        6,
+        9
+      ],
       "hypersurface_equation": "Degree-18 hypersurface (standard elliptic fibration example)",
       "configuration_matrix": null,
       "note": "Literature elliptic CY3 Hodge class used as an F-theory PROXY seed. Not a resolved Weierstrass / Tate model database entry.",

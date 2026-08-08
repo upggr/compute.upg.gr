@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "Sidecar sample of REAL Kreuzer\u2013Skarke reflexive 4-polytope vertices for textbook + featured Hall-of-Fame Hodge pairs. NOT the full 473M database. Each entry is a labeled representative; Hodge numbers do not uniquely fix a polytope.",
+  "note": "Sidecar sample of REAL Kreuzer\u2013Skarke reflexive 4-polytope vertices for textbook + featured Hall-of-Fame Hodge pairs. NOT the full 473M DB.",
   "source": "https://huggingface.co/datasets/calabi-yau-data/polytopes-4d",
   "citation": "Kreuzer:2000xy (hep-th/0002240)",
   "polytopes": [
@@ -81,8 +81,9 @@
       "source_slice": "polytopes-4d-05-vertices.parquet",
       "geometry_status": "representative",
       "uniqueness": "one polytope with these Hodge numbers; not unique",
-      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). This is ONE representative with these Hodge numbers \u2014 many distinct polytopes/triangulations can share the same Hodge pair.",
-      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d"
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -161,8 +162,9 @@
       "source_slice": "polytopes-4d-05-vertices.parquet",
       "geometry_status": "representative",
       "uniqueness": "one polytope with these Hodge numbers; not unique",
-      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). This is ONE representative with these Hodge numbers \u2014 many distinct polytopes/triangulations can share the same Hodge pair.",
-      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d"
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -241,8 +243,9 @@
       "source_slice": "polytopes-4d-05-vertices.parquet",
       "geometry_status": "representative",
       "uniqueness": "one polytope with these Hodge numbers; not unique",
-      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). This is ONE representative with these Hodge numbers \u2014 many distinct polytopes/triangulations can share the same Hodge pair.",
-      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d"
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -369,8 +372,9 @@
       "source_slice": "polytopes-4d-09-vertices.parquet",
       "geometry_status": "representative",
       "uniqueness": "one polytope with these Hodge numbers; not unique",
-      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). This is ONE representative with these Hodge numbers \u2014 many distinct polytopes/triangulations can share the same Hodge pair.",
-      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d"
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -449,8 +453,90 @@
       "source_slice": "polytopes-4d-05-vertices.parquet",
       "geometry_status": "representative",
       "uniqueness": "one polytope with these Hodge numbers; not unique",
-      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). This is ONE representative with these Hodge numbers \u2014 many distinct polytopes/triangulations can share the same Hodge pair.",
-      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d"
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 3,
+      "h21": 243,
+      "name": "Large-CS elliptic / KS class (3,243)",
+      "polytope_vertices": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          3,
+          4,
+          6,
+          0
+        ],
+        [
+          3,
+          4,
+          6,
+          12
+        ],
+        [
+          -21,
+          -20,
+          -18,
+          -12
+        ]
+      ],
+      "vertex_matrix": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          3,
+          4,
+          6,
+          0
+        ],
+        [
+          3,
+          4,
+          6,
+          12
+        ],
+        [
+          -21,
+          -20,
+          -18,
+          -12
+        ]
+      ],
+      "vertex_count": 5,
+      "facet_count": 5,
+      "point_count": 335,
+      "dual_point_count": 11,
+      "euler_characteristic": -480,
+      "source_slice": "polytopes-4d-05-vertices.parquet",
+      "geometry_status": "representative",
+      "uniqueness": "one polytope with these Hodge numbers; not unique",
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -565,8 +651,114 @@
       "source_slice": "polytopes-4d-08-vertices.parquet",
       "geometry_status": "representative",
       "uniqueness": "one polytope with these Hodge numbers; not unique",
-      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). This is ONE representative with these Hodge numbers \u2014 many distinct polytopes/triangulations can share the same Hodge pair.",
-      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d"
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 12,
+      "h21": 38,
+      "name": "Mirror of HoF featured KS (38,12)",
+      "polytope_vertices": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          2,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          2
+        ],
+        [
+          -1,
+          0,
+          3,
+          -2
+        ],
+        [
+          -1,
+          0,
+          -1,
+          -2
+        ],
+        [
+          -3,
+          -2,
+          -3,
+          2
+        ]
+      ],
+      "vertex_matrix": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          2,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          2
+        ],
+        [
+          -1,
+          0,
+          3,
+          -2
+        ],
+        [
+          -1,
+          0,
+          -1,
+          -2
+        ],
+        [
+          -3,
+          -2,
+          -3,
+          2
+        ]
+      ],
+      "vertex_count": 7,
+      "facet_count": 6,
+      "point_count": 32,
+      "dual_point_count": 21,
+      "euler_characteristic": -52,
+      "source_slice": "polytopes-4d-07-vertices.parquet",
+      "geometry_status": "representative",
+      "uniqueness": "one polytope with these Hodge numbers; not unique",
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -645,8 +837,9 @@
       "source_slice": "polytopes-4d-05-vertices.parquet",
       "geometry_status": "representative",
       "uniqueness": "one polytope with these Hodge numbers; not unique",
-      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). This is ONE representative with these Hodge numbers \u2014 many distinct polytopes/triangulations can share the same Hodge pair.",
-      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d"
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -725,8 +918,9 @@
       "source_slice": "polytopes-4d-05-vertices.parquet",
       "geometry_status": "representative",
       "uniqueness": "one polytope with these Hodge numbers; not unique",
-      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). This is ONE representative with these Hodge numbers \u2014 many distinct polytopes/triangulations can share the same Hodge pair.",
-      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d"
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -853,8 +1047,138 @@
       "source_slice": "polytopes-4d-09-vertices.parquet",
       "geometry_status": "representative",
       "uniqueness": "one polytope with these Hodge numbers; not unique",
-      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). This is ONE representative with these Hodge numbers \u2014 many distinct polytopes/triangulations can share the same Hodge pair.",
-      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d"
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 33,
+      "h21": 44,
+      "name": "Mirror of HoF featured KS (44,33)",
+      "polytope_vertices": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          -2,
+          1,
+          1,
+          0
+        ],
+        [
+          -3,
+          -3,
+          1,
+          0
+        ],
+        [
+          -9,
+          -6,
+          1,
+          0
+        ]
+      ],
+      "vertex_matrix": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          -2,
+          1,
+          1,
+          0
+        ],
+        [
+          -3,
+          -3,
+          1,
+          0
+        ],
+        [
+          -9,
+          -6,
+          1,
+          0
+        ]
+      ],
+      "vertex_count": 9,
+      "facet_count": 13,
+      "point_count": 34,
+      "dual_point_count": 44,
+      "euler_characteristic": -22,
+      "source_slice": "polytopes-4d-09-vertices.parquet",
+      "geometry_status": "representative",
+      "uniqueness": "one polytope with these Hodge numbers; not unique",
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -945,8 +1269,9 @@
       "source_slice": "polytopes-4d-06-vertices.parquet",
       "geometry_status": "representative",
       "uniqueness": "one polytope with these Hodge numbers; not unique",
-      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). This is ONE representative with these Hodge numbers \u2014 many distinct polytopes/triangulations can share the same Hodge pair.",
-      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d"
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -1085,8 +1410,348 @@
       "source_slice": "polytopes-4d-10-vertices.parquet",
       "geometry_status": "representative",
       "uniqueness": "one polytope with these Hodge numbers; not unique",
-      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). This is ONE representative with these Hodge numbers \u2014 many distinct polytopes/triangulations can share the same Hodge pair.",
-      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d"
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 58,
+      "h21": 55,
+      "name": "HoF landscape KS (58,55)",
+      "polytope_vertices": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          -2,
+          -2,
+          -1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          2
+        ],
+        [
+          0,
+          -2,
+          -3,
+          3
+        ],
+        [
+          -1,
+          -1,
+          0,
+          2
+        ],
+        [
+          -3,
+          -2,
+          0,
+          3
+        ],
+        [
+          -12,
+          -2,
+          9,
+          -6
+        ]
+      ],
+      "vertex_matrix": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          -2,
+          -2,
+          -1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          2
+        ],
+        [
+          0,
+          -2,
+          -3,
+          3
+        ],
+        [
+          -1,
+          -1,
+          0,
+          2
+        ],
+        [
+          -3,
+          -2,
+          0,
+          3
+        ],
+        [
+          -12,
+          -2,
+          9,
+          -6
+        ]
+      ],
+      "vertex_count": 10,
+      "facet_count": 10,
+      "point_count": 73,
+      "dual_point_count": 73,
+      "euler_characteristic": 6,
+      "source_slice": "polytopes-4d-10-vertices.parquet",
+      "geometry_status": "representative",
+      "uniqueness": "one polytope with these Hodge numbers; not unique",
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 62,
+      "h21": 14,
+      "name": "Mirror of HoF featured KS (14,62)",
+      "polytope_vertices": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -8,
+          -6,
+          -8,
+          -1
+        ]
+      ],
+      "vertex_matrix": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -8,
+          -6,
+          -8,
+          -1
+        ]
+      ],
+      "vertex_count": 5,
+      "facet_count": 5,
+      "point_count": 21,
+      "dual_point_count": 61,
+      "euler_characteristic": 96,
+      "source_slice": "polytopes-4d-05-vertices.parquet",
+      "geometry_status": "representative",
+      "uniqueness": "one polytope with these Hodge numbers; not unique",
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 97,
+      "h21": 77,
+      "name": "HoF landscape KS (97,77)",
+      "polytope_vertices": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          -4,
+          -1,
+          -2,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -9,
+          -6,
+          -2,
+          0
+        ],
+        [
+          -28,
+          -17,
+          -6,
+          -4
+        ],
+        [
+          -63,
+          -42,
+          -11,
+          -9
+        ]
+      ],
+      "vertex_matrix": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          -4,
+          -1,
+          -2,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -9,
+          -6,
+          -2,
+          0
+        ],
+        [
+          -28,
+          -17,
+          -6,
+          -4
+        ],
+        [
+          -63,
+          -42,
+          -11,
+          -9
+        ]
+      ],
+      "vertex_count": 8,
+      "facet_count": 8,
+      "point_count": 98,
+      "dual_point_count": 131,
+      "euler_characteristic": 40,
+      "source_slice": "polytopes-4d-08-vertices.parquet",
+      "geometry_status": "representative",
+      "uniqueness": "one polytope with these Hodge numbers; not unique",
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
     },
     {
       "dataset_id": "kreuzer-skarke",
@@ -1165,8 +1830,114 @@
       "source_slice": "polytopes-4d-05-vertices.parquet",
       "geometry_status": "representative",
       "uniqueness": "one polytope with these Hodge numbers; not unique",
-      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). This is ONE representative with these Hodge numbers \u2014 many distinct polytopes/triangulations can share the same Hodge pair.",
-      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d"
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 104,
+      "h21": 98,
+      "name": "HoF landscape KS (104,98)",
+      "polytope_vertices": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -21,
+          -14,
+          -3,
+          -3
+        ],
+        [
+          -3,
+          -2,
+          -3,
+          3
+        ],
+        [
+          -21,
+          -14,
+          -18,
+          12
+        ]
+      ],
+      "vertex_matrix": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -21,
+          -14,
+          -3,
+          -3
+        ],
+        [
+          -3,
+          -2,
+          -3,
+          3
+        ],
+        [
+          -21,
+          -14,
+          -18,
+          12
+        ]
+      ],
+      "vertex_count": 7,
+      "facet_count": 7,
+      "point_count": 139,
+      "dual_point_count": 139,
+      "euler_characteristic": 12,
+      "source_slice": "polytopes-4d-07-vertices.parquet",
+      "geometry_status": "representative",
+      "uniqueness": "one polytope with these Hodge numbers; not unique",
+      "note": "Real reflexive 4-polytope vertices from Hugging Face calabi-yau-data/polytopes-4d (Kreuzer\u2013Skarke). ONE representative \u2014 not unique at the Hodge level.",
+      "reference": "Kreuzer\u2013Skarke arXiv:hep-th/0002240; HF calabi-yau-data/polytopes-4d",
+      "reference_url": "https://arxiv.org/abs/hep-th/0002240"
     }
   ],
   "match_counts_in_downloaded_slices": {
@@ -1175,12 +1946,26 @@
     "1,149": 1,
     "2,83": 1,
     "2,86": 9,
-    "4,68": 13,
-    "14,62": 2107,
-    "19,19": 3485,
-    "25,26": 1390,
-    "38,12": 7397,
-    "44,33": 6,
-    "101,1": 1
-  }
+    "3,243": 3,
+    "4,68": 20,
+    "12,38": 1808,
+    "14,62": 4156,
+    "19,19": 8401,
+    "25,26": 298,
+    "33,44": 45,
+    "38,12": 17557,
+    "44,33": 70,
+    "58,55": 30,
+    "62,14": 16964,
+    "97,77": 305,
+    "101,1": 1,
+    "104,98": 186
+  },
+  "missing_targets": [
+    {
+      "h11": 1,
+      "h21": 73,
+      "label": "CICY P5[3,3] Hodge class"
+    }
+  ]
 }

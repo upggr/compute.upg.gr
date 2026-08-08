@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Look up a geometry — upg-strings{% endblock %}
+{% block description %}Check a Calabi-Yau geometry against the upg-strings ranking by its Hodge numbers.{% endblock %}
+
+{% block content %}
+<section class="hero hero-compact">
+    <div class="container">
+        <h1>Look up a geometry</h1>
+        <p class="tagline">Have a manifold you find interesting? Enter its Hodge numbers to get its
+        identifier, its derived invariants, and how it scores in our ranking.</p>
+    </div>
+</section>
+
+<div class="container">
+    <section class="section">
+        <div class="lookup-grid">
+            <form id="lookup-form" class="lookup-form" autocomplete="off">
+                <div class="form-row">
+                    <label for="lk-dataset">Dataset</label>
+                    <select id="lk-dataset">
+                        <option value="kreuzer-skarke">Kreuzer-Skarke (CY 3-folds)</option>
+                        <option value="cy5-folds">CY5-Folds (CI5F)</option>
+                        <option value="heterotic">Heterotic compactifications</option>
+                        <option value="info-density">Information density ranking</option>
+                    </select>
+                </div>
+
+                <div class="form-row-group">
+                    <div class="form-row">
+                        <label for="lk-h11">h<sup>1,1</sup></label>
+                        <input type="number" id="lk-h11" min="0" step="1" placeholder="171" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="lk-h21">h<sup>2,1</sup></label>
+                        <input type="number" id="lk-h21" min="0" step="1" placeholder="156" required>
+                    </div>
+                    <div class="form-row" id="lk-h31-row" hidden>
+                        <label for="lk-h31">h<sup>3,1</sup></label>
+                        <input type="number" id="lk-h31" min="0" step="1" placeholder="24">
+                    </div>
+                </div>
+
+                <p class="field-hint">
+                    The Euler characteristic is derived from these, not entered — so it always
+                    agrees with the Hodge numbers.
+                </p>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Identify</button>
+                    <button type="button" id="lk-search" class="btn btn-secondary">Find nearest in ranking</button>
+                </div>
+            </form>
+
+            <aside class="lookup-aside">
+                <h3>What this can and cannot tell you</h3>
+                <p><strong>It can</strong> give you a stable identifier for a set of invariants,
+                compute derived quantities (χ, tadpole charge χ/24, total moduli), and show you
+                where comparable geometries land in our ranking.</p>
+                <p><strong>It cannot</strong> tell you whether this is <em>your</em> specific
+                manifold. Hodge numbers do not uniquely determine a Calabi-Yau: many distinct
+                geometries share the same (h<sup>1,1</sup>, h<sup>2,1</sup>, χ). The ~474M
+                Kreuzer-Skarke polytopes collapse to only about 30,000 distinct Hodge pairs.</p>
+                <p class="aside-note">To refer to a geometry unambiguously, cite the
+                Kreuzer-Skarke polytope (its vertex matrix) together with the triangulation used.</p>
+            </aside>
+        </div>
+
+        <div id="lk-error" class="lookup-error" hidden></div>
+
+        <div id="lk-identity" class="lookup-result" hidden>
+            <h2>Identifier</h2>
+            <div class="id-block">
+                <code id="lk-id" class="id-value"></code>
+                <button type="button" id="lk-copy" class="btn btn-secondary btn-small">Copy</button>
+            </div>
+            <p class="id-scheme">Scheme: <code id="lk-scheme"></code></p>
+
+            <div class="callout callout-warning">
+                <strong>Not a universal identifier.</strong>
+                <span id="lk-note"></span>
+            </div>
+
+            <h3>Derived invariants</h3>
+            <div class="derived-grid" id="lk-derived"></div>
+        </div>
+
+        <div id="lk-matches" class="lookup-result" hidden>
+            <h2>Nearest candidates in the ranking</h2>
+            <p class="result-meta" id="lk-matches-meta"></p>
+            <div class="table-container">
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Identifier</th>
+                            <th>Invariants</th>
+                            <th>Distance</th>
+                            <th>Rank</th>
+                            <th>Score</th>
+                            <th>Target</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lk-matches-body"></tbody>
+                </table>
+            </div>
+            <p class="field-hint" id="lk-matches-note"></p>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const form = document.getElementById('lookup-form');
+    const datasetEl = document.getElementById('lk-dataset');
+    const h31Row = document.getElementById('lk-h31-row');
+    const errorEl = document.getElementById('lk-error');
+    const identityEl = document.getElementById('lk-identity');
+    const matchesEl = document.getElementById('lk-matches');
+
+    function showError(message) {
+        errorEl.textContent = message;
+        errorEl.hidden = false;
+    }
+
+    function clearError() {
+        errorEl.hidden = true;
+        errorEl.textContent = '';
+    }
+
+    function toggleH31() {
+        const isCY5 = datasetEl.value === 'cy5-folds';
+        h31Row.hidden = !isCY5;
+        document.getElementById('lk-h31').required = isCY5;
+    }
+    datasetEl.addEventListener('change', toggleH31);
+    toggleH31();
+
+    function body() {
+        const payload = {
+            dataset_id: datasetEl.value,
+            h11: document.getElementById('lk-h11').value,
+            h21: document.getElementById('lk-h21').value,
+        };
+        if (datasetEl.value === 'cy5-folds') {
+            payload.h31 = document.getElementById('lk-h31').value;
+        }
+        return payload;
+    }
+
+    async function post(url, payload) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || 'Request failed');
+        }
+        return data;
+    }
+
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        clearError();
+        matchesEl.hidden = true;
+        try {
+            const data = await post('/api/identify', body());
+            document.getElementById('lk-id').textContent = data.candidate_id;
+            document.getElementById('lk-scheme').textContent = data.identity_scheme;
+            document.getElementById('lk-note').textContent = data.identifier_note;
+
+            const grid = document.getElementById('lk-derived');
+            grid.innerHTML = '';
+            const labels = {
+                euler_char: 'Euler characteristic χ',
+                abs_euler: '|χ|',
+                total_moduli: 'Total moduli',
+                tadpole_charge_chi_over_24: 'Tadpole charge (χ/24)',
+            };
+            const order = ['euler_char', 'abs_euler', 'tadpole_charge_chi_over_24', 'total_moduli'];
+            Object.entries(data.derived).sort(function (a, b) {
+                const ia = order.indexOf(a[0]), ib = order.indexOf(b[0]);
+                return (ia < 0 ? order.length : ia) - (ib < 0 ? order.length : ib);
+            }).forEach(function (entry) {
+                const item = document.createElement('div');
+                item.className = 'derived-item';
+                const label = document.createElement('span');
+                label.className = 'derived-label';
+                label.textContent = labels[entry[0]] || entry[0];
+                const value = document.createElement('span');
+                value.className = 'derived-value';
+                value.textContent = entry[1];
+                item.appendChild(label);
+                item.appendChild(value);
+                grid.appendChild(item);
+            });
+
+            if (data.warning) showError(data.warning);
+            identityEl.hidden = false;
+        } catch (err) {
+            identityEl.hidden = true;
+            showError(err.message);
+        }
+    });
+
+    document.getElementById('lk-search').addEventListener('click', async function () {
+        clearError();
+        try {
+            const payload = body();
+            payload.limit = 10;
+            const data = await post('/api/search', payload);
+
+            const tbody = document.getElementById('lk-matches-body');
+            tbody.innerHTML = '';
+            data.matches.forEach(function (match) {
+                const row = document.createElement('tr');
+                if (match.exact_match) row.className = 'exact-match';
+
+                const cells = [
+                    match.candidate_id,
+                    (match.features || []).map(f => f[0] + '=' + f[1]).join(', '),
+                    match.distance === 0 ? 'exact' : match.distance,
+                    match.rank,
+                    typeof match.score === 'number' ? match.score.toFixed(4) : match.score,
+                    match.verified_target ? 'yes' : 'no',
+                ];
+                cells.forEach(function (text, index) {
+                    const cell = document.createElement('td');
+                    if (index === 0) {
+                        const code = document.createElement('code');
+                        code.textContent = text;
+                        cell.appendChild(code);
+                    } else {
+                        cell.textContent = text;
+                    }
+                    row.appendChild(cell);
+                });
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('lk-matches-meta').textContent =
+                `Searched ${data.searched} ranked candidates · ${data.exact_matches} exact match(es)`;
+            document.getElementById('lk-matches-note').textContent = data.note;
+            matchesEl.hidden = false;
+        } catch (err) {
+            matchesEl.hidden = true;
+            showError(err.message);
+        }
+    });
+
+    document.getElementById('lk-copy').addEventListener('click', function () {
+        const text = document.getElementById('lk-id').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            const button = document.getElementById('lk-copy');
+            button.textContent = 'Copied';
+            setTimeout(() => { button.textContent = 'Copy'; }, 1500);
+        });
+    });
+})();
+</script>
+{% endblock %}

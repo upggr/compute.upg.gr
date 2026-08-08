@@ -6,11 +6,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application files
+# Copy application runtime modules (must match app.py imports)
 COPY app.py .
 COPY cy_search.py .
 COPY cy_search_real.py .
 COPY datasets_registry.py .
+COPY hall_of_fame.py .
 COPY templates/ templates/
 COPY static/ static/
 

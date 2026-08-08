@@ -32,6 +32,8 @@
                             <option value="kreuzer-skarke" selected>Kreuzer-Skarke (CY 3-folds)</option>
                             <option value="cy5-folds">CY5-Folds (Complete Intersection)</option>
                             <option value="heterotic">Heterotic Compactifications</option>
+                            <option value="info-density">Information Density Ranking</option>
+                            <option value="f-theory-elliptic">F-theory Elliptic Proxies</option>
                         </select>
                         <p id="dataset-description" style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem;">
                             Searching for manifolds with |χ| < 100
@@ -41,10 +43,10 @@
                     <div>
                         <label for="n_candidates" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Dataset Size</label>
                         <select id="n_candidates" style="width: 100%;">
-                            <option value="1000">1,000 candidates (fast, ~2s)</option>
-                            <option value="5000" selected>5,000 candidates (recommended, ~5s)</option>
-                            <option value="10000">10,000 candidates (thorough, ~10s)</option>
-                            <option value="25000">25,000 candidates (comprehensive, ~30s)</option>
+                            <option value="1000">1,000 candidates (fast, sync)</option>
+                            <option value="5000" selected>5,000 candidates (recommended)</option>
+                            <option value="10000">10,000 candidates (async forced)</option>
+                            <option value="25000">25,000 candidates (public max, async)</option>
                         </select>
                     </div>
 
@@ -191,13 +193,17 @@
     const datasetDescriptions = {
         'kreuzer-skarke': 'Searching for manifolds with |χ| < 100',
         'cy5-folds': 'Searching for manifolds with h^{1,1} > 100',
-        'heterotic': 'Searching for balanced manifolds with h^{1,1} ≈ h^{2,1}'
+        'heterotic': 'Searching for balanced manifolds with h^{1,1} ≈ h^{2,1}',
+        'info-density': 'Ranking by information-density composite (request-scoped weights)',
+        'f-theory-elliptic': 'F-theory elliptic / base proxies (synthetic Hodge draws)'
     };
 
     const featureColumns = {
         'kreuzer-skarke': ['h11', 'h21', 'euler_abs', 'hodge_ratio', 'c2_h11'],
         'cy5-folds': ['h11', 'h21', 'h31', 'euler', 'euler_abs', 'hodge_sum'],
-        'heterotic': ['h11', 'h21', 'euler', 'euler_abs', 'hodge_ratio', 'hodge_balance', 'n_gen']
+        'heterotic': ['h11', 'h21', 'euler', 'euler_abs', 'hodge_ratio', 'hodge_balance', 'n_gen'],
+        'info-density': ['h11', 'h21', 'euler_abs', 'hodge_entropy', 'topo_efficiency', 'moduli_compactness', 'hodge_balance', 'flux_density', 'vacuum_stability', 'info_density'],
+        'f-theory-elliptic': ['h11', 'h21', 'euler_abs', 'elliptic_flag', 'base_h11_proxy']
     };
 
     let latestResults = null;

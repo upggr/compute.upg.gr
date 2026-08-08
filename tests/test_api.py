@@ -193,3 +193,29 @@ def test_labels_still_use_held_out_target_rules():
     labels = ds.generate_labels(candidates, 42)
     euler_abs = candidates[:, ds.get_feature_names().index('euler_abs')]
     np.testing.assert_array_equal(labels, (euler_abs < 100).astype(int))
+
+
+def test_path_traversal_on_data_route_is_rejected(client):
+    r = client.get('/data/../app.py')
+    assert r.status_code in (403, 404)
+
+
+def test_info_density_weights_post_does_not_poison_global(client):
+    before = dict(get_info_density_dataset().weights)
+    r = client.post('/api/info-density/weights', json={'entropy': 0.99})
+    assert r.status_code == 200
+    body = r.get_json()
+    assert 'weight_set_id' in body
+    assert dict(get_info_density_dataset().weights) == before
+
+
+def test_sample_results_are_cached(client):
+    import time
+    t0 = time.time()
+    r1 = client.get('/api/sample-results?dataset_id=kreuzer-skarke')
+    assert r1.status_code == 200
+    t1 = time.time()
+    r2 = client.get('/api/sample-results?dataset_id=kreuzer-skarke')
+    t2 = time.time()
+    assert r2.status_code == 200
+    assert (t2 - t1) < max(0.5, (t1 - t0) * 0.5)

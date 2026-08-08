@@ -20,17 +20,18 @@
             <h2>For Scientists</h2>
             <p>Use the application to quickly surface rare Calabi-Yau candidates while keeping a reproducible record.</p>
             <ul>
-                <li>Run searches in the web UI or CLI to rank candidates by predicted likelihood</li>
-                <li>Verify top-k hits and track precision/recall for experimental comparison</li>
+                <li>Run searches in the web UI or API to rank candidates by predicted likelihood</li>
+                <li>Verify top-k hits against each dataset’s target rule and track precision/recall vs a random baseline</li>
                 <li>Export CSV/JSON artifacts for downstream analysis and sharing</li>
                 <li>Record random seeds and dataset metadata for reproducibility</li>
+                <li>Look up offline geometry packs, promote verified hits to the Hall of Fame, and poll async jobs</li>
             </ul>
         </section>
 
         <section class="section">
             <h2>Installation Prerequisites</h2>
             <ul>
-                <li>Python 3.9 or higher</li>
+                <li>Python <strong>3.11</strong> (matches the production Docker image; pins do not resolve on 3.12+)</li>
                 <li>pip package manager</li>
                 <li>4GB RAM minimum (8GB recommended)</li>
                 <li>2GB free disk space for datasets and outputs</li>
@@ -40,6 +41,7 @@
             <div class="code-block">
                 <code>git clone https://github.com/upggr/compute.upg.gr.git<br>
 cd compute.upg.gr<br>
+python3.11 -m venv venv && source venv/bin/activate<br>
 pip install -r requirements.txt</code>
             </div>
         </section>
@@ -47,7 +49,7 @@ pip install -r requirements.txt</code>
         <section class="section">
             <h2>How to Run</h2>
 
-            <h3>Basic Run</h3>
+            <h3>Basic Run (CLI)</h3>
             <div class="code-block">
                 <code>python cy_search_real.py</code>
             </div>
@@ -56,16 +58,26 @@ pip install -r requirements.txt</code>
             <div class="code-block">
                 <code>python app.py</code>
             </div>
+            <p>Production uses gunicorn (see Dockerfile). Home and Run pages submit with <code>async: true</code> and poll <code>GET /api/jobs/&lt;id&gt;</code>.</p>
 
             <h3>Expected Runtime</h3>
-            <p>5-15 minutes on standard hardware, depending on dataset size and CPU performance.</p>
+            <p>Typical sync demo sizes (1k–5k candidates) finish in a few seconds on standard hardware. Larger public runs (up to 25k candidates) are forced async so gunicorn workers stay responsive. Offline lab runs may take longer depending on CPU.</p>
+
+            <h3>Limits</h3>
+            <ul>
+                <li>Public max <code>n_candidates</code>: <strong>25,000</strong></li>
+                <li>Requests with <code>n_candidates</code> &gt; 5,000 are forced async</li>
+                <li>Heavy endpoints are IP rate-limited (~20 / minute): <code>/api/run-demo</code>, <code>/api/batch</code>, <code>/api/export-physics</code>, <code>/api/score-custom</code>, <code>/api/search</code></li>
+            </ul>
 
             <h3>Output Location</h3>
-            <p>All artifacts are saved to <code>./output/</code> directory:</p>
+            <p>All run artifacts are saved under <code>static/data/</code> (ephemeral <code>results_*.json</code> files are TTL-cleaned; Hall of Fame / geometry SQLite DBs are kept):</p>
             <ul>
-                <li><code>output/results_topk.csv</code> - Top-k ranked results</li>
-                <li><code>output/metrics.json</code> - Performance metrics</li>
-                <li><code>output/repro.md</code> - Reproducibility report</li>
+                <li><code>static/data/results_&lt;run_id&gt;.json</code> — full run payload</li>
+                <li><code>static/data/results_topk.csv</code>, <code>metrics.json</code>, <code>repro.md</code> — seed / demo fixtures</li>
+                <li><code>static/data/hall_of_fame.sqlite</code> — persistent verified board</li>
+                <li><code>static/data/geometry.sqlite</code> — offline geometry lookup store</li>
+                <li><code>static/data/jobs.sqlite</code> — async job progress (when volume-mounted)</li>
             </ul>
 
             <h3>Run Exports</h3>
@@ -78,6 +90,21 @@ pip install -r requirements.txt</code>
 curl -X POST https://compute.upg.gr/api/score-custom -H "Content-Type: application/json" \\<br>
   -d '{"dataset_id":"kreuzer-skarke","rows":[[12,45,66,3.75,924]],"top_k":20,"seed":42,"verify":true,"save":true}'<br>
 <br>
+# Async demo / search (poll until completed)<br>
+curl -X POST https://compute.upg.gr/api/run-demo -H "Content-Type: application/json" \\<br>
+  -d '{"top_k":100,"n_candidates":5000,"async":true}'<br>
+curl https://compute.upg.gr/api/jobs/JOB_ID<br>
+<br>
+# Batch identify/search (max 50 jobs)<br>
+curl -X POST https://compute.upg.gr/api/batch -H "Content-Type: application/json" \\<br>
+  -d '{"jobs":[{"type":"identify","h11":11,"h21":11,"dataset_id":"kreuzer-skarke"}]}'<br>
+<br>
+# Geometry lookup<br>
+curl "https://compute.upg.gr/api/geometry/lookup?dataset_id=kreuzer-skarke&amp;h11=11&amp;h21=11"<br>
+<br>
+# Hall of Fame / featured<br>
+curl "https://compute.upg.gr/api/featured-candidates?dataset_id=kreuzer-skarke&amp;top_n=12"<br>
+<br>
 # Export: fetch results in tool-friendly formats<br>
 curl -o results.json "https://compute.upg.gr/api/export/RUN_ID?format=json"<br>
 curl -o results.csv "https://compute.upg.gr/api/export/RUN_ID?format=csv"<br>
@@ -86,6 +113,9 @@ curl -o cymetric.json "https://compute.upg.gr/api/export/RUN_ID?format=cymetric"
 curl -o candidates.sage "https://compute.upg.gr/api/export/RUN_ID?format=sage"<br>
 curl -o candidates.wl "https://compute.upg.gr/api/export/RUN_ID?format=mathematica"</code>
             </div>
+
+            <h3>Info-density weights (request-scoped)</h3>
+            <p><code>POST /api/info-density/weights</code> returns a <code>weight_set_id</code>; it does <strong>not</strong> mutate global worker state. Pass <code>weight_set_id</code> or inline <code>weights</code> on subsequent <code>/api/run-demo</code>, <code>/api/search</code>, or <code>/api/export-physics</code> calls.</p>
 
             <h3>Per-Tool Schemas</h3>
             <p>Exports share the same candidate objects, packaged per tool. Each candidate includes the fields returned by the dataset formatter.</p>
@@ -107,7 +137,7 @@ rank, h11, h21, euler_char, hodge_balance, n_generations, score, verified_target
 candidates = [ { ... }, { ... } ]<br>
 <br>
 # Mathematica output<br>
-candidates = {<| "rank" -> 1, "h11" -> 12, ... |>, ...};</code>
+candidates = {&lt;| "rank" -&gt; 1, "h11" -&gt; 12, ... |&gt;, ...};</code>
             </div>
 
             <h3>Local Export Scripts</h3>
@@ -125,67 +155,21 @@ python scripts/export_adapters.py --input static/data/results_RUN_ID.json --form
                 <li>Kreuzer-Skarke: h11, h21, euler_abs, hodge_ratio, c2_h11</li>
                 <li>CY5-Folds: h11, h21, h31, euler, euler_abs, hodge_sum</li>
                 <li>Heterotic: h11, h21, euler, euler_abs, hodge_ratio, hodge_balance, n_gen</li>
+                <li>Info-density / F-theory: see Run page column hint for the selected dataset</li>
             </ul>
-
-            <h3>Command-Line Options</h3>
-            <div class="code-block">
-                <code>--config CONFIG_FILE    Path to configuration YAML (default: default.yml)<br>
---verify                Verify top results against ground truth<br>
---export-artifacts      Generate CSV/JSON output files<br>
---top-k K              Number of top results to export (default: 100)<br>
---seed SEED            Random seed for reproducibility (default: 42)</code>
-            </div>
         </section>
 
         <section class="section">
             <h2>Reproducibility Guarantees</h2>
 
             <h3>Fixed Random Seeds</h3>
-            <p>All stochastic operations (model training, data shuffling) use deterministic seeds specified in the configuration file. Default seed is 42.</p>
+            <p>All stochastic operations (model training, data shuffling) use deterministic seeds. Default seed is 42.</p>
 
             <h3>Pinned Dependencies</h3>
-            <p>The <code>requirements.txt</code> file pins exact versions of all Python packages to ensure identical runtime environments.</p>
-            <div class="code-block">
-                <code>pip freeze > requirements.lock  # Generate locked dependencies</code>
-            </div>
-
-            <h3>Dataset Checksum Verification</h3>
-            <p>Dataset downloads are verified using SHA-256 checksums before processing begins. If the checksum fails, the pipeline halts with an error.</p>
-            <div class="code-block">
-                <code># Expected checksum stored in config<br>
-dataset_checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"</code>
-            </div>
+            <p>The <code>requirements.txt</code> file pins exact versions of all Python packages to ensure identical runtime environments (Python 3.11).</p>
 
             <h3>Run Metadata</h3>
-            <p>Every run generates a <code>repro.md</code> file containing:</p>
-            <ul>
-                <li>Timestamp and hostname</li>
-                <li>Git commit hash</li>
-                <li>Python version and environment info</li>
-                <li>Configuration parameters used</li>
-                <li>Dataset checksum verified</li>
-                <li>Random seeds employed</li>
-            </ul>
-        </section>
-
-        <section class="section">
-            <h2>Configuration</h2>
-            <p>Edit <code>default.yml</code> to customize pipeline behavior:</p>
-            <div class="code-block">
-                <code>dataset:<br>
-  url: "https://example.com/cy_dataset.csv"<br>
-  checksum: "sha256:e3b0c44..."<br>
-<br>
-model:<br>
-  type: "random_forest"<br>
-  n_estimators: 100<br>
-  max_depth: 10<br>
-<br>
-search:<br>
-  top_k: 100<br>
-  verification: true<br>
-  seed: 42</code>
-            </div>
+            <p>Every API run returns metadata including timestamp, dataset id, checksum slice, held-out features, and seeds. Shareable results are stored under <code>static/data/results_*.json</code>.</p>
         </section>
     </main>
 {% endblock %}

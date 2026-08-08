@@ -1,14 +1,22 @@
-from flask import Flask, render_template, jsonify, request, send_file, Response
+from flask import Flask, render_template, jsonify, request, send_file, Response, abort
 import io
 import zipfile
 import json
 import os
+import time
+import uuid
 import numpy as np
 import hashlib
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict, deque
 from datetime import datetime, timezone
+from werkzeug.utils import safe_join
 from cy_search import run_search, get_sample_results  # Demo implementation
-from cy_search_real import run_real_search, list_available_datasets, CYSearchEngine  # Real implementation
+from cy_search_real import (  # Real implementation
+    run_real_search,
+    list_available_datasets,
+    CYSearchEngine,
+    SYNTHETIC_RETRIEVAL_HONESTY,
+)
 from datasets_registry import DatasetRegistry, get_info_density_dataset
 import hall_of_fame
 import geometry_store
@@ -27,10 +35,23 @@ os.makedirs(ANALYSIS_DIR, exist_ok=True)
 
 # Request limits. These bound the work a single unauthenticated request can
 # cause: without them one POST can occupy a gunicorn worker indefinitely.
-MAX_N_CANDIDATES = 50000
+# Public max is intentionally lower than an offline lab run would use.
+MAX_N_CANDIDATES = 25000
+# Sync requests above this force async job polling so gunicorn workers stay free.
+FORCE_ASYNC_N_CANDIDATES = 5000
 MAX_TOP_K = 1000
 MAX_CUSTOM_ROWS = 10000
 CANDIDATE_CACHE_MAXSIZE = 64
+
+# Rate limits (per client IP, in-memory; generous for demos, bounded for abuse).
+RATE_LIMIT_WINDOW_SEC = 60
+RATE_LIMIT_HEAVY_MAX = 20
+# TTL for ephemeral run artifacts under static/data (not HoF / geometry DBs).
+RESULTS_TTL_SEC = 48 * 3600
+RESULTS_KEEP_LAST_N = 40
+CLEANUP_INTERVAL_SEC = 300
+SAMPLE_RESULTS_TTL_SEC = 6 * 3600
+WEIGHT_SET_TTL_SEC = 3600
 
 # Bounded LRU cache: the key includes user-controlled params, so an unbounded
 # dict here grows without limit as callers vary the seed.
@@ -38,6 +59,34 @@ CANDIDATE_CACHE = OrderedDict()
 FEATURED_PATH = os.path.join('data', 'featured_candidates.json')
 HALL_OF_FAME_PATH = os.path.join('static', 'data', 'hall_of_fame.sqlite')
 GEOMETRY_DB_PATH = os.path.join('static', 'data', 'geometry.sqlite')
+
+# Per-process caches (multi-worker safe: never mutate shared dataset singletons).
+_RATE_LOCK = threading.Lock()
+_RATE_HITS = defaultdict(deque)  # ip -> timestamps
+_WEIGHT_SETS_LOCK = threading.Lock()
+_WEIGHT_SETS = {}  # weight_set_id -> {weights, created_at}
+_SAMPLE_CACHE_LOCK = threading.Lock()
+_SAMPLE_CACHE = {}  # dataset_id -> {expires_at, payload}
+_CLEANUP_LOCK = threading.Lock()
+_LAST_CLEANUP_AT = 0.0
+
+# Files / patterns that TTL cleanup must never delete.
+_PROTECTED_DATA_NAMES = frozenset({
+    'hall_of_fame.sqlite',
+    'hall_of_fame.sqlite-wal',
+    'hall_of_fame.sqlite-shm',
+    'geometry.sqlite',
+    'geometry.sqlite-wal',
+    'geometry.sqlite-shm',
+    'jobs.sqlite',
+    'jobs.sqlite-wal',
+    'jobs.sqlite-shm',
+    'featured_candidates.json',
+    'known_constructions.json',
+    'metrics.json',
+    'repro.md',
+    'results_topk.csv',
+})
 
 
 def _utcnow_iso():
@@ -61,6 +110,200 @@ def _bounded_int(value, default, minimum, maximum):
 def _is_known_dataset(dataset_id):
     """Check a dataset id without raising (which would leak the registry keys)."""
     return any(d['id'] == dataset_id for d in list_available_datasets())
+
+
+def _client_ip():
+    forwarded = request.headers.get('X-Forwarded-For', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip() or '0.0.0.0'
+    return request.remote_addr or '0.0.0.0'
+
+
+def _rate_limit_allow(max_hits=RATE_LIMIT_HEAVY_MAX, window_sec=RATE_LIMIT_WINDOW_SEC):
+    """Simple IP token bucket. Returns True when the request is allowed."""
+    ip = _client_ip()
+    now = time.time()
+    with _RATE_LOCK:
+        bucket = _RATE_HITS[ip]
+        while bucket and now - bucket[0] >= window_sec:
+            bucket.popleft()
+        if len(bucket) >= max_hits:
+            return False
+        bucket.append(now)
+        return True
+
+
+def _rate_limited_response():
+    return jsonify({
+        'status': 'error',
+        'message': (
+            f'Rate limit exceeded ({RATE_LIMIT_HEAVY_MAX} heavy requests per '
+            f'{RATE_LIMIT_WINDOW_SEC}s). Retry shortly or use async jobs.'
+        ),
+    }), 429
+
+
+def _maybe_cleanup_results(ttl_sec=RESULTS_TTL_SEC, keep_last_n=RESULTS_KEEP_LAST_N):
+    """Delete old results_*.json / analysis artifacts; never touch HoF/geometry DBs."""
+    global _LAST_CLEANUP_AT
+    now = time.time()
+    with _CLEANUP_LOCK:
+        if now - _LAST_CLEANUP_AT < CLEANUP_INTERVAL_SEC:
+            return
+        _LAST_CLEANUP_AT = now
+
+    cutoff = now - ttl_sec
+    try:
+        entries = []
+        for name in os.listdir(RESULTS_DIR):
+            if name in _PROTECTED_DATA_NAMES:
+                continue
+            if name.startswith('sample_results_'):
+                continue
+            path = os.path.join(RESULTS_DIR, name)
+            if not os.path.isfile(path):
+                continue
+            if not (
+                name.startswith('results_') and name.endswith('.json')
+            ) and not name.endswith('.csv'):
+                # Leave unknown files alone except explicit result JSON/CSV.
+                if not (name.startswith('results_') or name.startswith('physics_')):
+                    continue
+            try:
+                mtime = os.path.getmtime(path)
+            except OSError:
+                continue
+            entries.append((mtime, path, name))
+
+        # Age-based delete, then trim surplus newest results_*.json.
+        for mtime, path, name in entries:
+            if mtime < cutoff:
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+
+        result_json = sorted(
+            ((m, p) for m, p, n in entries
+             if n.startswith('results_') and n.endswith('.json') and os.path.exists(p)),
+            reverse=True,
+        )
+        for _, path in result_json[keep_last_n:]:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+
+        if os.path.isdir(ANALYSIS_DIR):
+            for name in os.listdir(ANALYSIS_DIR):
+                path = os.path.join(ANALYSIS_DIR, name)
+                if not os.path.isfile(path):
+                    continue
+                try:
+                    if os.path.getmtime(path) < cutoff:
+                        os.remove(path)
+                except OSError:
+                    pass
+    except OSError:
+        pass
+
+
+def _validate_weight_dict(raw):
+    """Validate a partial info-density weight map. Returns (weights, error_response)."""
+    dataset = get_info_density_dataset()
+    valid_keys = set(dataset.DEFAULT_WEIGHTS.keys())
+    if not isinstance(raw, dict):
+        return None, (jsonify({'status': 'error', 'message': 'Weights must be a JSON object'}), 400)
+    invalid_keys = set(raw.keys()) - valid_keys
+    if invalid_keys:
+        return None, (jsonify({
+            'status': 'error',
+            'message': f'Invalid weight keys: {sorted(invalid_keys)}. Valid keys: {sorted(valid_keys)}',
+        }), 400)
+    cleaned = {}
+    for key, value in raw.items():
+        if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
+            return None, (jsonify({
+                'status': 'error',
+                'message': f'Weight "{key}" must be a non-negative number',
+            }), 400)
+        cleaned[key] = float(value)
+    return cleaned, None
+
+
+def _store_weight_set(weights):
+    weight_set_id = uuid.uuid4().hex[:12]
+    now = time.time()
+    with _WEIGHT_SETS_LOCK:
+        expired = [k for k, v in _WEIGHT_SETS.items() if now - v['created_at'] > WEIGHT_SET_TTL_SEC]
+        for k in expired:
+            _WEIGHT_SETS.pop(k, None)
+        _WEIGHT_SETS[weight_set_id] = {'weights': dict(weights), 'created_at': now}
+    return weight_set_id
+
+
+def _load_weight_set(weight_set_id):
+    if not weight_set_id:
+        return None
+    now = time.time()
+    with _WEIGHT_SETS_LOCK:
+        rec = _WEIGHT_SETS.get(weight_set_id)
+        if not rec:
+            return None
+        if now - rec['created_at'] > WEIGHT_SET_TTL_SEC:
+            _WEIGHT_SETS.pop(weight_set_id, None)
+            return None
+        return dict(rec['weights'])
+
+
+def _resolve_request_weights(params=None):
+    """Resolve info-density weights for this request only (no global mutation).
+
+    Precedence: body/query `weights` dict > `weight_set_id` > defaults.
+    """
+    dataset = get_info_density_dataset()
+    params = params or {}
+    resolved = dataset.DEFAULT_WEIGHTS.copy()
+    weight_set_id = params.get('weight_set_id') or request.args.get('weight_set_id')
+    stored = _load_weight_set(weight_set_id)
+    if stored:
+        resolved.update(stored)
+    raw = params.get('weights')
+    if raw is None and request.args.get('weights'):
+        try:
+            raw = json.loads(request.args.get('weights'))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            raw = None
+    if isinstance(raw, dict) and raw:
+        cleaned, err = _validate_weight_dict(raw)
+        if err:
+            return None, err
+        resolved.update(cleaned)
+    return resolved, None
+
+
+def _should_force_async(n_candidates, async_mode):
+    if async_mode:
+        return True
+    return n_candidates > FORCE_ASYNC_N_CANDIDATES
+
+
+def _safe_results_path(filename):
+    """Resolve filename under RESULTS_DIR or return None if unsafe / missing dir escape."""
+    if filename is None:
+        return None
+    # Reject obvious traversal tokens before join.
+    normalized = filename.replace('\\', '/')
+    if normalized.startswith('/') or any(part == '..' for part in normalized.split('/')):
+        return None
+    joined = safe_join(RESULTS_DIR, filename)
+    if not joined:
+        return None
+    real_root = os.path.realpath(RESULTS_DIR)
+    real_path = os.path.realpath(joined)
+    if real_path != real_root and not real_path.startswith(real_root + os.sep):
+        return None
+    return real_path
 
 
 # Topological invariants that identify a geometry, per dataset. Deliberately
@@ -359,11 +602,19 @@ def run_demo():
         "seed": 42,
         "verify": true,
         "n_candidates": 5000,
-        "dataset_id": "kreuzer-skarke",  # or "cy5-folds", "heterotic"
+        "dataset_id": "kreuzer-skarke",  # or "cy5-folds", "heterotic", ...
         "use_real": true,
-        "async": false   # if true, return job_id and poll /api/jobs/<id>
+        "async": false,   # if true (or n_candidates > FORCE_ASYNC), return job_id
+        "weights": {...},           # info-density only; request-scoped
+        "weight_set_id": "..."      # from POST /api/info-density/weights
     }
+
+    Public max n_candidates is MAX_N_CANDIDATES (25000). Requests above
+    FORCE_ASYNC_N_CANDIDATES (5000) are forced async.
     """
+    _maybe_cleanup_results()
+    if not _rate_limit_allow():
+        return _rate_limited_response()
     try:
         params = request.get_json() or {}
         top_k = _bounded_int(params.get('top_k'), 100, 1, MAX_TOP_K)
@@ -372,7 +623,14 @@ def run_demo():
         n_candidates = _bounded_int(params.get('n_candidates'), 5000, 10, MAX_N_CANDIDATES)
         dataset_id = params.get('dataset_id', 'kreuzer-skarke')
         use_real = params.get('use_real', True)  # Default to real implementation
-        async_mode = bool(params.get('async') or params.get('async_mode'))
+        async_mode = _should_force_async(
+            n_candidates, bool(params.get('async') or params.get('async_mode'))
+        )
+        weights = None
+        if dataset_id == 'info-density':
+            weights, err = _resolve_request_weights(params)
+            if err:
+                return err
 
         if not _is_known_dataset(dataset_id):
             return jsonify({
@@ -395,6 +653,7 @@ def run_demo():
                             n_candidates=n_candidates,
                             verify=verify,
                             dataset_id=dataset_id,
+                            weights=weights,
                         )
                     else:
                         job_store.update_job(job_id, percent=40, stage='demo_search')
@@ -428,6 +687,9 @@ def run_demo():
                 'status': 'accepted',
                 'job_id': job_id,
                 'progress_url': f'/api/jobs/{job_id}',
+                'forced_async': n_candidates > FORCE_ASYNC_N_CANDIDATES and not bool(
+                    params.get('async') or params.get('async_mode')
+                ),
                 'message': 'Job queued; poll progress_url until status=completed',
             }), 202
 
@@ -439,7 +701,8 @@ def run_demo():
                 seed=seed,
                 n_candidates=n_candidates,
                 verify=verify,
-                dataset_id=dataset_id
+                dataset_id=dataset_id,
+                weights=weights,
             )
         else:
             print(f"Running DEMO: top_k={top_k}, seed={seed}")
@@ -485,6 +748,9 @@ def get_job_progress(job_id):
 @app.route('/api/batch', methods=['POST'])
 def batch_api():
     """Bounded batch of identify / search jobs (max 50)."""
+    _maybe_cleanup_results()
+    if not _rate_limit_allow():
+        return _rate_limited_response()
     params = request.get_json() or {}
     jobs = params.get('jobs') or params.get('requests') or []
     if not isinstance(jobs, list) or not jobs:
@@ -575,16 +841,55 @@ def get_results(run_id):
 
 @app.route('/api/sample-results')
 def sample_results():
-    """Get sample results for display (uses real implementation)"""
-    # Use real implementation with small dataset for quick response
+    """Cached sample results for display (avoids retraining RF on every hit)."""
+    _maybe_cleanup_results()
     dataset_id = request.args.get('dataset_id', 'kreuzer-skarke')
+    if not _is_known_dataset(dataset_id):
+        return jsonify({'status': 'error', 'message': f'Unknown dataset: {dataset_id}'}), 400
+
+    now = time.time()
+    with _SAMPLE_CACHE_LOCK:
+        cached = _SAMPLE_CACHE.get(dataset_id)
+        if cached and cached['expires_at'] > now:
+            return jsonify(cached['payload'])
+
+    # Prefer durable fixture under static/data/ (immutable until TTL file mtime ages out).
+    fixture_name = f'sample_results_{dataset_id}.json'
+    fixture_path = _safe_results_path(fixture_name)
+    if fixture_path and os.path.isfile(fixture_path):
+        try:
+            age = now - os.path.getmtime(fixture_path)
+            if age < SAMPLE_RESULTS_TTL_SEC:
+                with open(fixture_path, 'r') as f:
+                    payload = json.load(f)
+                with _SAMPLE_CACHE_LOCK:
+                    _SAMPLE_CACHE[dataset_id] = {
+                        'expires_at': now + SAMPLE_RESULTS_TTL_SEC,
+                        'payload': payload,
+                    }
+                return jsonify(payload)
+        except (OSError, json.JSONDecodeError):
+            pass
+
     results = run_real_search(
         top_k=20,
         seed=42,
         n_candidates=1000,
         verify=True,
-        dataset_id=dataset_id
+        dataset_id=dataset_id,
     )
+    try:
+        write_path = os.path.join(RESULTS_DIR, fixture_name)
+        with open(write_path, 'w') as f:
+            json.dump(results, f)
+    except OSError:
+        pass
+
+    with _SAMPLE_CACHE_LOCK:
+        _SAMPLE_CACHE[dataset_id] = {
+            'expires_at': now + SAMPLE_RESULTS_TTL_SEC,
+            'payload': results,
+        }
     return jsonify(results)
 
 
@@ -616,8 +921,9 @@ def _load_results(run_id):
         return json.load(f)
 
 
-def _build_candidate_cards(dataset_id, seed=42, top_n=12, n_candidates=5000):
-    cache_key = (dataset_id, seed, top_n, n_candidates)
+def _build_candidate_cards(dataset_id, seed=42, top_n=12, n_candidates=5000, weights=None):
+    weight_key = tuple(sorted((weights or {}).items())) if weights else ()
+    cache_key = (dataset_id, seed, top_n, n_candidates, weight_key)
     if cache_key in CANDIDATE_CACHE:
         CANDIDATE_CACHE.move_to_end(cache_key)
         return CANDIDATE_CACHE[cache_key]
@@ -627,7 +933,8 @@ def _build_candidate_cards(dataset_id, seed=42, top_n=12, n_candidates=5000):
         seed=seed,
         n_candidates=n_candidates,
         verify=True,
-        dataset_id=dataset_id
+        dataset_id=dataset_id,
+        weights=weights,
     )
 
     dataset = DatasetRegistry.get_dataset(dataset_id)
@@ -1067,7 +1374,13 @@ def search_candidates():
     lookup would almost always return nothing useful. Instead we rank the
     generated candidates by distance from the query and return the nearest,
     flagging which (if any) match exactly.
+
+    Large n_candidates (> FORCE_ASYNC_N_CANDIDATES) must set async:true and
+    poll /api/jobs/<id>; sync requests above the threshold are forced async.
     """
+    _maybe_cleanup_results()
+    if not _rate_limit_allow():
+        return _rate_limited_response()
     params = request.get_json() or {}
     dataset_id = params.get('dataset_id', 'kreuzer-skarke')
 
@@ -1077,6 +1390,14 @@ def search_candidates():
     seed = _bounded_int(params.get('seed'), 42, 0, 2**32 - 1)
     n_candidates = _bounded_int(params.get('n_candidates'), 5000, 10, MAX_N_CANDIDATES)
     limit = _bounded_int(params.get('limit'), 10, 1, 100)
+    async_mode = _should_force_async(
+        n_candidates, bool(params.get('async') or params.get('async_mode'))
+    )
+    weights = None
+    if dataset_id == 'info-density':
+        weights, err = _resolve_request_weights(params)
+        if err:
+            return err
 
     query = {}
     for field in ('h11', 'h21', 'h31'):
@@ -1094,55 +1415,82 @@ def search_candidates():
     if any(v < 0 for v in query.values()):
         return jsonify({'status': 'error', 'message': 'Hodge numbers must be non-negative'}), 400
 
-    # Search the full ranked set, not just the top slice, so a query can find
-    # geometries the ranking scored poorly.
-    payload = _build_candidate_cards(
-        dataset_id=dataset_id, seed=seed,
-        top_n=min(MAX_TOP_K, n_candidates), n_candidates=n_candidates
-    )
+    def _run_search_body():
+        # Search the full ranked set, not just the top slice, so a query can find
+        # geometries the ranking scored poorly.
+        payload = _build_candidate_cards(
+            dataset_id=dataset_id, seed=seed,
+            top_n=min(MAX_TOP_K, n_candidates), n_candidates=n_candidates,
+            weights=weights,
+        )
 
-    scored = []
-    for card in payload['candidates']:
-        raw = card.get('raw', {})
-        distance = 0.0
-        for field, wanted in query.items():
-            actual = raw.get(field)
-            if actual is None:
-                distance = float('inf')
-                break
-            distance += (float(actual) - wanted) ** 2
-        if distance == float('inf'):
-            continue
-        scored.append((distance ** 0.5, card))
+        scored = []
+        for card in payload['candidates']:
+            raw = card.get('raw', {})
+            distance = 0.0
+            for field, wanted in query.items():
+                actual = raw.get(field)
+                if actual is None:
+                    distance = float('inf')
+                    break
+                distance += (float(actual) - wanted) ** 2
+            if distance == float('inf'):
+                continue
+            scored.append((distance ** 0.5, card))
 
-    scored.sort(key=lambda pair: (pair[0], pair[1].get('rank', 0)))
+        scored.sort(key=lambda pair: (pair[0], pair[1].get('rank', 0)))
 
-    matches = []
-    for distance, card in scored[:limit]:
-        matches.append({
-            'candidate_id': card['candidate_id'],
-            'identity': card.get('identity'),
-            'rank': card.get('rank'),
-            'score': card.get('score'),
-            'verified_target': card.get('verified_target'),
-            'features': card.get('features'),
-            'distance': round(distance, 4),
-            'exact_match': distance == 0.0,
-        })
+        matches = []
+        for distance, card in scored[:limit]:
+            matches.append({
+                'candidate_id': card['candidate_id'],
+                'identity': card.get('identity'),
+                'rank': card.get('rank'),
+                'score': card.get('score'),
+                'verified_target': card.get('verified_target'),
+                'features': card.get('features'),
+                'distance': round(distance, 4),
+                'exact_match': distance == 0.0,
+            })
 
-    return jsonify({
-        'status': 'success',
-        'query': query,
-        'dataset_id': dataset_id,
-        'searched': len(payload['candidates']),
-        'exact_matches': sum(1 for m in matches if m['exact_match']),
-        'matches': matches,
-        'note': (
-            'Results are the nearest candidates in this sampled run by '
-            'Euclidean distance on the supplied invariants. Distance 0 means '
-            'the invariants agree exactly, not that the manifold is the same.'
-        ),
-    })
+        return {
+            'status': 'success',
+            'query': query,
+            'dataset_id': dataset_id,
+            'searched': len(payload['candidates']),
+            'exact_matches': sum(1 for m in matches if m['exact_match']),
+            'matches': matches,
+            'note': (
+                'Results are the nearest candidates in this sampled run by '
+                'Euclidean distance on the supplied invariants. Distance 0 means '
+                'the invariants agree exactly, not that the manifold is the same.'
+            ),
+        }
+
+    if async_mode:
+        job_id = job_store.create_job(stage='queued')
+
+        def _worker():
+            try:
+                job_store.update_job(job_id, status='running', percent=10, stage='search')
+                body = _run_search_body()
+                job_store.update_job(
+                    job_id, status='completed', percent=100, stage='done', result=body
+                )
+            except Exception as exc:
+                job_store.update_job(
+                    job_id, status='failed', percent=100, stage='error', error=str(exc)
+                )
+
+        threading.Thread(target=_worker, daemon=True).start()
+        return jsonify({
+            'status': 'accepted',
+            'job_id': job_id,
+            'progress_url': f'/api/jobs/{job_id}',
+            'message': 'Search queued; poll progress_url until status=completed',
+        }), 202
+
+    return jsonify(_run_search_body())
 
 
 def _export_candidates(results):
@@ -1514,12 +1862,15 @@ def download_analysis_bundle(candidate_id):
 @app.route('/api/info-density/weights', methods=['GET', 'POST'])
 def info_density_weights():
     """
-    Get or set custom weights for the info-density composite score.
+    Request-scoped info-density weights (multi-worker safe).
 
-    GET: Returns current weights
-    POST: Set new weights (partial update supported)
+    GET: defaults plus optional session/query weights
+         (?weight_set_id=... or ?weights={...} JSON)
+    POST: validate a weight map and return a weight_set_id. Does NOT mutate
+          the process-global dataset singleton. Pass weight_set_id or weights
+          on subsequent /api/run-demo, /api/search, or /api/export-physics calls.
 
-    Accepts JSON payload for POST:
+    POST body (partial update supported):
     {
         "entropy": 0.20,
         "efficiency": 0.20,
@@ -1532,52 +1883,52 @@ def info_density_weights():
     All weights should sum to 1.0 for normalized scoring.
     """
     dataset = get_info_density_dataset()
+    defaults = dataset.DEFAULT_WEIGHTS.copy()
 
     if request.method == 'GET':
+        resolved, err = _resolve_request_weights(dict(request.args))
+        if err:
+            return err
         return jsonify({
             'status': 'success',
-            'weights': dataset.weights,
-            'default_weights': dataset.DEFAULT_WEIGHTS
+            'weights': resolved,
+            'default_weights': defaults,
+            'weight_set_id': request.args.get('weight_set_id'),
+            'note': (
+                'Weights are request-scoped. POST returns a weight_set_id; pass it '
+                '(or a weights object) on search/run-demo. Defaults are never mutated.'
+            ),
         })
 
-    # POST - update weights
     try:
         new_weights = request.get_json() or {}
+        cleaned, err = _validate_weight_dict(new_weights)
+        if err:
+            return err
 
-        # Validate weight keys
-        valid_keys = set(dataset.DEFAULT_WEIGHTS.keys())
-        invalid_keys = set(new_weights.keys()) - valid_keys
-        if invalid_keys:
-            return jsonify({
-                'status': 'error',
-                'message': f'Invalid weight keys: {invalid_keys}. Valid keys: {valid_keys}'
-            }), 400
+        resolved = defaults.copy()
+        resolved.update(cleaned)
+        weight_set_id = _store_weight_set(cleaned)
 
-        # Validate weight values
-        for key, value in new_weights.items():
-            if not isinstance(value, (int, float)) or value < 0:
-                return jsonify({
-                    'status': 'error',
-                    'message': f'Weight "{key}" must be a non-negative number'
-                }), 400
-
-        # Update weights
-        dataset.set_weights(new_weights)
-
-        # Check if weights sum to ~1.0 (warn but don't error)
-        total = sum(dataset.weights.values())
+        total = sum(resolved.values())
         warning = None
         if abs(total - 1.0) > 0.01:
             warning = f'Weights sum to {total:.3f}, not 1.0. Results may not be normalized.'
 
         response = {
             'status': 'success',
-            'message': 'Weights updated',
-            'weights': dataset.weights
+            'message': 'Weight set created (request-scoped; not applied globally)',
+            'weight_set_id': weight_set_id,
+            'weights': resolved,
+            'default_weights': defaults,
+            'ttl_seconds': WEIGHT_SET_TTL_SEC,
+            'usage': {
+                'run_demo': {'weight_set_id': weight_set_id},
+                'or_inline': {'weights': cleaned},
+            },
         }
         if warning:
             response['warning'] = warning
-
         return jsonify(response)
 
     except Exception as e:
@@ -1586,13 +1937,15 @@ def info_density_weights():
 
 @app.route('/api/info-density/weights/reset', methods=['POST'])
 def reset_info_density_weights():
-    """Reset info-density weights to defaults"""
+    """Return default weights. Does not mutate global process state."""
     dataset = get_info_density_dataset()
+    # Keep singleton in sync with defaults in case older code mutated it.
     dataset.weights = dataset.DEFAULT_WEIGHTS.copy()
     return jsonify({
         'status': 'success',
-        'message': 'Weights reset to defaults',
-        'weights': dataset.weights
+        'message': 'Defaults restored (no global weight poisoning)',
+        'weights': dataset.DEFAULT_WEIGHTS.copy(),
+        'default_weights': dataset.DEFAULT_WEIGHTS.copy(),
     })
 
 
@@ -1610,15 +1963,17 @@ def export_physics_data():
         "top_k": 100,
         "seed": 42,
         "n_candidates": 5000,
-        "format": "json"  // or "csv", "numpy"
+        "format": "json",  // or "csv", "numpy"
+        "weights": {...},
+        "weight_set_id": "...",
+        "async": false
     }
 
-    Returns comprehensive physics data including:
-    - All Hodge numbers and derived invariants
-    - Tadpole charge (χ/24) for D3 brane counting
-    - Flux density and vacuum stability metrics
-    - ML ranking score
+    Public max n_candidates is 25000; above 5000 requests are forced async.
     """
+    _maybe_cleanup_results()
+    if not _rate_limit_allow():
+        return _rate_limited_response()
     try:
         params = request.get_json() or {}
         dataset_id = params.get('dataset_id', 'info-density')
@@ -1626,72 +1981,109 @@ def export_physics_data():
         seed = _bounded_int(params.get('seed'), 42, 0, 2**32 - 1)
         n_candidates = _bounded_int(params.get('n_candidates'), 5000, 10, MAX_N_CANDIDATES)
         export_format = params.get('format', 'json').lower()
+        async_mode = _should_force_async(
+            n_candidates, bool(params.get('async') or params.get('async_mode'))
+        )
 
         if not _is_known_dataset(dataset_id):
             return jsonify({'status': 'error', 'message': f'Unknown dataset: {dataset_id}'}), 400
 
-        # Run search
-        results = run_real_search(
-            top_k=top_k,
-            seed=seed,
-            n_candidates=n_candidates,
-            verify=True,
-            dataset_id=dataset_id
-        )
+        weights = None
+        if dataset_id == 'info-density':
+            weights, err = _resolve_request_weights(params)
+            if err:
+                return err
 
-        # Build physics export payload
-        candidates_data = []
-        for r in results['top_results']:
-            candidate = {
-                'rank': r.get('rank'),
-                'h11': r.get('h11'),
-                'h21': r.get('h21'),
-                'euler_characteristic': r.get('euler_char'),
-                'ml_score': r.get('score'),
-                'verified_target': r.get('verified_target')
+        def _build_export():
+            results = run_real_search(
+                top_k=top_k,
+                seed=seed,
+                n_candidates=n_candidates,
+                verify=True,
+                dataset_id=dataset_id,
+                weights=weights,
+            )
+
+            candidates_data = []
+            for r in results['top_results']:
+                candidate = {
+                    'rank': r.get('rank'),
+                    'h11': r.get('h11'),
+                    'h21': r.get('h21'),
+                    'euler_characteristic': r.get('euler_char'),
+                    'ml_score': r.get('score'),
+                    'verified_target': r.get('verified_target')
+                }
+
+                if dataset_id == 'info-density':
+                    candidate.update({
+                        'tadpole_charge': r.get('tadpole_charge'),
+                        'hodge_entropy': r.get('hodge_entropy'),
+                        'topo_efficiency': r.get('topo_efficiency'),
+                        'moduli_compactness': r.get('moduli_compactness'),
+                        'hodge_balance': r.get('hodge_balance'),
+                        'flux_density': r.get('flux_density'),
+                        'vacuum_stability': r.get('vacuum_stability'),
+                        'info_density': r.get('info_density')
+                    })
+                elif dataset_id == 'heterotic':
+                    candidate.update({
+                        'hodge_balance': r.get('hodge_balance'),
+                        'n_generations': r.get('n_generations')
+                    })
+                elif dataset_id == 'cy5-folds':
+                    candidate['h31'] = r.get('h31')
+
+                candidates_data.append(candidate)
+
+            export_payload = {
+                'metadata': {
+                    'dataset_id': dataset_id,
+                    'dataset_name': results['run_metadata']['dataset'],
+                    'total_candidates_searched': results['run_metadata']['total_candidates'],
+                    'top_k': top_k,
+                    'seed': seed,
+                    'timestamp': results['run_metadata']['timestamp'],
+                    'precision_at_k': results['performance_metrics']['precision_at_k'],
+                    'checksum': results['run_metadata']['dataset_checksum']
+                },
+                'candidates': candidates_data
             }
 
-            # Add dataset-specific physics fields
             if dataset_id == 'info-density':
-                candidate.update({
-                    'tadpole_charge': r.get('tadpole_charge'),  # χ/24
-                    'hodge_entropy': r.get('hodge_entropy'),
-                    'topo_efficiency': r.get('topo_efficiency'),
-                    'moduli_compactness': r.get('moduli_compactness'),
-                    'hodge_balance': r.get('hodge_balance'),
-                    'flux_density': r.get('flux_density'),
-                    'vacuum_stability': r.get('vacuum_stability'),
-                    'info_density': r.get('info_density')
-                })
-            elif dataset_id == 'heterotic':
-                candidate.update({
-                    'hodge_balance': r.get('hodge_balance'),
-                    'n_generations': r.get('n_generations')
-                })
-            elif dataset_id == 'cy5-folds':
-                candidate['h31'] = r.get('h31')
+                export_payload['metadata']['weights'] = weights or get_info_density_dataset().DEFAULT_WEIGHTS.copy()
 
-            candidates_data.append(candidate)
+            return export_payload, candidates_data
 
-        export_payload = {
-            'metadata': {
-                'dataset_id': dataset_id,
-                'dataset_name': results['run_metadata']['dataset'],
-                'total_candidates_searched': results['run_metadata']['total_candidates'],
-                'top_k': top_k,
-                'seed': seed,
-                'timestamp': results['run_metadata']['timestamp'],
-                'precision_at_k': results['performance_metrics']['precision_at_k'],
-                'checksum': results['run_metadata']['dataset_checksum']
-            },
-            'candidates': candidates_data
-        }
+        if async_mode and export_format == 'json':
+            job_id = job_store.create_job(stage='queued')
 
-        # Add weights if info-density
-        if dataset_id == 'info-density':
-            export_payload['metadata']['weights'] = get_info_density_dataset().weights
+            def _worker():
+                try:
+                    job_store.update_job(job_id, status='running', percent=15, stage='export_physics')
+                    export_payload, _ = _build_export()
+                    job_store.update_job(
+                        job_id,
+                        status='completed',
+                        percent=100,
+                        stage='done',
+                        result={'status': 'success', 'export': export_payload},
+                    )
+                except Exception as exc:
+                    job_store.update_job(
+                        job_id, status='failed', percent=100, stage='error', error=str(exc)
+                    )
 
-        # Format response
+            threading.Thread(target=_worker, daemon=True).start()
+            return jsonify({
+                'status': 'accepted',
+                'job_id': job_id,
+                'progress_url': f'/api/jobs/{job_id}',
+                'message': 'Export queued; poll progress_url until status=completed',
+            }), 202
+
+        export_payload, candidates_data = _build_export()
+
         if export_format == 'json':
             return jsonify({'status': 'success', 'export': export_payload})
 
@@ -1704,7 +2096,6 @@ def export_physics_data():
             return response
 
         elif export_format == 'numpy':
-            # Return as JSON with array structure suitable for np.array()
             if not candidates_data:
                 return jsonify({'status': 'error', 'message': 'No candidates to export'}), 400
 
@@ -1747,6 +2138,9 @@ def score_custom():
         "verify": true
     }
     """
+    _maybe_cleanup_results()
+    if not _rate_limit_allow():
+        return _rate_limited_response()
     try:
         params = request.get_json() or {}
         dataset_id = params.get('dataset_id', 'kreuzer-skarke')
@@ -1796,7 +2190,16 @@ def score_custom():
         custom_data = np.array(parsed_rows, dtype=np.float32)
 
         # Train model on synthetic dataset samples to score custom inputs
-        train_candidates = dataset.generate_candidates(5000, seed)
+        # (target-defining columns are held out inside CYSearchEngine.train).
+        weights = None
+        if dataset_id == 'info-density':
+            weights, err = _resolve_request_weights(params)
+            if err:
+                return err
+        if weights is not None:
+            train_candidates = dataset.generate_candidates(5000, seed, weights=weights)
+        else:
+            train_candidates = dataset.generate_candidates(5000, seed)
         train_labels = dataset.generate_labels(train_candidates, seed)
         engine = CYSearchEngine(dataset_id=dataset_id, random_seed=seed)
         engine.train(train_candidates, train_labels)
@@ -1819,12 +2222,14 @@ def score_custom():
                     first_hit_idx = idx
                     break
             time_to_first_hit = first_hit_idx if first_hit_idx is not None else None
+            baseline = float(labels.mean()) if len(labels) else 0.0
         else:
             top_labels = [None] * top_k
             true_positives = 0
             precision = None
             recall = None
             time_to_first_hit = None
+            baseline = None
 
         results = {
             "run_metadata": {
@@ -1834,14 +2239,27 @@ def score_custom():
                 "dataset_description": metadata.description,
                 "custom_input_count": len(custom_data),
                 "model_type": "RandomForest",
-                "random_seed": seed
+                "random_seed": seed,
+                "held_out_features": dataset.get_held_out_feature_names(),
+                "model_features": dataset.get_model_feature_names(),
+                "candidate_source": "synthetic_hodge_draws",
             },
             "performance_metrics": {
+                "metric_kind": "synthetic_retrieval_vs_baseline",
                 "precision_at_k": round(precision, 4) if precision is not None else None,
                 "recall_at_k": round(recall, 4) if recall is not None else None,
                 "time_to_first_hit": time_to_first_hit,
                 "verified_count": int(true_positives),
-                "total_top_k": top_k
+                "total_top_k": top_k,
+                "baseline_random_precision": (
+                    round(baseline, 4) if baseline is not None else None
+                ),
+                "honesty": SYNTHETIC_RETRIEVAL_HONESTY,
+                "leakage_note": dataset.leakage_note(),
+                "verified_means": (
+                    "Passes dataset target rule on synthetic labels "
+                    "(not experimental physics verification)."
+                ),
             },
             "timing": {
                 "total_runtime_seconds": 0.0
@@ -1875,11 +2293,14 @@ def score_custom():
 
 @app.route('/data/<path:filename>')
 def download_file(filename):
-    """Download result files (CSV, JSON, MD)"""
-    file_path = os.path.join(RESULTS_DIR, filename)
-    if os.path.exists(file_path):
+    """Download result files under RESULTS_DIR only (path-traversal safe)."""
+    _maybe_cleanup_results()
+    file_path = _safe_results_path(filename)
+    if file_path is None:
+        abort(403)
+    if os.path.isfile(file_path):
         return send_file(file_path, as_attachment=True)
-    return "File not found", 404
+    abort(404)
 
 
 if __name__ == '__main__':

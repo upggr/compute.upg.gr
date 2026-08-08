@@ -901,12 +901,15 @@ html[data-theme="dark"] .compat-pill {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
 }
 
-.candidate-open {
-    display: inline-block;
-    margin-top: 0.75rem;
-    font-size: 0.875rem;
-    color: var(--primary-color);
-    font-weight: 600;
+.candidate-id-line {
+    margin: 0.15rem 0 0.5rem;
+    font-size: 0.75rem;
+    opacity: 0.7;
+    word-break: break-all;
+}
+
+.candidate-id-line code {
+    font-size: inherit;
 }
 
 .renderer-shell {

@@ -27,7 +27,8 @@
     {% else %}
     <section class="section">
         <p class="note"><a href="/candidates.html">← Hall of Fame</a></p>
-        <h1>{{ candidate.candidate_id }}</h1>
+        <h1>{{ display_title }}</h1>
+        <p class="note"><code>{{ candidate.candidate_id }}</code></p>
         <p>
             Permanent page for this geometry. Share this URL —
             it stays stable because the id is derived from the invariants, not from a run rank.

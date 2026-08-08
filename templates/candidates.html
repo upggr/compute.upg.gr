@@ -214,13 +214,36 @@
         grid.innerHTML = '<div class="candidate-card candidate-card-loading">Loading candidates...</div>';
     }
 
+    function featureMap(candidate) {
+        const map = {};
+        (candidate.features || []).forEach(pair => {
+            if (Array.isArray(pair) && pair.length >= 2) map[pair[0]] = pair[1];
+        });
+        if (candidate.h11 != null) map.h11 = candidate.h11;
+        if (candidate.h21 != null) map.h21 = candidate.h21;
+        if (candidate.h31 != null) map.h31 = candidate.h31;
+        if (candidate.euler_char != null) map['χ'] = candidate.euler_char;
+        return map;
+    }
+
+    function displayTitle(candidate) {
+        const f = featureMap(candidate);
+        const parts = [];
+        if (f.h11 != null) parts.push(`h¹¹=${f.h11}`);
+        if (f.h21 != null) parts.push(`h²¹=${f.h21}`);
+        if (f.h31 != null) parts.push(`h³¹=${f.h31}`);
+        if (f['χ'] != null) parts.push(`χ=${f['χ']}`);
+        else if (f.euler_char != null) parts.push(`χ=${f.euler_char}`);
+        return parts.length ? parts.join(' · ') : candidate.candidate_id;
+    }
+
     function renderCandidates(list) {
         if (!list.length) {
             grid.innerHTML = '<div class="candidate-card candidate-card-loading">No candidates available.</div>';
             return;
         }
 
-        grid.innerHTML = list.map(candidate => {
+        grid.innerHTML = list.map((candidate, index) => {
             const featureTags = (candidate.features || []).map(([label, value]) =>
                 `<span class="pill">${label}: ${value}</span>`
             ).join('');
@@ -228,12 +251,15 @@
             const selectedClass = selectedIds.has(candidate.candidate_id) ? 'selected' : '';
             const score = Number(candidate.score || 0).toFixed(4);
             const detailHref = `/candidate/${encodeURIComponent(candidate.candidate_id)}`;
+            const boardRank = index + 1;
+            const title = displayTitle(candidate);
             return `
-                <a class="candidate-card ${selectedClass}" href="${detailHref}" data-id="${candidate.candidate_id}" data-dataset="${candidate.dataset_id}" data-seed="${candidate.viz_seed}" data-score="${candidate.score}" data-rank="${candidate.rank}" data-verified="${candidate.verified_target}" data-name="${candidate.dataset_name}">
-                    <div class="candidate-rank">#${candidate.rank ?? '—'}</div>
-                    <h3 class="candidate-title">${candidate.candidate_id}</h3>
+                <a class="candidate-card ${selectedClass}" href="${detailHref}" data-id="${candidate.candidate_id}" data-dataset="${candidate.dataset_id}" data-seed="${candidate.viz_seed}" data-score="${candidate.score}" data-rank="${boardRank}" data-verified="${candidate.verified_target}" data-name="${candidate.dataset_name}">
+                    <div class="candidate-rank">#${boardRank}</div>
+                    <h3 class="candidate-title">${title}</h3>
                     <p class="candidate-meta">${candidate.dataset_name || candidate.dataset_id}</p>
-                    <div class="candidate-score">Score: ${score}</div>
+                    <p class="candidate-id-line"><code>${candidate.candidate_id}</code></p>
+                    <div class="candidate-score">Best score: ${score}</div>
                     <div class="candidate-features">${featureTags}</div>
                     <div class="candidate-tag ${candidate.verified_target ? 'verified' : 'unverified'}">${verifiedText}</div>
                     <span class="candidate-open">Open page →</span>
@@ -267,7 +293,7 @@
         try {
             let endpoint = `/api/candidates?dataset_id=${datasetId}&top_n=${topN}&seed=${seed}`;
             if (view === 'featured') {
-                endpoint = `/api/featured-candidates?dataset_id=${datasetId}`;
+                endpoint = `/api/featured-candidates?dataset_id=${datasetId}&top_n=${topN}`;
                 if (verified !== 'all') {
                     endpoint += `&verified=${verified}`;
                 }
@@ -669,8 +695,9 @@
         const tag = chip.dataset.tag;
         setLoading();
         const datasetId = document.getElementById('gallery-dataset').value;
+        const topN = document.getElementById('gallery-top-n').value;
         const verified = document.getElementById('gallery-verified').value;
-        let endpoint = `/api/featured-candidates?dataset_id=${datasetId}&tag=${tag}`;
+        let endpoint = `/api/featured-candidates?dataset_id=${datasetId}&tag=${tag}&top_n=${topN}`;
         if (verified !== 'all') {
             endpoint += `&verified=${verified}`;
         }

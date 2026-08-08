@@ -147,16 +147,27 @@ def candidate_page(candidate_id):
         # Fall back to API-shaped lookup across live cache / featured seed ids.
         return render_template('candidate.html', candidate=None, candidate_id=candidate_id), 404
 
-    og_title = f"{candidate['candidate_id']} — upg-strings"
     features = dict(candidate.get('features') or [])
     h11 = candidate.get('h11') if candidate.get('h11') is not None else features.get('h11')
     h21 = candidate.get('h21') if candidate.get('h21') is not None else features.get('h21')
     chi = candidate.get('euler_char')
     if chi is None:
         chi = features.get('χ', features.get('euler_char'))
+
+    og_parts = []
+    if h11 is not None:
+        og_parts.append(f"h¹¹={h11}")
+    if h21 is not None:
+        og_parts.append(f"h²¹={h21}")
+    if candidate.get('h31') is not None:
+        og_parts.append(f"h³¹={candidate.get('h31')}")
+    if chi is not None:
+        og_parts.append(f"χ={chi}")
+    display_title = " · ".join(og_parts) if og_parts else candidate['candidate_id']
+    og_title = f"{display_title} — upg-strings"
     og_description = (
         f"{candidate.get('dataset_name') or candidate.get('dataset_id')}: "
-        f"h11={h11}, h21={h21}, χ={chi}, "
+        f"{display_title}, "
         f"{'verified' if candidate.get('verified_target') else 'unverified'}, "
         f"best score {float(candidate.get('score') or 0):.4f}"
     )
@@ -165,6 +176,7 @@ def candidate_page(candidate_id):
         'candidate.html',
         candidate=candidate,
         candidate_id=candidate_id,
+        display_title=display_title,
         h11=h11,
         h21=h21,
         chi=chi,

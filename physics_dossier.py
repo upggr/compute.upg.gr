@@ -226,6 +226,237 @@ def _raw_keys(raw: Optional[Dict[str, Any]]) -> List[str]:
     return sorted(str(k) for k in raw.keys())
 
 
+def _fmt_sci(x: float) -> str:
+    """Scientific notation string safe for huge flux-vacua estimates."""
+    if x <= 0 or not math.isfinite(x):
+        return '0'
+    exp = int(math.floor(math.log10(x)))
+    mant = x / (10 ** exp)
+    return f'{mant:.3f}e{exp:+d}'
+
+
+def flux_vacua_estimate(h21: int, tadpole_L: float) -> Dict[str, Any]:
+    """Bousso–Polchinski / Denef–Douglas-style log-density estimate.
+
+    Exact inputs: K = h²¹+1 (flux superpotential monomials / CS periods count
+    proxy) and L = |χ|/24. The vacua *count* is an asymptotic proxy, not a scan.
+    """
+    K = int(h21) + 1
+    L = max(float(tadpole_L), 1e-12)
+    if K <= 0:
+        return {
+            'K': K,
+            'L': round(L, 6),
+            'log_N_flux': None,
+            'N_flux_est': None,
+            'N_flux_est_sci': None,
+            'stirling_note': 'K must be positive',
+        }
+    # Stirling: log K! ≈ K log K − K + ½ log(2πK)
+    log_k_fact = K * math.log(K) - K + 0.5 * math.log(2 * math.pi * K)
+    log_N = 2 * K * math.log(2 * math.pi * L) - log_k_fact
+    # Avoid overflow in exp; keep sci string from log10.
+    log10_N = log_N / math.log(10.0)
+    if log10_N > 300:
+        n_sci = f'10^{log10_N:.2f}'
+        n_est = None
+    else:
+        n_est = math.exp(log_N)
+        n_sci = _fmt_sci(n_est)
+    return {
+        'K': K,
+        'L': round(L, 6),
+        'log_N_flux': round(log_N, 4),
+        'log10_N_flux': round(log10_N, 4),
+        'N_flux_est': n_est,
+        'N_flux_est_sci': n_sci,
+        'stirling_note': (
+            r'log N ∼ 2K log(2πL) − log K!  (Stirling); asymptotic landscape proxy'
+        ),
+    }
+
+
+def second_chern_proxy(h11: int, h21: int) -> Dict[str, Any]:
+    """Common KS-style linear proxy for c₂·J scale (not an intersection number)."""
+    c2 = 12 * h11 + 6 * h21
+    return {
+        'c2_J_proxy': int(c2),
+        'formula': '12 h¹¹ + 6 h²¹',
+        'honesty': 'proxy',
+        'note': (
+            'Linear stand-in used in ranking features; a real c₂·J needs the '
+            'resolved toric geometry and a chosen Kähler class.'
+        ),
+    }
+
+
+def generation_index(euler: int) -> Dict[str, Any]:
+    """Net chiral generation index |χ|/2 (heterotic / topological index proxy)."""
+    n_gen = abs(int(euler)) // 2
+    return {
+        'n_generations': n_gen,
+        'formula': '|χ|/2',
+        'three_generation_target': abs(int(euler)) == 6,
+        'note': (
+            'For heterotic compactifications the net number of chiral generations '
+            'is |χ|/2 when the gauge bundle index equals the Euler characteristic '
+            'index. This is a topological necessary condition, not a full model.'
+        ),
+    }
+
+
+def stabilization_map(h11: int, h21: int) -> List[Dict[str, Any]]:
+    """Which moduli sectors can be fixed by which mechanisms (in principle)."""
+    return [
+        {
+            'sector': 'Complex structure',
+            'count': h21,
+            'mechanism': 'G₃ flux (tree-level GVW superpotential)',
+            'status': 'in_principle',
+            'detail': f'{h21} moduli; flux lattice dimension proxy K = h²¹+1',
+        },
+        {
+            'sector': 'Kähler',
+            'count': h11,
+            'mechanism': 'Non-perturbative (gaugino condensation / instantons)',
+            'status': 'needs_extra',
+            'detail': f'{h11} moduli; fluxes alone do not stabilize volume moduli',
+        },
+        {
+            'sector': 'Dilaton / axio-dilaton',
+            'count': 1,
+            'mechanism': 'Fluxes + non-perturbative corrections',
+            'status': 'needs_extra',
+            'detail': 'Universal modulus; needs a concrete flux+np setup',
+        },
+    ]
+
+
+# Famous constructions keyed by (dataset_id, h11, h21). Only cite when unique-
+# enough textbook examples exist — never invent polytopes for arbitrary Hodge.
+KNOWN_CONSTRUCTIONS: Dict[Tuple[str, int, int], Dict[str, Any]] = {
+    ('kreuzer-skarke', 1, 101): {
+        'name': 'Quintic threefold in ℂP⁴',
+        'ambient': 'P^4',
+        'weight_system': [1, 1, 1, 1, 1],
+        'hypersurface_equation': 'Generic degree-5 hypersurface ∑_{|α|=5} c_α x^α = 0',
+        'favourable': True,
+        'reference': 'Candelas–Horowitz–Strominger–Witten; Greene–Plesser mirror',
+        'note': (
+            'Textbook example. Many distinct quintics share (h¹¹,h²¹)=(1,101); '
+            'this is a construction class, not a unique vacuum.'
+        ),
+    },
+    ('kreuzer-skarke', 101, 1): {
+        'name': 'Mirror quintic',
+        'ambient': 'Toric mirror of P^4[5] (Greene–Plesser orbifold / KS dual)',
+        'weight_system': [1, 1, 1, 1, 1],
+        'hypersurface_equation': 'Mirror family of the quintic (orbifold + resolution)',
+        'favourable': True,
+        'reference': 'Greene–Plesser; Candelas–de la Ossa–Green–Parkes',
+        'note': 'Hodge mirror of the quintic: (h¹¹,h²¹)=(101,1), χ=+200.',
+    },
+    ('kreuzer-skarke', 2, 83): {
+        'name': 'Bicubic in P²×P²',
+        'ambient': 'P^2 × P^2',
+        'weight_system': None,
+        'hypersurface_equation': 'Bidegree (3,3) hypersurface',
+        'favourable': True,
+        'reference': 'Classic CICY / toric hypersurface example',
+        'note': 'Common pedagogical example with h¹¹=2, h²¹=83, χ=−162.',
+    },
+}
+
+
+def lookup_known_construction(
+    dataset_id: str, h11: int, h21: int
+) -> Optional[Dict[str, Any]]:
+    return KNOWN_CONSTRUCTIONS.get((dataset_id, int(h11), int(h21)))
+
+
+def construction_workplan(
+    dataset_id: str, h11: int, h21: int, euler: int, h31: Optional[int] = None
+) -> List[Dict[str, str]]:
+    """Concrete next-step recipe with numbers filled in (still needs external tools)."""
+    L = abs(euler) / 24.0
+    steps = [
+        {
+            'id': 'invariants',
+            'title': 'Lock topological invariants',
+            'detail': f'Use (h¹¹,h²¹,χ)=({h11},{h21},{euler}) as search keys.',
+        },
+    ]
+    if dataset_id == 'kreuzer-skarke':
+        steps.extend([
+            {
+                'id': 'polytope',
+                'title': 'Find reflexive 4-polytopes with these Hodge numbers',
+                'detail': (
+                    'PALP / KS database / CYTools: filter polytopes whose '
+                    f'favourable hypersurfaces give h¹¹={h11}, h²¹={h21}.'
+                ),
+            },
+            {
+                'id': 'triangulate',
+                'title': 'Choose a fine regular star triangulation',
+                'detail': 'Fixes the toric ambient and the resolved CY hypersurface.',
+            },
+            {
+                'id': 'periods',
+                'title': 'Compute periods / prepotential',
+                'detail': (
+                    f'Needed for a real flux scan on the {h21}-dimensional '
+                    'complex-structure moduli space.'
+                ),
+            },
+            {
+                'id': 'tadpole',
+                'title': 'Impose D3 tadpole',
+                'detail': f'Target budget L = |χ|/24 = {L:.4f}.',
+            },
+        ])
+    elif dataset_id == 'cy5-folds':
+        steps.extend([
+            {
+                'id': 'config',
+                'title': 'Recover a CI5F configuration matrix',
+                'detail': (
+                    f'Compatible with (h¹¹,h²¹,h³¹)=({h11},{h21},{h31}). '
+                    'Configuration matrices are not stored on this page yet.'
+                ),
+            },
+            {
+                'id': 'kahler',
+                'title': 'Large-volume Kähler cone data',
+                'detail': f'h¹¹={h11} suggests many Kähler moduli (LVS-style searches).',
+            },
+        ])
+    elif dataset_id == 'heterotic':
+        n_gen = abs(euler) // 2
+        steps.extend([
+            {
+                'id': 'geometry',
+                'title': 'Pick a concrete CY3 with these Hodge numbers',
+                'detail': 'KS / CICY / toric construction — Hodge pair is not unique.',
+            },
+            {
+                'id': 'bundle',
+                'title': 'Build a stable holomorphic vector bundle',
+                'detail': (
+                    f'Target net chirality ~ |χ|/2 = {n_gen} generations '
+                    '(index theorem); needs monad/extension/spectral cover data.'
+                ),
+            },
+        ])
+    else:
+        steps.append({
+            'id': 'backend',
+            'title': 'Attach geometry from a heavier backend',
+            'detail': 'Store polytope / bundle / flux data in raw_json for this id.',
+        })
+    return steps
+
+
 def construction_payload(
     dataset_id: str,
     candidate_id: str,
@@ -233,6 +464,10 @@ def construction_payload(
     features: Optional[List] = None,
     tags: Optional[List] = None,
     summary: Optional[str] = None,
+    h11: Optional[int] = None,
+    h21: Optional[int] = None,
+    h31: Optional[int] = None,
+    euler_char: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Honest construction metadata: show what we have, never invent equations."""
     raw = raw or {}
@@ -240,6 +475,16 @@ def construction_payload(
     for item in features or []:
         if isinstance(item, (list, tuple)) and len(item) >= 2:
             feature_map[str(item[0])] = item[1]
+
+    h11_i = _i(h11 if h11 is not None else raw.get('h11', feature_map.get('h11')))
+    h21_i = _i(h21 if h21 is not None else raw.get('h21', feature_map.get('h21')))
+    h31_i = _i(h31 if h31 is not None else raw.get('h31', feature_map.get('h31')))
+    euler_i = _i(
+        euler_char if euler_char is not None
+        else raw.get('euler_char', feature_map.get('χ', feature_map.get('euler_char')))
+    )
+    if euler_i is None and h11_i is not None and h21_i is not None:
+        euler_i = derive_euler(dataset_id or 'kreuzer-skarke', h11_i, h21_i, h31_i)
 
     known_geometry_keys = (
         'polytope_id', 'polytope_hash', 'polytope_vertices', 'vertex_matrix',
@@ -249,6 +494,17 @@ def construction_payload(
     present_geometry = {
         k: raw[k] for k in known_geometry_keys if k in raw and raw[k] is not None
     }
+
+    curated = None
+    if h11_i is not None and h21_i is not None:
+        curated = lookup_known_construction(dataset_id or 'kreuzer-skarke', h11_i, h21_i)
+        if curated:
+            # Merge curated fields into present_geometry only when raw lacks them.
+            for key in (
+                'ambient', 'weight_system', 'hypersurface_equation', 'favourable',
+            ):
+                if key not in present_geometry and curated.get(key) is not None:
+                    present_geometry[key] = curated[key]
 
     unavailable = [
         {
@@ -267,7 +523,7 @@ def construction_payload(
             'reason': 'Not recoverable from Hodge numbers alone.',
         },
     ]
-    # Drop unavailable entries that we unexpectedly do have.
+    # Drop unavailable entries that we unexpectedly do have (raw or curated).
     unavailable = [u for u in unavailable if u['id'] not in present_geometry]
 
     if dataset_id == 'kreuzer-skarke':
@@ -300,6 +556,18 @@ def construction_payload(
         )
         source_url = None
 
+    workplan: List[Dict[str, str]] = []
+    if h11_i is not None and h21_i is not None and euler_i is not None:
+        workplan = construction_workplan(
+            dataset_id or 'kreuzer-skarke', h11_i, h21_i, euler_i, h31_i
+        )
+
+    honesty = (
+        'Exact: stored metadata keys and Hodge invariants. '
+        'Curated: textbook constructions when (h¹¹,h²¹) matches a known class. '
+        'Unavailable: unique polytope vertices / triangulation unless stored in raw.'
+    )
+
     return {
         'candidate_id': candidate_id,
         'dataset_id': dataset_id,
@@ -311,11 +579,9 @@ def construction_payload(
         'unavailable': unavailable,
         'reconstruct_howto': reconstruct,
         'source_url': source_url,
-        'honesty': (
-            'Exact: stored metadata keys and Hodge invariants. '
-            'Unavailable: hypersurface equations and polytope vertices '
-            '(unless listed under present geometry).'
-        ),
+        'curated': curated,
+        'workplan': workplan,
+        'honesty': honesty,
     }
 
 
@@ -333,6 +599,10 @@ def build_tabs(
     h11, h21 = dossier['h11'], dossier['h21']
     euler = dossier['euler_char']
     dataset_id = dossier.get('dataset_id') or 'kreuzer-skarke'
+    vacua = flux_vacua_estimate(h21, s['tadpole_L'])
+    gens = generation_index(euler)
+    c2 = second_chern_proxy(h11, h21)
+    stab = stabilization_map(h11, h21)
 
     moduli = {
         'id': 'moduli',
@@ -341,7 +611,7 @@ def build_tabs(
             'Exact counts from Hodge numbers for a CY3: dim of Kähler moduli '
             'space is h¹¹; complex-structure moduli space dimension is h²¹ '
             '(before quotienting by discrete symmetries / flux stabilization). '
-            'These are dimension proxies, not a solved moduli potential.'
+            'Stabilization map is mechanism taxonomy, not a solved potential.'
         ),
         'counts': {
             'kahler_moduli_h11': h11,
@@ -356,11 +626,12 @@ def build_tabs(
             'euler': int(s['mirror_euler']),
             'note': 'Mirror swaps h¹¹ ↔ h²¹ and sends χ → −χ at the Hodge level.',
         },
+        'stabilization': stab,
         'meaning': [
             'h¹¹ counts independent Kähler (size) deformations of even cycles.',
             'h²¹ counts complex-structure (shape) deformations.',
-            'Stabilization in flux compactifications typically needs enough '
-            'fluxes relative to these counts — see the Fluxes tab.',
+            'G₃ fluxes can fix complex structure in principle; Kähler moduli '
+            'need non-perturbative effects — see stabilization map below.',
         ],
     }
 
@@ -369,27 +640,36 @@ def build_tabs(
         'title': 'Fluxes / tadpole',
         'honesty': (
             'Exact: tadpole budget L = |χ|/24 from the Euler characteristic. '
-            'Proxy: Bousso–Polchinski-inspired log flux-density scalar used in '
-            'ranking. Not a vacuum scan.'
+            'Computed proxy: Stirling / Bousso–Polchinski log-density and '
+            'asymptotic N_flux estimate. Not a vacuum scan over a real flux lattice.'
         ),
         'budget': {
             'euler_char': euler,
             'tadpole_L': s['tadpole_L'],
             'tadpole_headroom': s['tadpole_headroom'],
             'flux_density_proxy': s['flux_density'],
-            'K_proxy': h21 + 1,
+            'K_proxy': vacua['K'],
+            'log_N_flux': vacua['log_N_flux'],
+            'log10_N_flux': vacua.get('log10_N_flux'),
+            'N_flux_est_sci': vacua['N_flux_est_sci'],
         },
+        'vacua_estimate': vacua,
         'constraints': [
             {
                 'name': 'D3 tadpole (IIB sketch)',
                 'tex': r'N_{D3} + N_{\mathrm{flux}} = L = |\chi|/24',
                 'status': 'exact_budget',
+                'detail': f"L = {s['tadpole_L']}; headroom proxy = {s['tadpole_headroom']}",
             },
             {
-                'name': 'Flux vacua log-density proxy',
+                'name': 'Flux vacua asymptotic estimate',
                 'tex': r'\log N_{\mathrm{flux}} \sim 2K\log(2\pi L) - \log K!',
                 'status': 'proxy',
-                'detail': f"K = h²¹+1 = {h21 + 1}; normalized proxy = {s['flux_density']}",
+                'detail': (
+                    f"K = {vacua['K']}; log N ≈ {vacua['log_N_flux']}; "
+                    f"N ~ {vacua['N_flux_est_sci']}; "
+                    f"ranking sigmoid = {s['flux_density']}"
+                ),
             },
         ],
         'requires_for_full_scan': [
@@ -404,26 +684,69 @@ def build_tabs(
         'id': 'phenomenology',
         'title': 'Phenomenology',
         'honesty': (
-            'Only necessary-condition proxies from Hodge data and the dataset '
-            'search target. No gauge group, no soft SUSY spectrum, no Yukawas.'
+            'Topological indices and necessary-condition proxies from Hodge data. '
+            'Generation index |χ|/2 is exact as a topological formula; matching '
+            'the Standard Model still needs bundles/fluxes. No soft spectra.'
         ),
         'proxies': {
             'hodge_balance': s['hodge_balance'],
             'vacuum_stability_proxy': s['vacuum_stability'],
             'topo_efficiency': s['topo_efficiency'],
             'hodge_entropy': s['hodge_entropy'],
+            'c2_J_proxy': c2['c2_J_proxy'],
         },
+        'indices': gens,
+        'chern': c2,
         'dataset_target': next(
             (c for c in dossier['checks'] if c['id'] == 'dataset_target'), None
         ),
         'tags': list(tags or []),
+        'computed': [
+            {
+                'name': 'Net generation index',
+                'value': gens['n_generations'],
+                'status': 'exact_formula',
+                'detail': gens['note'],
+            },
+            {
+                'name': 'Three-generation necessary condition',
+                'value': 'yes' if gens['three_generation_target'] else 'no',
+                'status': 'exact_check',
+                'detail': '|χ| = 6 ⇔ |χ|/2 = 3 generations (heterotic index sketch)',
+            },
+            {
+                'name': 'c₂·J scale proxy',
+                'value': c2['c2_J_proxy'],
+                'status': 'proxy',
+                'detail': c2['note'],
+            },
+        ],
         'not_computed': [
             'Standard Model gauge embeddings',
             'Soft SUSY-breaking spectra',
             'Yukawa couplings / fermion masses',
-            'Full flux vacuum enumeration',
+            'Full flux vacuum enumeration over a concrete lattice',
         ],
     }
+
+    # Extra certificate checks derived here (keep dossier.checks intact + append).
+    extra_checks = [
+        {
+            'id': 'generation_index',
+            'label': 'Generation index defined',
+            'rule': 'n_gen = |χ|/2 ≥ 0',
+            'ok': gens['n_generations'] >= 0,
+            'detail': f"n_gen={gens['n_generations']}",
+        },
+        {
+            'id': 'euler_even_cy3',
+            'label': 'Euler parity (CY3)',
+            'rule': 'χ even for CY3 Hodge identity χ=2(h¹¹−h²¹)',
+            'ok': dataset_id == 'cy5-folds' or (euler % 2 == 0),
+            'detail': f'χ={euler}',
+        },
+    ]
+    all_checks = list(dossier['checks']) + extra_checks
 
     certificates = {
         'id': 'certificates',
@@ -433,8 +756,19 @@ def build_tabs(
             'stored invariants. These are certificates, not uniqueness theorems '
             'or existence proofs for string vacua.'
         ),
-        'checks': dossier['checks'],
-        'identities': dossier['identities'],
+        'checks': all_checks,
+        'identities': dossier['identities'] + [
+            {
+                'name': 'Net generation index',
+                'tex': r'n_{\mathrm{gen}} = |\chi|/2',
+                'value': gens['n_generations'],
+            },
+            {
+                'name': 'Flux vacua log-count (Stirling proxy)',
+                'tex': r'\log N_{\mathrm{flux}} \sim 2K\log(2\pi L)-\log K!',
+                'value': vacua['log_N_flux'],
+            },
+        ],
         'euler_consistent': dossier['euler_consistent'],
     }
 
@@ -449,6 +783,8 @@ def build_tabs(
             'total_moduli': int(s['total_moduli']),
             'hodge_balance': s['hodge_balance'],
             'flux_density': s['flux_density'],
+            'n_generations': gens['n_generations'],
+            'N_flux_est_sci': vacua['N_flux_est_sci'],
         },
     }
 
@@ -467,6 +803,8 @@ def build_tabs(
             'feature_map': {},
             'tags': [],
             'reconstruct_howto': '',
+            'curated': None,
+            'workplan': [],
         },
         'certificates': certificates,
     }

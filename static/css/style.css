@@ -1537,6 +1537,43 @@ html[data-theme="light"] .analysis-tab.is-active {
     color: var(--text-secondary, #9aa7b8);
 }
 
+.stab-list,
+.workplan-list {
+    margin: 0.75rem 0 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+.stab-item,
+.workplan-list li {
+    margin: 0.55rem 0;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: rgba(109, 183, 255, 0.04);
+}
+
+.stab-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.stab-in_principle {
+    border-color: rgba(72, 187, 120, 0.35);
+}
+
+.stab-needs_extra {
+    border-color: rgba(237, 137, 54, 0.35);
+}
+
+.callout-info {
+    border-color: rgba(109, 183, 255, 0.35);
+    background: rgba(109, 183, 255, 0.08);
+}
+
 html:not([data-theme="light"]) .analysis-tab,
 html[data-theme="dark"] .analysis-tab {
     color: #b8c7d9;

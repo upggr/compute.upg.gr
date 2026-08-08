@@ -177,6 +177,10 @@ def candidate_page(candidate_id):
             features=candidate.get('features'),
             tags=candidate.get('tags'),
             summary=candidate.get('summary'),
+            h11=h11,
+            h21=h21,
+            h31=h31,
+            euler_char=chi,
         )
         tabs = physics_dossier.build_tabs(
             dossier,

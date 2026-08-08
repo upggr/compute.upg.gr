@@ -100,6 +100,8 @@
                             <div class="detail-item"><span>Total moduli</span><strong>{{ tabs.overview.scalars_highlight.total_moduli }}</strong></div>
                             <div class="detail-item"><span>Hodge balance</span><strong>{{ tabs.overview.scalars_highlight.hodge_balance }}</strong></div>
                             <div class="detail-item"><span>Flux density proxy</span><strong>{{ tabs.overview.scalars_highlight.flux_density }}</strong></div>
+                            <div class="detail-item"><span>Generation index |χ|/2</span><strong>{{ tabs.overview.scalars_highlight.n_generations }}</strong></div>
+                            <div class="detail-item"><span>N_flux estimate</span><strong>{{ tabs.overview.scalars_highlight.N_flux_est_sci }}</strong></div>
                         </div>
                     </div>
                 </div>
@@ -128,16 +130,34 @@
                     <li>{{ line }}</li>
                     {% endfor %}
                 </ul>
+                {% if tabs.moduli.stabilization %}
+                <h3>Stabilization map</h3>
+                <ul class="stab-list">
+                    {% for row in tabs.moduli.stabilization %}
+                    <li class="stab-item stab-{{ row.status }}">
+                        <div class="stab-head">
+                            <strong>{{ row.sector }}</strong>
+                            <span class="pill">{{ row.count }}</span>
+                            <span class="pill">{{ row.status }}</span>
+                        </div>
+                        <div class="note">{{ row.mechanism }}</div>
+                        <div class="note">{{ row.detail }}</div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
             </div>
 
             <div class="analysis-tabpanel" role="tabpanel" id="tab-fluxes" aria-labelledby="tabbtn-fluxes" data-tab-panel="fluxes" hidden>
-                <p class="honesty-label"><span class="pill">exact budget · proxy density</span> {{ tabs.fluxes.honesty }}</p>
+                <p class="honesty-label"><span class="pill">exact budget · Stirling proxy</span> {{ tabs.fluxes.honesty }}</p>
                 <div class="details-grid">
                     <div class="detail-item"><span>χ</span><strong>{{ tabs.fluxes.budget.euler_char }}</strong></div>
                     <div class="detail-item"><span>Tadpole L = |χ|/24</span><strong>{{ tabs.fluxes.budget.tadpole_L }}</strong></div>
                     <div class="detail-item"><span>Tadpole headroom</span><strong>{{ tabs.fluxes.budget.tadpole_headroom }}</strong></div>
                     <div class="detail-item"><span>K = h²¹+1</span><strong>{{ tabs.fluxes.budget.K_proxy }}</strong></div>
-                    <div class="detail-item"><span>Flux density proxy</span><strong>{{ tabs.fluxes.budget.flux_density_proxy }}</strong></div>
+                    <div class="detail-item"><span>log N_flux</span><strong>{{ tabs.fluxes.budget.log_N_flux }}</strong></div>
+                    <div class="detail-item"><span>N_flux ~</span><strong>{{ tabs.fluxes.budget.N_flux_est_sci }}</strong></div>
+                    <div class="detail-item"><span>Flux density (ranking)</span><strong>{{ tabs.fluxes.budget.flux_density_proxy }}</strong></div>
                 </div>
                 <h3>Constraints</h3>
                 <ul class="identity-list">
@@ -159,7 +179,7 @@
             </div>
 
             <div class="analysis-tabpanel" role="tabpanel" id="tab-phenomenology" aria-labelledby="tabbtn-phenomenology" data-tab-panel="phenomenology" hidden>
-                <p class="honesty-label"><span class="pill">proxies only</span> {{ tabs.phenomenology.honesty }}</p>
+                <p class="honesty-label"><span class="pill">indices + proxies</span> {{ tabs.phenomenology.honesty }}</p>
                 {% if tabs.phenomenology.dataset_target %}
                 <div class="check-list" style="margin-bottom: 1rem;">
                     <div class="{{ 'check-pass' if tabs.phenomenology.dataset_target.ok else 'check-fail' }}" style="display:flex; gap:0.75rem; padding:0.65rem 0.75rem; border-radius:10px; border:1px solid var(--border-color);">
@@ -172,11 +192,27 @@
                 </div>
                 {% endif %}
                 <div class="details-grid">
+                    <div class="detail-item"><span>Generation index |χ|/2</span><strong>{{ tabs.phenomenology.indices.n_generations }}</strong></div>
+                    <div class="detail-item"><span>3-generation target (|χ|=6)</span><strong>{{ 'yes' if tabs.phenomenology.indices.three_generation_target else 'no' }}</strong></div>
                     <div class="detail-item"><span>Hodge balance</span><strong>{{ tabs.phenomenology.proxies.hodge_balance }}</strong></div>
                     <div class="detail-item"><span>Vacuum stability proxy</span><strong>{{ tabs.phenomenology.proxies.vacuum_stability_proxy }}</strong></div>
                     <div class="detail-item"><span>Topo efficiency</span><strong>{{ tabs.phenomenology.proxies.topo_efficiency }}</strong></div>
                     <div class="detail-item"><span>Hodge entropy</span><strong>{{ tabs.phenomenology.proxies.hodge_entropy }}</strong></div>
+                    <div class="detail-item"><span>c₂·J proxy</span><strong>{{ tabs.phenomenology.proxies.c2_J_proxy }}</strong></div>
                 </div>
+                {% if tabs.phenomenology.computed %}
+                <h3>Computed from topology</h3>
+                <ul class="identity-list">
+                    {% for item in tabs.phenomenology.computed %}
+                    <li>
+                        <strong>{{ item.name }}</strong>
+                        <span class="pill">{{ item.status }}</span>
+                        <span class="pill">→ {{ item.value }}</span>
+                        {% if item.detail %}<div class="note">{{ item.detail }}</div>{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
                 {% if tabs.phenomenology.tags %}
                 <p style="margin-top: 1rem;">
                     {% for tag in tabs.phenomenology.tags %}
@@ -184,7 +220,7 @@
                     {% endfor %}
                 </p>
                 {% endif %}
-                <h3>Not computed from Hodge numbers</h3>
+                <h3>Still needs geometry / bundles / fluxes</h3>
                 <ul class="meaning-list unavailable-list">
                     {% for item in tabs.phenomenology.not_computed %}
                     <li>{{ item }}</li>
@@ -193,7 +229,7 @@
             </div>
 
             <div class="analysis-tabpanel" role="tabpanel" id="tab-construction" aria-labelledby="tabbtn-construction" data-tab-panel="construction" hidden>
-                <p class="honesty-label"><span class="pill">metadata only</span> {{ tabs.construction.honesty }}</p>
+                <p class="honesty-label"><span class="pill">metadata · curated · workplan</span> {{ tabs.construction.honesty }}</p>
                 {% if tabs.construction.summary %}
                 <p>{{ tabs.construction.summary }}</p>
                 {% endif %}
@@ -202,6 +238,15 @@
                     <div class="detail-item"><span>Candidate id</span><strong><code>{{ tabs.construction.candidate_id }}</code></strong></div>
                     <div class="detail-item"><span>Raw field keys</span><strong>{{ tabs.construction.raw_keys|join(', ') if tabs.construction.raw_keys else '—' }}</strong></div>
                 </div>
+                {% if tabs.construction.curated %}
+                <div class="callout callout-info" style="margin-top: 1rem;">
+                    <strong>Curated construction:</strong> {{ tabs.construction.curated.name }}
+                    <div class="note">{{ tabs.construction.curated.note }}</div>
+                    {% if tabs.construction.curated.reference %}
+                    <div class="note">Ref: {{ tabs.construction.curated.reference }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
                 {% if tabs.construction.feature_map %}
                 <h3>Stored features</h3>
                 <div class="details-grid">
@@ -223,17 +268,30 @@
                     Hodge numbers alone do not determine a unique geometry.
                 </p>
                 {% endif %}
+                {% if tabs.construction.workplan %}
+                <h3>Construction workplan</h3>
+                <ol class="workplan-list">
+                    {% for step in tabs.construction.workplan %}
+                    <li>
+                        <strong>{{ step.title }}</strong>
+                        <div class="note">{{ step.detail }}</div>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% endif %}
                 <h3>How one would reconstruct</h3>
                 <p>{{ tabs.construction.reconstruct_howto }}</p>
                 {% if tabs.construction.source_url %}
                 <p class="note">Dataset source: <a href="{{ tabs.construction.source_url }}" rel="noopener noreferrer" target="_blank">{{ tabs.construction.source_url }}</a></p>
                 {% endif %}
-                <h3>Unavailable (extension points)</h3>
+                {% if tabs.construction.unavailable %}
+                <h3>Still unavailable</h3>
                 <ul class="meaning-list unavailable-list">
                     {% for u in tabs.construction.unavailable %}
                     <li><strong>{{ u.label }}</strong> — {{ u.reason }}</li>
                     {% endfor %}
                 </ul>
+                {% endif %}
             </div>
 
             <div class="analysis-tabpanel" role="tabpanel" id="tab-certificates" aria-labelledby="tabbtn-certificates" data-tab-panel="certificates" hidden>

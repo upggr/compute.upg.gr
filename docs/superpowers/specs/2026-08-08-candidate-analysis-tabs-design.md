@@ -40,9 +40,20 @@ Landscape, student lab, and 3D preview stay as sections below the tabs.
 
 ## Extension points
 
-- Construction tab lists `unavailable` items (`polytope_vertices`,
-  `triangulation`, `hypersurface_equation`) for future backends.
-- Fluxes tab lists `requires_for_full_scan` (periods, O3/O7 data, …).
+- Construction tab lists remaining `unavailable` items when raw/curated data
+  lack vertices or triangulations.
+- Fluxes still lists `requires_for_full_scan` for periods / O3–O7 / lattice.
+- Phenomenology still lists soft spectra / Yukawas / gauge embeddings as
+  not_computed (need bundles/fluxes).
+
+## Filled in (2026-08-08 deepen pass)
+
+- Stirling `log N_flux` + scientific `N_flux` estimate on Fluxes / Overview
+- Stabilization map on Moduli (CS vs Kähler vs dilaton mechanisms)
+- Generation index `|χ|/2` + 3-generation check on Phenomenology / Certificates
+- `c₂·J` ranking proxy
+- Curated textbook constructions (quintic, mirror, bicubic) when Hodge matches
+- Numbered construction workplan with invariants filled in
 
 ## Files
 

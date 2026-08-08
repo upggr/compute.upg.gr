@@ -83,16 +83,19 @@ def dataset_target_check(dataset_id: str, h11: int, h21: int, euler: int) -> Dic
     if dataset_id == 'cy5-folds':
         ok = h11 > 100
         rule = 'h^{1,1} > 100'
+        rule_tex = r'h^{1,1} > 100'
         detail = f'h¹¹={h11}'
     elif dataset_id == 'heterotic':
         total = h11 + h21 + 1e-10
         balance = 1.0 - abs(h11 - h21) / total
         ok = balance >= 0.9
         rule = 'h^{1,1} ≈ h^{2,1} (balance ≥ 0.9)'
+        rule_tex = r'1 - \dfrac{|h^{1,1}-h^{2,1}|}{h^{1,1}+h^{2,1}} \ge 0.9'
         detail = f'balance={balance:.3f}'
     elif dataset_id == 'info-density':
         ok = False
         rule = 'top decile by information-density composite (run-dependent)'
+        rule_tex = r'\text{info-density percentile (run-dependent)}'
         detail = (
             'Cannot certify from Hodge numbers alone — percentile requires a '
             'full ranking run. Proxies (entropy, compactness, flux density) '
@@ -101,8 +104,16 @@ def dataset_target_check(dataset_id: str, h11: int, h21: int, euler: int) -> Dic
     else:
         ok = abs(euler) < 100
         rule = '|χ| < 100'
+        rule_tex = r'|\chi| < 100'
         detail = f'|χ|={abs(euler)}'
-    return {'id': 'dataset_target', 'label': 'Dataset target rule', 'rule': rule, 'ok': ok, 'detail': detail}
+    return {
+        'id': 'dataset_target',
+        'label': 'Dataset target rule',
+        'rule': rule,
+        'rule_tex': rule_tex,
+        'ok': ok,
+        'detail': detail,
+    }
 
 
 def build_dossier(
@@ -135,6 +146,11 @@ def build_dossier(
                 'χ = 6 + 6(h¹¹ − h²¹ + h³¹)' if dataset_id == 'cy5-folds'
                 else 'χ = 2(h¹¹ − h²¹)'
             ),
+            'rule_tex': (
+                r'\chi = 6 + 6(h^{1,1} - h^{2,1} + h^{3,1})'
+                if dataset_id == 'cy5-folds'
+                else r'\chi = 2(h^{1,1} - h^{2,1})'
+            ),
             'ok': euler_consistent,
             'detail': (
                 f'derived χ={derived_euler}'
@@ -146,6 +162,7 @@ def build_dossier(
             'id': 'tadpole_positive',
             'label': 'Tadpole charge defined',
             'rule': 'L = |χ|/24 ≥ 0',
+            'rule_tex': r'L = |\chi|/24 \ge 0',
             'ok': scalars['tadpole_L'] >= 0,
             'detail': f'L={scalars["tadpole_L"]}',
         },
@@ -153,6 +170,7 @@ def build_dossier(
             'id': 'moduli_positive',
             'label': 'Positive Hodge numbers',
             'rule': 'h¹¹ ≥ 1 and h²¹ ≥ 1',
+            'rule_tex': r'h^{1,1} \ge 1,\quad h^{2,1} \ge 1',
             'ok': h11_i >= 1 and h21_i >= 1,
             'detail': f'h¹¹={h11_i}, h²¹={h21_i}',
         },
@@ -1029,6 +1047,7 @@ def build_tabs(
             'id': 'generation_index',
             'label': 'Generation index defined',
             'rule': 'n_gen = |χ|/2 ≥ 0',
+            'rule_tex': r'n_{\mathrm{gen}} = |\chi|/2 \ge 0',
             'ok': gens['n_generations'] >= 0,
             'detail': f"n_gen={gens['n_generations']}",
         },
@@ -1036,6 +1055,7 @@ def build_tabs(
             'id': 'euler_even_cy3',
             'label': 'Euler parity (CY3)',
             'rule': 'χ even for CY3 Hodge identity χ=2(h¹¹−h²¹)',
+            'rule_tex': r'\chi = 2(h^{1,1}-h^{2,1})\ \text{even}',
             'ok': dataset_id == 'cy5-folds' or (euler % 2 == 0),
             'detail': f'χ={euler}',
         },
@@ -1055,6 +1075,7 @@ def build_tabs(
                 'id': 'period_count',
                 'label': 'Period count identity',
                 'rule': 'K = h²¹+1 and b₃ = 2(h²¹+1) for CY3',
+                'rule_tex': r'K = h^{2,1}+1,\quad b_3 = 2(h^{2,1}+1)',
                 'ok': dataset_id == 'cy5-folds' or periods['h3_betti'] == 2 * (h21 + 1),
                 'detail': f"K={periods['picard_fuchs_order']}, b₃={periods['h3_betti']}",
             },
@@ -1062,6 +1083,7 @@ def build_tabs(
                 'id': 'scan_readiness',
                 'label': 'Flux-scan readiness',
                 'rule': f'{readiness["score"]}/{readiness["total"]} prerequisites available',
+                'rule_tex': rf'\text{{readiness }} {readiness["score"]}/{readiness["total"]}',
                 'ok': readiness['score'] >= 3,
                 'detail': f"{readiness['pct']}% — see Fluxes / Construction tabs",
             },

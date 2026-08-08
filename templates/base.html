@@ -9,6 +9,8 @@
     {% block og_tags %}{% endblock %}
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6lkzDUksS6Or4VJDRS2S2F2lwA/gR5B0hDZfvmxRNl0K/EWaUUcyPeMUto" crossorigin="anonymous">
+    {% block head_extra %}{% endblock %}
 </head>
 <body>
     <nav class="nav">
@@ -93,6 +95,8 @@
     })();
     </script>
 
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuoQYQkVOcCuviL+zTzZgP0iQuRZEYF+eXqGAnBCBhRuj3Zh67QYHecNSs" crossorigin="anonymous"></script>
+    <script defer src="{{ url_for('static', filename='js/math-render.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -86,14 +86,61 @@
                         <div class="hd-row"><span class="hd-cell muted">0</span><span class="hd-cell muted">0</span></div>
                         <div class="hd-row"><span class="hd-cell">{{ dossier.diamond.h33 }}</span></div>
                         <p class="note">{{ dossier.diamond.note }}</p>
+                        <div class="diamond-legend">
+                            <span class="tex">h^{1,1}</span>
+                            <span class="tex">h^{2,1}</span>
+                            {% if dossier.diamond.h31 is not none %}
+                            <span class="tex">h^{3,1}</span>
+                            {% endif %}
+                        </div>
                     </div>
                     <div>
                         <h3>Identities</h3>
-                        <ul class="identity-list">
+                        <div class="equation-board" aria-label="Rendered identities">
+                            {% for item in dossier.identities %}
+                            <figure class="equation-card">
+                                <figcaption>{{ item.name }}</figcaption>
+                                <div class="tex tex-display">{{ item.tex }}</div>
+                                {% if item.value is not none %}
+                                <div class="equation-result"><span class="pill">→ {{ item.value }}</span></div>
+                                {% endif %}
+                            </figure>
+                            {% endfor %}
+                        </div>
+                        {% if h11 is not none and h21 is not none and chi is not none and candidate.dataset_id != 'cy5-folds' %}
+                        <h3>With this candidate’s numbers</h3>
+                        <div class="equation-board equation-board-plugged">
+                            <figure class="equation-card">
+                                <figcaption>Euler characteristic</figcaption>
+                                <div class="tex tex-display">\chi = 2(h^{1,1}-h^{2,1}) = 2({{ h11 }}-{{ h21 }}) = {{ chi }}</div>
+                            </figure>
+                            <figure class="equation-card">
+                                <figcaption>D3 tadpole budget</figcaption>
+                                <div class="tex tex-display">L = \dfrac{|\chi|}{24} = \dfrac{|{{ chi }}|}{24} = {{ '%.4f'|format((chi|abs) / 24) }}</div>
+                            </figure>
+                            <figure class="equation-card">
+                                <figcaption>Generation index</figcaption>
+                                <div class="tex tex-display">n_{\mathrm{gen}} = \dfrac{|\chi|}{2} = \dfrac{|{{ chi }}|}{2} = {{ ((chi|abs) / 2)|int }}</div>
+                            </figure>
+                            <figure class="equation-card">
+                                <figcaption>Mirror map</figcaption>
+                                <div class="tex tex-display">(h^{1,1},h^{2,1},\chi)=({{ h11 }},{{ h21 }},{{ chi }})\;\mapsto\;({{ h21 }},{{ h11 }},{{ -chi }})</div>
+                            </figure>
+                        </div>
+                        {% elif h11 is not none and h21 is not none and h31 is not none and chi is not none %}
+                        <h3>With this candidate’s numbers</h3>
+                        <div class="equation-board equation-board-plugged">
+                            <figure class="equation-card">
+                                <figcaption>CY5 Euler characteristic</figcaption>
+                                <div class="tex tex-display">\chi = 6+6(h^{1,1}-h^{2,1}+h^{3,1}) = 6+6({{ h11 }}-{{ h21 }}+{{ h31 }}) = {{ chi }}</div>
+                            </figure>
+                        </div>
+                        {% endif %}
+                        <ul class="identity-list" hidden>
                             {% for item in dossier.identities %}
                             <li>
                                 <strong>{{ item.name }}</strong>
-                                <code class="tex">{{ item.tex }}</code>
+                                <span class="tex">{{ item.tex }}</span>
                                 {% if item.value is not none %}<span class="pill">→ {{ item.value }}</span>{% endif %}
                             </li>
                             {% endfor %}
@@ -222,7 +269,7 @@
                     <li>
                         <strong>{{ c.name }}</strong>
                         <span class="pill">{{ c.status }}</span>
-                        <code class="tex">{{ c.tex }}</code>
+                        <div class="tex tex-display">{{ c.tex }}</div>
                         {% if c.detail %}<div class="note">{{ c.detail }}</div>{% endif %}
                     </li>
                     {% endfor %}
@@ -243,7 +290,12 @@
                         <span class="check-mark">{{ 'PASS' if tabs.phenomenology.dataset_target.ok else 'FAIL' }}</span>
                         <div>
                             <strong>{{ tabs.phenomenology.dataset_target.label }}</strong>
-                            <div class="note"><code>{{ tabs.phenomenology.dataset_target.rule }}</code> — {{ tabs.phenomenology.dataset_target.detail }}</div>
+                            {% if tabs.phenomenology.dataset_target.rule_tex %}
+                            <div class="tex">{{ tabs.phenomenology.dataset_target.rule_tex }}</div>
+                            {% else %}
+                            <div class="note"><code>{{ tabs.phenomenology.dataset_target.rule }}</code></div>
+                            {% endif %}
+                            <div class="note">{{ tabs.phenomenology.dataset_target.detail }}</div>
                         </div>
                     </div>
                 </div>
@@ -393,21 +445,28 @@
                         <span class="check-mark">{{ 'PASS' if check.ok else 'FAIL' }}</span>
                         <div>
                             <strong>{{ check.label }}</strong>
-                            <div class="note"><code>{{ check.rule }}</code> — {{ check.detail }}</div>
+                            {% if check.rule_tex %}
+                            <div class="tex">{{ check.rule_tex }}</div>
+                            {% else %}
+                            <div class="note"><code>{{ check.rule }}</code></div>
+                            {% endif %}
+                            <div class="note">{{ check.detail }}</div>
                         </div>
                     </li>
                     {% endfor %}
                 </ul>
                 <h3>Identity certificates</h3>
-                <ul class="identity-list">
+                <div class="equation-board">
                     {% for item in tabs.certificates.identities %}
-                    <li>
-                        <strong>{{ item.name }}</strong>
-                        <code class="tex">{{ item.tex }}</code>
-                        {% if item.value is not none %}<span class="pill">→ {{ item.value }}</span>{% endif %}
-                    </li>
+                    <figure class="equation-card">
+                        <figcaption>{{ item.name }}</figcaption>
+                        <div class="tex tex-display">{{ item.tex }}</div>
+                        {% if item.value is not none %}
+                        <div class="equation-result"><span class="pill">→ {{ item.value }}</span></div>
+                        {% endif %}
+                    </figure>
                     {% endfor %}
-                </ul>
+                </div>
             </div>
         </div>
     </section>
@@ -432,7 +491,12 @@
                         <span class="check-mark">{{ 'PASS' if check.ok else 'FAIL' }}</span>
                         <div>
                             <strong>{{ check.label }}</strong>
-                            <div class="note"><code>{{ check.rule }}</code> — {{ check.detail }}</div>
+                            {% if check.rule_tex %}
+                            <div class="tex">{{ check.rule_tex }}</div>
+                            {% else %}
+                            <div class="note"><code>{{ check.rule }}</code></div>
+                            {% endif %}
+                            <div class="note">{{ check.detail }}</div>
                         </div>
                     </li>
                     {% endfor %}
@@ -475,11 +539,27 @@
             <summary>What are these numbers?</summary>
             <p>
                 Calabi–Yau shapes are candidate “hidden dimensions” in string theory.
-                <strong>h¹¹</strong> counts Kähler moduli (sizes/shapes of even cycles);
-                <strong>h²¹</strong> counts complex-structure moduli.
-                For a CY threefold, Euler characteristic is forced by
-                <code>χ = 2(h¹¹ − h²¹)</code>. The tadpole budget is <code>L = |χ|/24</code>.
+                <span class="tex">h^{1,1}</span> counts Kähler moduli (sizes of even cycles);
+                <span class="tex">h^{2,1}</span> counts complex-structure moduli.
+                For a CY threefold,
+                <span class="tex">\chi = 2(h^{1,1} - h^{2,1})</span>
+                and the tadpole budget is
+                <span class="tex">L = |\chi|/24</span>.
             </p>
+            <div class="equation-board">
+                <figure class="equation-card">
+                    <figcaption>Euler</figcaption>
+                    <div class="tex tex-display">\chi = 2(h^{1,1}-h^{2,1})</div>
+                </figure>
+                <figure class="equation-card">
+                    <figcaption>Tadpole</figcaption>
+                    <div class="tex tex-display">L = \dfrac{|\chi|}{24}</div>
+                </figure>
+                <figure class="equation-card">
+                    <figcaption>Generations</figcaption>
+                    <div class="tex tex-display">n_{\mathrm{gen}} = \dfrac{|\chi|}{2}</div>
+                </figure>
+            </div>
         </details>
         <details>
             <summary>Derive χ yourself</summary>
@@ -539,6 +619,7 @@
             if (history.replaceState) {
                 history.replaceState(null, '', '#' + name);
             }
+            if (window.UPGMath) window.UPGMath.typeset(tabRoot);
         }
         buttons.forEach((btn) => {
             btn.addEventListener('click', () => activateTab(btn.dataset.tab));
@@ -675,7 +756,22 @@
         const b = Number(document.getElementById('lab-h21').value);
         const e = 2 * (a - b);
         const L = Math.abs(e) / 24;
-        labOut.textContent = `χ = 2(${a} − ${b}) = ${e};  tadpole L = |χ|/24 = ${L.toFixed(4)};  mirror = (h¹¹,h²¹)=(${b},${a}) with χ=${-e}.`;
+        labOut.innerHTML = `
+            <div class="equation-board equation-board-plugged">
+              <figure class="equation-card">
+                <figcaption>Derived χ</figcaption>
+                <div class="tex tex-display" data-math-dynamic="1">\\chi = 2(${a}-${b}) = ${e}</div>
+              </figure>
+              <figure class="equation-card">
+                <figcaption>Tadpole</figcaption>
+                <div class="tex tex-display" data-math-dynamic="1">L = |\\chi|/24 = ${L.toFixed(4)}</div>
+              </figure>
+              <figure class="equation-card">
+                <figcaption>Mirror</figcaption>
+                <div class="tex tex-display" data-math-dynamic="1">(h^{1,1},h^{2,1})\\mapsto(${b},${a}),\\ \\chi\\mapsto ${-e}</div>
+              </figure>
+            </div>`;
+        if (window.UPGMath) window.UPGMath.typeset(labOut);
     });
     const quizEl = document.getElementById('lab-quiz');
     function newQuiz() {
@@ -686,26 +782,28 @@
         let ansHtml = '';
         if (kind === 0) {
             const ans = 2 * (A - B);
-            prompt = `If h¹¹=${A} and h²¹=${B}, what is χ?`;
-            ansHtml = `<code>${ans}</code> via χ=2(h¹¹−h²¹).`;
+            prompt = `If <span class="tex" data-math-dynamic="1">h^{1,1}=${A}</span> and <span class="tex" data-math-dynamic="1">h^{2,1}=${B}</span>, what is <span class="tex" data-math-dynamic="1">\\chi</span>?`;
+            ansHtml = `<span class="tex tex-display" data-math-dynamic="1">\\chi = 2(${A}-${B}) = ${ans}</span>`;
         } else if (kind === 1) {
             const chi = 2 * (A - B);
             const L = Math.abs(chi) / 24;
-            prompt = `If χ=${chi}, what is the tadpole budget L = |χ|/24?`;
-            ansHtml = `<code>${L.toFixed(4)}</code>`;
+            prompt = `If <span class="tex" data-math-dynamic="1">\\chi=${chi}</span>, what is <span class="tex" data-math-dynamic="1">L=|\\chi|/24</span>?`;
+            ansHtml = `<span class="tex tex-display" data-math-dynamic="1">L = ${L.toFixed(4)}</span>`;
         } else if (kind === 2) {
             const chi = 2 * (A - B);
             const nGen = Math.abs(chi) / 2;
-            prompt = `If χ=${chi}, what is the net generation index n_gen = |χ|/2?`;
-            ansHtml = `<code>${nGen}</code> (heterotic index sketch).`;
+            prompt = `If <span class="tex" data-math-dynamic="1">\\chi=${chi}</span>, what is <span class="tex" data-math-dynamic="1">n_{\\mathrm{gen}}=|\\chi|/2</span>?`;
+            ansHtml = `<span class="tex tex-display" data-math-dynamic="1">n_{\\mathrm{gen}} = ${nGen}</span>`;
         } else {
             const K = B + 1;
-            prompt = `If h²¹=${B}, what is the flux lattice dimension proxy K = h²¹+1?`;
-            ansHtml = `<code>${K}</code> (used in Stirling log N_flux estimates).`;
+            prompt = `If <span class="tex" data-math-dynamic="1">h^{2,1}=${B}</span>, what is <span class="tex" data-math-dynamic="1">K=h^{2,1}+1</span>?`;
+            ansHtml = `<span class="tex tex-display" data-math-dynamic="1">K = ${K}</span>`;
         }
         quizEl.innerHTML = `${prompt} <button type="button" class="btn btn-secondary btn-small" id="lab-reveal">Reveal</button> <span id="lab-ans" hidden>${ansHtml}</span>`;
+        if (window.UPGMath) window.UPGMath.typeset(quizEl);
         document.getElementById('lab-reveal')?.addEventListener('click', () => {
             document.getElementById('lab-ans').hidden = false;
+            if (window.UPGMath) window.UPGMath.typeset(quizEl);
         });
     }
     document.getElementById('lab-quiz-btn')?.addEventListener('click', newQuiz);

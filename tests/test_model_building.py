@@ -10,6 +10,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import model_cards  # noqa: E402
 import model_exclusions  # noqa: E402
 
 
@@ -67,3 +68,31 @@ def test_every_exclusion_has_required_fields():
         assert len(c['assumptions']) >= 1
         assert isinstance(c['rules_out'], str)
         assert isinstance(c['detail'], str)
+
+
+# --- model cards -----------------------------------------------------------
+
+def test_model_cards_load_at_least_three():
+    cards = model_cards.load_cards(force_reload=True)
+    assert len(cards) >= 3
+    for card in cards:
+        assert card['reference_url'] or card['arxiv']
+        assert card['title']
+        assert card['framework'] in (
+            'iib-flux', 'heterotic', 'f-theory', 'other',
+        )
+        assert 'spectrum_summary' in card
+        assert card['honesty']
+
+
+def test_model_cards_match_quintic_and_heterotic():
+    q = model_cards.list_for_hodge('kreuzer-skarke', 1, 101)
+    assert any('CdOGP' in c['title'] or 'quintic' in c['title'].lower() for c in q)
+    h = model_cards.lookup('heterotic', 73, 70)
+    assert h is not None
+    assert h['framework'] == 'heterotic'
+    assert 'arxiv.org' in (h.get('reference_url') or '') or h.get('arxiv')
+
+
+def test_model_card_lookup_miss():
+    assert model_cards.lookup('kreuzer-skarke', 99999, 99999) is None

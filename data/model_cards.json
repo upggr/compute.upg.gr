@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "honesty": "Literature model cards only. Spectra quoted solely when present in the cited reference; Hodge matches are class-level, not uniqueness proofs.",
+  "cards": [
+    {
+      "id": "cdogp-quintic-mirror-periods",
+      "dataset_id": "kreuzer-skarke",
+      "h11": 1,
+      "h21": 101,
+      "h31": null,
+      "candidate_id": null,
+      "framework": "iib-flux",
+      "title": "Quintic / mirror-quintic periods (CdOGP)",
+      "reference": "Candelas, de la Ossa, Green, Parkes, Nucl. Phys. B359 (1991) 21–74",
+      "reference_url": "https://doi.org/10.1016/0550-3213(91)90292-6",
+      "arxiv": null,
+      "assumptions": [
+        "One-parameter mirror-quintic family (Greene–Plesser / CdOGP normalization)",
+        "Literature Picard–Fuchs operator and special loci only — no numerical period engine here",
+        "Hodge class (h¹¹,h²¹)=(1,101) is shared by many quintics; not a unique polytope"
+      ],
+      "spectrum_summary": "No soft spectrum claimed. The cited paper gives the mirror-family Picard–Fuchs analysis and Yukawa structure for the quintic mirror pair; periods are literature structure, not computed on this site.",
+      "geometry_status": "representative-polytope",
+      "honesty": "Literature-backed period / PF structure for the quintic Hodge class. Not a flux vacuum census."
+    },
+    {
+      "id": "braun-he-ovrut-pantev-heterotic-msm",
+      "dataset_id": "heterotic",
+      "h11": 73,
+      "h21": 70,
+      "h31": null,
+      "candidate_id": null,
+      "framework": "heterotic",
+      "title": "Heterotic standard-model constructions (three net generations)",
+      "reference": "Braun, He, Ovrut, Pantev, Phys. Lett. B618 (2005) 210; arXiv:hep-th/0501070",
+      "reference_url": "https://arxiv.org/abs/hep-th/0501070",
+      "arxiv": "hep-th/0501070",
+      "assumptions": [
+        "Heterotic E₈×E₈ on a smooth CY3 with a stable holomorphic bundle",
+        "Net chirality index n_gen = |χ|/2 when the bundle index matches the Euler index",
+        "This card attaches to a Hodge class with |χ|=6; the cited paper builds concrete bundles on specific manifolds — matching Hodge alone is not that construction"
+      ],
+      "spectrum_summary": "The cited construction reports an observable-sector gauge group SU(3)_C×SU(2)_L×U(1)_Y×U(1)_{B−L}, three families of quarks and leptons (with right-handed neutrinos), two Higgs pairs, and no exotic matter in the strong-coupling case. This site only checks the topological necessary condition |χ|=6 for Hodge (73,70); it does not reproduce the bundle cohomology.",
+      "geometry_status": "hodge-only",
+      "honesty": "Literature pointer for heterotic 3-generation model-building. Topology here is necessary, not sufficient."
+    },
+    {
+      "id": "morrison-vafa-f-theory-cy3",
+      "dataset_id": "f-theory-elliptic",
+      "h11": 3,
+      "h21": 243,
+      "h31": null,
+      "candidate_id": null,
+      "framework": "f-theory",
+      "title": "F-theory on elliptically fibered Calabi–Yau threefolds",
+      "reference": "Morrison, Vafa, Nucl. Phys. B473 (1996) 74–100; arXiv:hep-th/9602114",
+      "reference_url": "https://arxiv.org/abs/hep-th/9602114",
+      "arxiv": "hep-th/9602114",
+      "assumptions": [
+        "F-theory compactification on an elliptically fibered CY3",
+        "Base and Weierstrass/Tate data determine the gauge algebra — not fixed by Hodge numbers alone",
+        "Site f-theory-elliptic dataset uses elliptic-friendly Hodge proxies, not a Weierstrass census"
+      ],
+      "spectrum_summary": "No invented spectrum. The cited paper develops F-theory compactifications on elliptic CY3s and relates singularity structure to non-abelian gauge symmetry; this card is a literature seed for elliptic-friendly Hodge classes such as (3,243).",
+      "geometry_status": "hodge-only",
+      "honesty": "F-theory literature seed. Elliptic fibration data are not stored; do not invent gauge groups from Hodge numbers."
+    },
+    {
+      "id": "greene-plesser-mirror-quintic",
+      "dataset_id": "kreuzer-skarke",
+      "h11": 101,
+      "h21": 1,
+      "h31": null,
+      "candidate_id": null,
+      "framework": "iib-flux",
+      "title": "Mirror quintic (Greene–Plesser) Hodge class",
+      "reference": "Greene, Plesser, Nucl. Phys. B338 (1990) 15–37",
+      "reference_url": "https://doi.org/10.1016/0550-3213(90)90622-k",
+      "arxiv": null,
+      "assumptions": [
+        "Mirror symmetry at the Hodge level: (101,1) ↔ (1,101)",
+        "Orbifold construction / resolution of the Fermat quintic mirror family",
+        "Class-level example — many geometries can share these Hodge numbers"
+      ],
+      "spectrum_summary": "No spectrum claimed. Mirror of the quintic with χ=+200; used as a textbook IIB / mirror-symmetry laboratory (period analysis via CdOGP).",
+      "geometry_status": "representative-polytope",
+      "honesty": "Textbook mirror-quintic literature card. Not a unique polytope proof."
+    }
+  ]
+}

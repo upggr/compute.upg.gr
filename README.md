@@ -457,4 +457,4 @@ This project builds on:
 
 ---
 
-**Disclaimer**: This tool accelerates computational search and verification. It does not claim to 'solve string theory' or make predictions about physical reality.
+**Disclaimer**: This tool accelerates computational search and packaging of candidate dossiers. Demo corpora are synthetic Hodge draws; Verified means a dataset target-rule match on those labels.

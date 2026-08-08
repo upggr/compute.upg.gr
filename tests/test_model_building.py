@@ -170,7 +170,7 @@ def test_build_tabs_includes_model_building():
     assert tabs['ok']
     mb = tabs['model_building']
     assert mb['id'] == 'model-building'
-    assert 'Not a proof of string theory' in mb['honesty_banner']
+    assert 'Spectra only when cited' in mb['honesty_banner'] or 'literature cards' in mb['honesty_banner']
     assert any(c['id'] == 'heterotic_standard_embedding_3gen' for c in mb['exclusions'])
     assert any(c['id'] == 'ks_tadpole_budget' for c in mb['exclusions'])
     assert 'checklist' in mb['geometry_pipeline']
@@ -242,6 +242,6 @@ def test_candidate_page_has_model_building_tab(client):
         html = r.get_data(as_text=True)
         assert 'data-tab="model-building"' in html
         assert 'tab-model-building' in html
-        assert 'Model-building aids' in html or 'Not a proof of string theory' in html
+        assert 'Model-building aids' in html or 'literature cards' in html
         return
     pytest.skip('No seeded quintic/heterotic candidate page available locally')

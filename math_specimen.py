@@ -13,8 +13,8 @@ import geometry_store
 
 
 SPECIMEN_FRAMING = (
-    'This page is a citeable geometric specimen (Hodge class ± construction data), '
-    'not a proof of string theory.'
+    'Citeable geometric specimen: Hodge class plus any stored construction metadata '
+    '(toric data, literature periods, mirror link when available).'
 )
 
 
@@ -55,7 +55,7 @@ def evaluate_specimen_match(
     """Decide whether this candidate is a showcaseable math specimen.
 
     FOUND means we have *extra* geometric / literature substance beyond a bare
-    Hodge triple — not that string theory is verified.
+    Hodge triple.
     """
     construction = construction or {}
     tags_l = [str(t).lower() for t in (tags or [])]
@@ -86,7 +86,7 @@ def evaluate_specimen_match(
         headline = 'SPECIMEN FOUND'
         blurb = (
             'This Hodge class matches showcase conditions — citeable geometric '
-            'substance beyond bare invariants. Still not a proof of string theory.'
+            'substance beyond bare invariants.'
         )
     else:
         headline = 'Specimen pending'
@@ -253,15 +253,14 @@ def mathematics_payload(
             f'  title = {{upg-strings geometric specimen: {hodge_label}}},\n'
             f'  author = {{Kokkinis, Ioannis}},\n'
             f'  howpublished = {{\\url{{{canonical}}}}},\n'
-            f'  note = {{Citeable Hodge class ± construction metadata; '
-            f'not a proof of string theory; χ={euler}}},\n'
+            f'  note = {{Citeable Hodge class ± construction metadata; χ={euler}}},\n'
             f'  year = {{2026}}\n'
             f'}}'
         ),
         'plain': (
             f'Ioannis Kokkinis, upg-strings geometric specimen {hodge_label} '
             f'(χ={euler}). {canonical}#mathematics. '
-            f'Topological / combinatorial specimen, not a string-theory proof.'
+            f'Topological / combinatorial specimen.'
         ),
     }
 

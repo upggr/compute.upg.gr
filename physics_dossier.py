@@ -1561,7 +1561,7 @@ def build_tabs(
         'title': 'Model-building',
         'honesty_banner': (
             'Model-building aids: topological exclusions and literature cards. '
-            'Not a proof of string theory; spectra only when cited.'
+            'Spectra only when cited from published references.'
         ),
         'honesty': (
             'Exclusions are necessary conditions under stated assumptions only. '

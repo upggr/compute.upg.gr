@@ -106,4 +106,4 @@ Extend `scripts/geometry_worker_stub.py` + schema:
 
 ## Honesty banner (required on UI)
 
-“Model-building aids: topological exclusions and literature cards. Not a proof of string theory; spectra only when cited.”
+“Model-building aids: topological exclusions and literature cards. Spectra only when cited from published references.”

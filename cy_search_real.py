@@ -6,8 +6,10 @@ ML-guided search for rare geometries across multiple string theory datasets:
 - CY5-Folds (Complete Intersection Calabi-Yau five-folds)
 - Heterotic Compactifications
 
-We achieve perfect precision and non-trivial recall in ML-guided search
-for rare targets, with sub-second runtime.
+Candidates are synthetic Hodge draws. "Verified" means a row passes the
+dataset target rule on those labels — not experimental physics verification.
+Target-defining feature columns are held out of the RandomForest so reported
+metrics are synthetic retrieval vs a random baseline, not perfect-precision claims.
 """
 
 import numpy as np
@@ -21,6 +23,13 @@ warnings.filterwarnings('ignore')
 
 from datasets_registry import DatasetRegistry
 
+SYNTHETIC_RETRIEVAL_HONESTY = (
+    "Synthetic Hodge-number draws ranked by RandomForest; "
+    "'Verified' = passes the dataset target rule on those labels "
+    "(not experimental physics verification). "
+    "performance_metrics are synthetic retrieval vs random baseline."
+)
+
 
 class CYSearchEngine:
     """Universal ML-guided search engine for rare geometries"""
@@ -33,12 +42,14 @@ class CYSearchEngine:
         self.scaler = None
 
     def train(self, X, y):
-        """Train ML model to identify target geometries"""
+        """Train ML model on held-out (non-leaky) feature columns only."""
         np.random.seed(self.seed)
+
+        X_model = self.dataset.model_features(X)
 
         # Normalize features
         self.scaler = StandardScaler()
-        X_scaled = self.scaler.fit_transform(X)
+        X_scaled = self.scaler.fit_transform(X_model)
 
         # Train Random Forest classifier
         self.model = RandomForestClassifier(
@@ -58,7 +69,8 @@ class CYSearchEngine:
         if self.model is None:
             raise ValueError("Model not trained. Call train() first.")
 
-        X_scaled = self.scaler.transform(X)
+        X_model = self.dataset.model_features(X)
+        X_scaled = self.scaler.transform(X_model)
 
         # Get prediction probabilities
         proba = self.model.predict_proba(X_scaled)
@@ -72,16 +84,17 @@ class CYSearchEngine:
         return scores
 
     def get_feature_importance(self):
-        """Get feature importance from trained model"""
+        """Get feature importance from trained model (model columns only)."""
         if self.model is None:
             return None
 
-        feature_names = self.dataset.get_feature_names()
+        feature_names = self.dataset.get_model_feature_names()
         importance = self.model.feature_importances_
         return dict(zip(feature_names, importance))
 
 
-def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_id='kreuzer-skarke'):
+def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True,
+                    dataset_id='kreuzer-skarke', weights=None):
     """
     Run ML-guided search for rare geometries
 
@@ -96,7 +109,9 @@ def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_
     verify : bool
         Whether to verify results against ground truth
     dataset_id : str
-        Dataset identifier ('kreuzer-skarke', 'cy5-folds', 'heterotic')
+        Dataset identifier ('kreuzer-skarke', 'cy5-folds', 'heterotic', ...)
+    weights : dict or None
+        Optional info-density composite weights for this call only.
 
     Returns:
     --------
@@ -116,7 +131,10 @@ def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_
     # Step 1: Generate candidates
     print(f"Loading {metadata.name}...")
     load_start = time.time()
-    candidates = dataset.generate_candidates(n_candidates, seed)
+    if dataset_id == 'info-density' and weights is not None:
+        candidates = dataset.generate_candidates(n_candidates, seed, weights=weights)
+    else:
+        candidates = dataset.generate_candidates(n_candidates, seed)
     labels = dataset.generate_labels(candidates, seed)
     load_time = time.time() - load_start
 
@@ -131,7 +149,7 @@ def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_
     X_train, y_train = candidates[:train_size], labels[:train_size]
     X_test, y_test = candidates[train_size:], labels[train_size:]
 
-    # Step 3: Train ML model
+    # Step 3: Train ML model (target-defining columns held out inside engine)
     print("Training ML model...")
     train_start = time.time()
     engine = CYSearchEngine(dataset_id=dataset_id, random_seed=seed)
@@ -153,7 +171,7 @@ def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_
     top_labels = y_test[top_indices]
     top_candidates = X_test[top_indices]
 
-    # Step 6: Verification
+    # Step 6: Verification against dataset target rule (may use held-out columns)
     verify_start = time.time()
     if verify:
         true_positives = top_labels.sum()
@@ -181,6 +199,7 @@ def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_
 
     # Get feature importance
     feature_importance = engine.get_feature_importance()
+    held_out = dataset.get_held_out_feature_names()
 
     # Build results
     results = {
@@ -196,16 +215,26 @@ def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_
             "random_seed": seed,
             "total_candidates": len(X_test),
             "train_size": len(X_train),
-            "true_targets_in_test": int(y_test.sum())
+            "true_targets_in_test": int(y_test.sum()),
+            "held_out_features": held_out,
+            "model_features": dataset.get_model_feature_names(),
+            "candidate_source": "synthetic_hodge_draws",
         },
         "performance_metrics": {
+            "metric_kind": "synthetic_retrieval_vs_baseline",
             "precision_at_k": round(precision, 4) if precision is not None else None,
             "recall_at_k": round(recall, 4) if recall is not None else None,
             "time_to_first_hit": time_to_first_hit,
             "verified_count": int(true_positives),
             "total_top_k": effective_k,
             "requested_top_k": top_k,
-            "baseline_random_precision": round(y_test.mean(), 4)
+            "baseline_random_precision": round(float(y_test.mean()), 4),
+            "honesty": SYNTHETIC_RETRIEVAL_HONESTY,
+            "leakage_note": dataset.leakage_note(),
+            "verified_means": (
+                "Passes dataset target rule on synthetic labels "
+                "(not experimental physics verification)."
+            ),
         },
         "timing": {
             "total_runtime_seconds": round(total_time, 2),
@@ -217,6 +246,11 @@ def run_real_search(top_k=100, seed=42, n_candidates=5000, verify=True, dataset_
         "feature_importance": {k: round(v, 4) for k, v in feature_importance.items()},
         "top_results": []
     }
+    if dataset_id == 'info-density':
+        results['run_metadata']['weights'] = (
+            weights if weights is not None
+            else getattr(dataset, 'DEFAULT_WEIGHTS', {}).copy()
+        )
 
     # Add top results (all of them: previously capped at 20, which silently
     # contradicted a requested top_k of 100)
@@ -257,12 +291,14 @@ if __name__ == "__main__":
             dataset_id=dataset_info['id']
         )
 
+        metrics = results['performance_metrics']
         print(f"\n✓ Search completed in {results['timing']['total_runtime_seconds']:.1f}s")
-        print(f"  Precision@100: {results['performance_metrics']['precision_at_k']:.1%}")
-        print(f"  Recall@100: {results['performance_metrics']['recall_at_k']:.1%}")
-        print(f"  Baseline (random): {results['performance_metrics']['baseline_random_precision']:.1%}")
-        print(f"  Verified targets: {results['performance_metrics']['verified_count']}/100")
-        print(f"  Time to first hit: rank {results['performance_metrics']['time_to_first_hit']}")
+        print(f"  Precision@100 (synthetic retrieval): {metrics['precision_at_k']:.1%}")
+        print(f"  Recall@100: {metrics['recall_at_k']:.1%}")
+        print(f"  Baseline (random): {metrics['baseline_random_precision']:.1%}")
+        print(f"  Verified (target rule): {metrics['verified_count']}/100")
+        print(f"  Time to first hit: rank {metrics['time_to_first_hit']}")
+        print(f"  Hold-out: {results['run_metadata']['held_out_features']}")
 
         print("\n  Top Feature Importances:")
         for feat, imp in sorted(results['feature_importance'].items(), key=lambda x: -x[1])[:5]:

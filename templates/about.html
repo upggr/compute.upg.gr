@@ -2,10 +2,10 @@
 {% set active_page = "about" %}
 
 {% block title %}About - upg-strings{% endblock %}
-{% block description %}About the upg-strings project and team.{% endblock %}
+{% block description %}About upg-strings: synthetic Hodge draws, target-rule verification, Hall of Fame dossiers.{% endblock %}
 {% block og_tags %}
     <meta property="og:title" content="About - upg-strings">
-    <meta property="og:description" content="About the upg-strings project and team.">
+    <meta property="og:description" content="About upg-strings: synthetic draws, honest metrics, Hall of Fame.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://compute.upg.gr/about.html">
 {% endblock %}
@@ -18,69 +18,62 @@
 
         <section class="section">
             <h2>Overview</h2>
-            <p><strong>We build ML-guided search tools that drastically reduce the cost of finding rare Calabi-Yau geometries in large string-theory datasets, with full verification and reproducibility.</strong></p>
-            <p><strong style="color: var(--primary-color);">We achieve perfect precision and non-trivial recall in ML-guided search for rare targets, with sub-second runtime.</strong></p>
-            <p>upg-strings is a research tool for applying machine learning to the computational exploration of Calabi-Yau manifolds in the string theory landscape. The project emphasizes reproducibility, verification, and transparent methodology over performance claims.</p>
-            <p>This is applied computation and AI tooling designed to accelerate discovery in theoretical physics datasets, not a claim to solve fundamental physics problems.</p>
+            <p><strong>We build ML-guided ranking tools for rare Calabi-Yau-like targets in large search spaces, with reproducible seeds, target-rule checks, and shareable dossiers.</strong></p>
+            <p>Demo corpora are <strong>synthetic Hodge-number draws</strong> inspired by published dataset statistics — not a live crawl of the full Kreuzer–Skarke census, and not experimental physics data.</p>
+            <p><strong>Verified</strong> means a candidate passes that dataset’s target rule on those synthetic labels (e.g. |χ| &lt; 100 for Kreuzer–Skarke). It is <em>not</em> experimental verification of a string vacuum.</p>
+            <p>upg-strings emphasizes reproducibility, transparent methodology, and durable product surfaces (Hall of Fame + shareable dossiers) over inflated precision marketing.</p>
         </section>
 
         <section class="section">
-            <h2>What Makes upg-strings Unique</h2>
-            <p>upg-strings fills a critical gap in the string theory research toolkit. While existing tools focus on analyzing individual manifolds or classifying known geometries, upg-strings is the first <strong>search engine for the string landscape</strong>.</p>
+            <h2>What Makes upg-strings Useful</h2>
+            <p>While tools like CYTools focus on analyzing individual manifolds, upg-strings is a <strong>search / ranking layer</strong>: which synthetic candidates are worth opening a dossier for?</p>
 
-            <h3>The Problem We Solve</h3>
-            <p>The Kreuzer-Skarke database contains 474 million reflexive polytopes describing Calabi-Yau manifolds. Finding geometries with specific topological properties for phenomenological model building is like searching for needles in a haystack.</p>
+            <h3>The problem we sketch</h3>
+            <p>The Kreuzer–Skarke database describes hundreds of millions of reflexive polytopes. Finding geometries with specific topological properties is hard. This site demonstrates ranking + packaging on synthetic draws so the pipeline stays cheap and reproducible.</p>
 
-            <h3>How We're Different</h3>
+            <h3>How we're different (honestly)</h3>
             <div class="outputs-grid">
                 <div class="output-item">
-                    <h3>Existing Tools</h3>
+                    <h3>Existing tools</h3>
                     <p><strong>CYTools:</strong> Analyzes geometry of individual manifolds</p>
-                    <p><strong>Research Papers:</strong> Classify or generate new manifolds</p>
-                    <p><strong>Traditional Approach:</strong> Manual selection or random sampling</p>
+                    <p><strong>Research papers:</strong> Classify or generate new manifolds</p>
+                    <p><strong>Traditional approach:</strong> Manual selection or random sampling</p>
                 </div>
                 <div class="output-item">
                     <h3>upg-strings</h3>
-                    <p><strong>Ranks & Searches:</strong> Finds promising candidates automatically</p>
-                    <p><strong>8.7x Better:</strong> Than random selection</p>
-                    <p><strong>98% Cost Reduction:</strong> Examine 100 instead of 5,000 manifolds</p>
+                    <p><strong>Ranks &amp; packages:</strong> Scores candidates and opens shareable dossiers</p>
+                    <p><strong>Hall of Fame:</strong> Persistent board of target-rule hits</p>
+                    <p><strong>Honest metrics:</strong> Synthetic retrieval vs random baseline; label features held out of the model</p>
                 </div>
             </div>
         </section>
 
         <section class="section">
-            <h2>A Simple Scenario</h2>
-            <p><strong>Without upg-strings:</strong></p>
-            <p>You need Calabi-Yau manifolds with small Euler characteristic (|χ| &lt; 100) for your particle physics model.</p>
+            <h2>A simple scenario</h2>
+            <p><strong>Goal:</strong> Calabi-Yau-like manifolds with small Euler characteristic (|χ| &lt; 100) for phenomenological sketches.</p>
             <ul>
-                <li>Option 1: Check all 474M candidates → <strong>Impossible</strong></li>
-                <li>Option 2: Random sampling → <strong>9.7% success rate</strong></li>
-                <li>Option 3: Ask domain experts → <strong>Doesn't scale</strong></li>
+                <li>Full census search of ~474M polytopes → not what this demo runs</li>
+                <li>Random sampling of synthetic draws → baseline hit rate in the API response</li>
+                <li>ML-guided ranking with |χ| held out of the forest → retrieval lift vs that baseline on synthetic labels</li>
+                <li>Open a dossier / pin to Hall of Fame when the target rule passes</li>
             </ul>
-
-            <p><strong>With upg-strings:</strong></p>
-            <ul>
-                <li>Run ML-guided search → <strong>84% success rate in top 100</strong></li>
-                <li>Examine 100 candidates instead of thousands</li>
-                <li>Complete in <strong>5 seconds</strong></li>
-                <li>Get verified results with full reproducibility metadata</li>
-            </ul>
+            <p>Do not read marketing-style “8.7×” or “98% cost reduction” as measured KS physics performance — those were overstated relative to this synthetic setup.</p>
         </section>
 
         <section class="section">
-            <h2>Performance That Matters</h2>
+            <h2>Metrics that matter here</h2>
             <div class="metrics-grid">
                 <div class="metric-item">
-                    <h3>84% Precision@100</h3>
-                    <p>84 out of 100 top predictions are verified correct</p>
+                    <h3>Synthetic retrieval</h3>
+                    <p>Precision@k / Recall@k against the dataset target rule on synthetic draws</p>
                 </div>
                 <div class="metric-item">
-                    <h3>8.7x Improvement</h3>
-                    <p>Nearly 9 times better than random selection</p>
+                    <h3>vs baseline</h3>
+                    <p>Compare to random selection rate in the same draw (<code>baseline_random_precision</code>)</p>
                 </div>
                 <div class="metric-item">
-                    <h3>98% Cost Reduction</h3>
-                    <p>Drastically reduces search space and computation time</p>
+                    <h3>Leakage hold-out</h3>
+                    <p>Target-defining columns (e.g. absolute χ) are withheld from the RandomForest</p>
                 </div>
             </div>
         </section>
@@ -88,11 +81,11 @@
         <section class="section">
             <h2>Our Approach</h2>
             <ul>
-                <li><strong>Information Retrieval for Physics:</strong> Apply search engine principles to the string landscape</li>
-                <li><strong>Reproducible Pipeline:</strong> Every run is fully deterministic with checksummed data, pinned dependencies, and fixed random seeds</li>
-                <li><strong>Verification-First:</strong> All predictions are validated against ground truth with transparent metrics (Precision@k, Recall@k)</li>
-                <li><strong>Open Artifacts:</strong> Complete outputs (CSV, JSON, metadata) are exported for independent analysis</li>
-                <li><strong>Production-Ready:</strong> Web interface and REST API, not just research code</li>
+                <li><strong>Information retrieval framing:</strong> Rank candidates, then verify with an explicit rule</li>
+                <li><strong>Reproducible pipeline:</strong> Deterministic seeds, checksummed draws, pinned dependencies</li>
+                <li><strong>Verification with clear meaning:</strong> Target-rule pass on synthetic labels — stated in API <code>honesty</code> / <code>leakage_note</code></li>
+                <li><strong>Durable product:</strong> Hall of Fame + shareable candidate dossiers</li>
+                <li><strong>Open artifacts:</strong> CSV, JSON, reproducibility notes</li>
             </ul>
         </section>
 
@@ -100,18 +93,20 @@
             <h2>The Bigger Picture</h2>
             <p>Think of upg-strings as part of the Calabi-Yau research stack:</p>
             <ol>
-                <li><strong>Generation:</strong> Genetic algorithms create new manifolds</li>
-                <li><strong>Search:</strong> upg-strings finds promising candidates (← You are here)</li>
+                <li><strong>Generation:</strong> Genetic algorithms or databases create / enumerate manifolds</li>
+                <li><strong>Search:</strong> upg-strings ranks promising candidates (← you are here)</li>
                 <li><strong>Analysis:</strong> CYTools computes detailed geometry</li>
                 <li><strong>Metrics:</strong> cymetric approximates Ricci-flat metrics</li>
-                <li><strong>Classification:</strong> ML models verify topological properties</li>
+                <li><strong>Classification:</strong> Domain models check topological properties</li>
             </ol>
-            <p>upg-strings bridges the gap between having a massive database and doing detailed analysis. It answers: <strong>"Which manifolds should I analyze?"</strong></p>
+            <p>upg-strings answers: <strong>"Which candidates should I open a dossier for?"</strong></p>
         </section>
 
         <section class="section">
             <h2>New here?</h2>
-            <p>Start with a plain-language walkthrough on the <a href="/eli5.html">ELI5</a> page, then try a <a href="/demo.html">Run</a> or browse the <a href="/candidates.html">Hall of Fame</a>.</p>
+            <p>Browse the <a href="/candidates.html">Hall of Fame</a>, try <a href="/lookup.html">Lookup</a>, open the
+            <a href="/candidate/kreuzer-skarke-66d611d18a9d">quintic dossier</a>, or start with the
+            <a href="/eli5.html">ELI5</a> walkthrough. Live ranking on the home page is optional.</p>
         </section>
     </main>
 {% endblock %}

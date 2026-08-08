@@ -51,6 +51,46 @@ class BaseDataset(ABC):
         """Return list of feature names"""
         pass
 
+    def get_held_out_feature_names(self) -> List[str]:
+        """Columns used for labels/display but withheld from the ML model.
+
+        Labels may still depend on these (e.g. |χ| < 100). Training/ranking
+        must call model_features() so the RandomForest never sees them.
+        """
+        return []
+
+    def get_model_feature_names(self) -> List[str]:
+        held = set(self.get_held_out_feature_names())
+        return [name for name in self.get_feature_names() if name not in held]
+
+    def get_model_feature_indices(self) -> List[int]:
+        held = set(self.get_held_out_feature_names())
+        return [
+            idx for idx, name in enumerate(self.get_feature_names())
+            if name not in held
+        ]
+
+    def model_features(self, candidates: np.ndarray) -> np.ndarray:
+        """Slice candidate rows to the non-leaky training/ranking features."""
+        indices = self.get_model_feature_indices()
+        if not indices:
+            raise ValueError(f"{type(self).__name__} has no model features after hold-out")
+        return np.asarray(candidates)[:, indices]
+
+    def leakage_note(self) -> str:
+        held = self.get_held_out_feature_names()
+        if not held:
+            return (
+                "No explicit hold-out configured; treat precision as synthetic "
+                "retrieval on rule-based labels, not physics verification."
+            )
+        return (
+            "Held out of RandomForest (label/display only): "
+            + ", ".join(held)
+            + ". Metrics are synthetic retrieval vs random baseline on "
+            "dataset target-rule labels — not experimental physics verification."
+        )
+
     @abstractmethod
     def format_result(self, candidate: np.ndarray, score: float, verified: bool, rank: int) -> Dict[str, Any]:
         """Format a single result for display"""
@@ -101,6 +141,10 @@ class KreuzerSkarkeDataset(BaseDataset):
 
     def get_feature_names(self) -> List[str]:
         return ['h11', 'h21', 'euler_abs', 'hodge_ratio', 'c2_h11']
+
+    def get_held_out_feature_names(self) -> List[str]:
+        # Label is |χ| < 100 via euler_abs — do not feed absolute χ to the model.
+        return ['euler_abs']
 
     def format_result(self, candidate: np.ndarray, score: float, verified: bool, rank: int) -> Dict[str, Any]:
         h11, h21, euler_abs, hodge_ratio, c2_h11 = candidate
@@ -165,6 +209,10 @@ class CY5FoldsDataset(BaseDataset):
 
     def get_feature_names(self) -> List[str]:
         return ['h11', 'h21', 'h31', 'euler', 'euler_abs', 'hodge_sum']
+
+    def get_held_out_feature_names(self) -> List[str]:
+        # Label is h11 > 100 — withhold the target-defining Hodge number.
+        return ['h11']
 
     def format_result(self, candidate: np.ndarray, score: float, verified: bool, rank: int) -> Dict[str, Any]:
         h11, h21, h31, euler, euler_abs, hodge_sum = candidate
@@ -348,6 +396,10 @@ class InformationDensityDataset(BaseDataset):
             'flux_density', 'vacuum_stability', 'info_density'
         ]
 
+    def get_held_out_feature_names(self) -> List[str]:
+        # Label is top-decile of the composite score — withhold that column.
+        return ['info_density']
+
     def format_result(self, candidate: np.ndarray, score: float, verified: bool, rank: int) -> Dict[str, Any]:
         (h11, h21, euler_abs, hodge_entropy, topo_efficiency,
          moduli_compactness, hodge_balance, flux_density,
@@ -416,6 +468,10 @@ class HeteroticDataset(BaseDataset):
 
     def get_feature_names(self) -> List[str]:
         return ['h11', 'h21', 'euler', 'euler_abs', 'hodge_ratio', 'hodge_balance', 'n_gen']
+
+    def get_held_out_feature_names(self) -> List[str]:
+        # Label is |h11 - h21| < 20. Withhold direct encodings of that gap.
+        return ['hodge_balance', 'euler', 'euler_abs', 'n_gen']
 
     def format_result(self, candidate: np.ndarray, score: float, verified: bool, rank: int) -> Dict[str, Any]:
         h11, h21, euler, euler_abs, hodge_ratio, hodge_balance, n_gen = candidate
@@ -511,6 +567,10 @@ class FTheoryEllipticDataset(BaseDataset):
             'h11', 'h21', 'euler_abs', 'elliptic_flag',
             'mw_rank_proxy', 'base_h11_proxy', 'topo_efficiency',
         ]
+
+    def get_held_out_feature_names(self) -> List[str]:
+        # Label uses elliptic_flag (h11 ≤ 10) and literature seeds.
+        return ['elliptic_flag', 'base_h11_proxy']
 
     def format_result(self, candidate: np.ndarray, score: float, verified: bool, rank: int) -> Dict[str, Any]:
         h11, h21, euler_abs, elliptic_flag, mw_rank, base_h11, topo_eff = candidate

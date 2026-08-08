@@ -1,8 +1,8 @@
 # upg-strings: ML-Guided Search for Rare Geometries in String Theory
 
-**We build ML-guided search tools that drastically reduce the cost of finding rare Calabi-Yau geometries in large string-theory datasets, with full verification and reproducibility.**
+**We build ML-guided ranking tools for rare Calabi-Yau-like targets, with reproducible seeds, target-rule checks, and shareable dossiers (Hall of Fame).**
 
-**We achieve perfect precision and non-trivial recall in ML-guided search for rare targets, with sub-second runtime.**
+**Demo corpora are synthetic Hodge-number draws.** “Verified” means a row passes the dataset target rule on those labels — not experimental physics verification. Target-defining features (e.g. absolute χ) are held out of the RandomForest; API metrics are labeled as synthetic retrieval vs baseline.
 
 [![Website](https://img.shields.io/badge/website-compute.upg.gr-blue)](https://compute.upg.gr)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -389,16 +389,16 @@ Roadmap vs full CYTools: this is the **offline → DB → query** path. In-proce
 - [x] Real-time progress tracking for long-running searches (`POST /api/run-demo` with `async:true` → `GET /api/jobs/<id>`)
 - [x] Batch processing API (`POST /api/batch`, ≤50 identify/search jobs)
 
-## What Makes upg-strings Unique
+## What Makes upg-strings Useful
 
-While existing tools focus on **analyzing individual manifolds** (CYTools) or **classifying known geometries** (ML papers), upg-strings is the first **search engine for the string landscape**.
+While existing tools focus on **analyzing individual manifolds** (CYTools) or **classifying known geometries** (ML papers), upg-strings is a **search / ranking + dossier layer** for landscape-style candidate triage.
 
-We solve the problem: *"Which manifolds should I analyze?"* before detailed computation begins.
+We answer: *"Which candidates should I open a dossier for?"* before deeper computation begins.
 
-- **8.7x better** than random selection
-- **98% cost reduction** in search space
-- **Perfect precision** on rare targets
-- **Sub-second runtime** for ranking
+- **Synthetic retrieval metrics** vs random baseline (see `performance_metrics.metric_kind`)
+- **Leakage hold-out** of target-defining columns (`leakage_note` in API responses)
+- **Hall of Fame + shareable dossiers** as the durable product surface
+- **Fast ranking** of synthetic draws for reproducible demos
 
 ## References
 

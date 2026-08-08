@@ -15,10 +15,11 @@
         <section class="section">
             <h1>Hall of Fame</h1>
             <p>
-                Persistent board of verified geometries the tool has found.
-                Each card has its own shareable page. <strong>Rank / score</strong> is the
+                Persistent board of geometries the tool has found.
+                Each card has its own shareable dossier. <strong>Rank / score</strong> is the
                 best the model has assigned so far; <strong>Verified</strong> means it
-                passed that dataset’s target rule.
+                passed that dataset’s target rule on synthetic labels — not experimental
+                physics verification.
             </p>
             <p id="gallery-target" class="note">Target for Kreuzer–Skarke: manifolds with |χ| &lt; 100.</p>
             <div class="candidate-controls">
@@ -35,6 +36,8 @@
                         <option value="kreuzer-skarke" selected>Kreuzer-Skarke (CY 3-folds)</option>
                         <option value="cy5-folds">CY5-Folds (Complete Intersection)</option>
                         <option value="heterotic">Heterotic Compactifications</option>
+                        <option value="info-density">Information Density Ranking</option>
+                        <option value="f-theory-elliptic">F-theory Elliptic Proxies</option>
                     </select>
                 </div>
                 <div class="control-group">
@@ -146,7 +149,9 @@
     const datasetDescriptions = {
         'kreuzer-skarke': 'Target: manifolds with |χ| < 100 (small Euler characteristic).',
         'cy5-folds': 'Target: manifolds with h¹¹ > 100 (many Kähler moduli / large-volume scenarios).',
-        'heterotic': 'Target: balanced manifolds with h¹¹ ≈ h²¹.'
+        'heterotic': 'Target: balanced manifolds with h¹¹ ≈ h²¹.',
+        'info-density': 'Target: high information-density composite (top decile).',
+        'f-theory-elliptic': 'Target: F-theory elliptic / base proxy geometries.'
     };
 
     const grid = document.getElementById('candidates-grid');

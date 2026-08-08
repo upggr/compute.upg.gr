@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% set active_page = "home" %}
 
-{% block title %}upg-strings - Verified ML-guided search for Calabi-Yau targets{% endblock %}
-{% block description %}Reproducible pipeline to rank and verify rare targets in Calabi-Yau datasets.{% endblock %}
+{% block title %}upg-strings - ML-guided search for Calabi-Yau targets{% endblock %}
+{% block description %}Synthetic Hodge draws, ranked and checked against dataset target rules. Browse Hall of Fame dossiers and look up geometries.{% endblock %}
 {% block og_tags %}
-    <meta property="og:title" content="upg-strings - Verified ML-guided search">
-    <meta property="og:description" content="Reproducible pipeline to rank and verify rare targets in Calabi-Yau datasets.">
+    <meta property="og:title" content="upg-strings - ML-guided Calabi-Yau search">
+    <meta property="og:description" content="Synthetic Hodge draws with target-rule checks, Hall of Fame, and shareable dossiers.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://compute.upg.gr">
 {% endblock %}
@@ -13,23 +13,54 @@
 {% block content %}
     <header class="hero">
         <div class="container">
-            <div class="badge">Verified Outputs</div>
+            <div class="badge">Synthetic draws · target-rule checks</div>
             <h1>upg-strings</h1>
-            <p class="subtitle">Verified ML-guided search for rare Calabi-Yau targets (string landscape)</p>
-            <p class="tagline">We build ML-guided search tools that drastically reduce the cost of finding rare Calabi-Yau geometries in large string-theory datasets, with full verification and reproducibility.</p>
-            <p class="tagline" style="font-weight: 600; color: var(--primary-color); margin-top: 1rem;">We achieve perfect precision and non-trivial recall in ML-guided search for rare targets, with sub-second runtime.</p>
-            <p class="tagline" style="margin-top: 0.75rem;">Compatible with CYTools, cymetric, Sage, Mathematica, plus JSON/CSV exports.</p>
+            <p class="subtitle">ML-guided ranking for rare Calabi-Yau targets in the string landscape</p>
+            <p class="tagline">Rank synthetic Hodge-number draws against dataset target rules, with reproducible seeds and shareable candidate dossiers — not a claim of experimental physics verification.</p>
+            <p class="tagline" style="margin-top: 1rem;">
+                <strong>Verified</strong> means the geometry passes that dataset’s target rule on synthetic labels
+                (for Kreuzer–Skarke: |χ| &lt; 100). It is not lab confirmation of a vacuum.
+            </p>
+            <p class="tagline" style="margin-top: 0.75rem;">Durable product: Hall of Fame + shareable dossiers, plus Lookup for known Hodge triples.</p>
+            <div class="links-grid" style="margin-top: 1.75rem; justify-content: center;">
+                <a href="/candidates.html" class="btn btn-primary">Hall of Fame</a>
+                <a href="/lookup.html" class="btn btn-primary">Lookup</a>
+                <a href="/candidate/kreuzer-skarke-66d611d18a9d" class="btn btn-primary">Quintic dossier</a>
+            </div>
+            <p class="note" style="margin-top: 1rem; text-align: center;">
+                Textbook example: the quintic mirror (h¹¹=1, h²¹=101, χ=−200) —
+                <a href="/candidate/kreuzer-skarke-66d611d18a9d">kreuzer-skarke-66d611d18a9d</a>.
+            </p>
         </div>
     </header>
 
     <main class="container">
         <section class="section">
-            <h2>Run a Search</h2>
-            <p>Click the button below to run a live ML-guided search on 5,000 Calabi-Yau manifolds. Results will appear in ~5-10 seconds.</p>
+            <h2>Explore first</h2>
+            <p>Primary entry points are curated candidates and lookup — not a single sync search button.</p>
+            <div class="outputs-grid">
+                <div class="output-item">
+                    <h3><a href="/candidates.html">Hall of Fame</a></h3>
+                    <p>Persistent board of geometries that passed dataset target rules, each with a shareable dossier page.</p>
+                </div>
+                <div class="output-item">
+                    <h3><a href="/lookup.html">Lookup</a></h3>
+                    <p>Identify a Hodge triple and open its dossier without waiting on a live ranking job.</p>
+                </div>
+                <div class="output-item">
+                    <h3><a href="/candidate/kreuzer-skarke-66d611d18a9d">Quintic candidate</a></h3>
+                    <p>Open the classic mirror-quintic-style example dossier (synthetic / literature Hodge pair).</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Optional: run a live ranking</h2>
+            <p>Secondary demo: rank ~5,000 synthetic draws. Metrics are <em>synthetic retrieval vs random baseline</em> — target-defining features are held out of the model. Runtime is typically a few seconds.</p>
 
             <div style="margin: 2rem 0; text-align: center;">
-                <button id="run-demo-btn" class="btn btn-primary" style="font-size: 1.125rem; padding: 1rem 2rem;">
-                    🚀 Run Live Search Now
+                <button id="run-demo-btn" class="btn btn-secondary" style="font-size: 1.125rem; padding: 1rem 2rem;">
+                    Run live ranking (async demo)
                 </button>
             </div>
 
@@ -38,11 +69,12 @@
             </div>
 
             <div id="demo-results" style="display: none; margin-top: 2rem;">
-                <h3>Search Complete!</h3>
+                <h3>Ranking complete</h3>
+                <p class="note">These numbers are synthetic retrieval metrics, not physics precision claims.</p>
                 <div class="metrics-cards" style="margin-top: 1rem;">
                     <div class="metric-card">
                         <div class="metric-value" id="demo-precision">-</div>
-                        <div class="metric-label">Precision@100</div>
+                        <div class="metric-label">Precision@100 (synthetic)</div>
                     </div>
                     <div class="metric-card">
                         <div class="metric-value" id="demo-recall">-</div>
@@ -54,11 +86,12 @@
                     </div>
                     <div class="metric-card">
                         <div class="metric-value" id="demo-verified">-</div>
-                        <div class="metric-label">Verified Targets</div>
+                        <div class="metric-label">Target-rule hits</div>
                     </div>
                 </div>
                 <p style="margin-top: 1rem; text-align: center;">
-                    <a href="/results.html" class="btn btn-secondary">View Full Results</a>
+                    <a href="/results.html" class="btn btn-secondary">View full results</a>
+                    <a href="/candidates.html" class="btn btn-primary" style="margin-left: 0.5rem;">Hall of Fame</a>
                 </p>
             </div>
 
@@ -66,12 +99,12 @@
 
         <section class="section">
             <h2>For Scientists</h2>
-            <p>Use upg-strings as a reproducible filter for rare geometries before deeper analysis.</p>
+            <p>Use upg-strings as a reproducible filter before deeper analysis — with clear limits on what “verified” means.</p>
             <ul>
-                <li>Run an ML-guided search to rank candidates by likelihood of meeting your target criteria</li>
-                <li>Verify top-k hits against ground truth labels for precision and recall</li>
-                <li>Export CSV/JSON artifacts for downstream calculations and publication-ready summaries</li>
-                <li>Repeat with fixed seeds to compare experiments and share reproducible results</li>
+                <li>Rank synthetic candidates by likelihood of meeting a dataset target rule</li>
+                <li>Check top-k hits against that rule (synthetic labels) for retrieval-style precision/recall</li>
+                <li>Export CSV/JSON artifacts; open shareable dossiers from Hall of Fame</li>
+                <li>Repeat with fixed seeds for reproducible comparisons</li>
             </ul>
         </section>
 
@@ -80,11 +113,11 @@
             <div class="outputs-grid">
                 <div class="output-item">
                     <h3>results_topk.csv</h3>
-                    <p>Top-ranked candidates with scores and verification status</p>
+                    <p>Top-ranked candidates with scores and target-rule status</p>
                 </div>
                 <div class="output-item">
                     <h3>metrics.json</h3>
-                    <p>Performance metrics and timing data</p>
+                    <p>Synthetic retrieval metrics, baseline, and honesty / leakage notes</p>
                 </div>
                 <div class="output-item">
                     <h3>repro.md</h3>
@@ -103,19 +136,19 @@
         </section>
 
         <section class="section">
-            <h2>Metrics</h2>
+            <h2>Metrics (honest framing)</h2>
             <div class="metrics-grid">
                 <div class="metric-item">
                     <h3>Precision@k</h3>
-                    <p>Fraction of top-k predictions that are verified correct</p>
+                    <p>Fraction of top-k that pass the synthetic target rule — vs random baseline in the same draw</p>
                 </div>
                 <div class="metric-item">
                     <h3>Recall@k</h3>
-                    <p>Fraction of all true targets found in top-k results</p>
+                    <p>Fraction of all rule-positive rows found in top-k</p>
                 </div>
                 <div class="metric-item">
-                    <h3>Time-to-First-Hit</h3>
-                    <p>How quickly the first verified target is discovered</p>
+                    <h3>Hold-out</h3>
+                    <p>Target-defining columns (e.g. |χ|) are withheld from the RandomForest</p>
                 </div>
             </div>
         </section>
@@ -129,6 +162,9 @@
                 <a href="/docs.html" class="btn btn-secondary">
                     Documentation
                 </a>
+                <a href="/about.html" class="btn btn-secondary">
+                    About &amp; honesty
+                </a>
                 <a href="/results.html" class="btn btn-secondary">
                     Latest Run Artifacts
                 </a>
@@ -136,7 +172,7 @@
         </section>
 
         <section class="section disclaimer">
-            <p><strong>Disclaimer:</strong> This tool accelerates computational search and verification. It does not claim to 'solve string theory'.</p>
+            <p><strong>Disclaimer:</strong> Demo corpora are synthetic Hodge draws. This tool accelerates computational search and packaging of candidate dossiers. It does not claim to solve string theory or experimentally verify vacua.</p>
         </section>
     </main>
 {% endblock %}
@@ -149,14 +185,28 @@
         const resultsDiv = document.getElementById('demo-results');
         const statusMsg = document.getElementById('status-message');
 
-        // Disable button
         btn.disabled = true;
-        btn.textContent = '⏳ Running search...';
+        btn.textContent = 'Running ranking…';
 
-        // Show status
         statusDiv.style.display = 'block';
         resultsDiv.style.display = 'none';
-        statusMsg.textContent = 'Initializing ML-guided search on 5,000 Calabi-Yau manifolds...';
+        statusMsg.textContent = 'Queuing async ranking job (workers stay free while RF trains)…';
+
+        function showSuccess(results) {
+            const metrics = results.performance_metrics;
+            const timing = results.timing;
+            document.getElementById('demo-precision').textContent =
+                (metrics.precision_at_k * 100).toFixed(1) + '%';
+            document.getElementById('demo-recall').textContent =
+                (metrics.recall_at_k * 100).toFixed(1) + '%';
+            document.getElementById('demo-runtime').textContent =
+                timing.total_runtime_seconds.toFixed(1) + 's';
+            document.getElementById('demo-verified').textContent =
+                metrics.verified_count + '/100';
+            statusDiv.style.display = 'none';
+            resultsDiv.style.display = 'block';
+            btn.textContent = 'Ranking complete';
+        }
 
         try {
             const response = await fetch('/api/run-demo', {
@@ -167,38 +217,49 @@
                     seed: 42,
                     n_candidates: 5000,
                     verify: true,
-                    use_real: true
+                    use_real: true,
+                    async: true
                 })
             });
 
             const data = await response.json();
 
-            if (data.status === 'success') {
-                // Show results
-                const metrics = data.results.performance_metrics;
-                const timing = data.results.timing;
-
-                document.getElementById('demo-precision').textContent =
-                    (metrics.precision_at_k * 100).toFixed(1) + '%';
-                document.getElementById('demo-recall').textContent =
-                    (metrics.recall_at_k * 100).toFixed(1) + '%';
-                document.getElementById('demo-runtime').textContent =
-                    timing.total_runtime_seconds.toFixed(1) + 's';
-                document.getElementById('demo-verified').textContent =
-                    metrics.verified_count + '/100';
-
-                statusDiv.style.display = 'none';
-                resultsDiv.style.display = 'block';
-                btn.textContent = '✓ Search Complete!';
+            if (data.status === 'accepted' && data.job_id) {
+                statusMsg.textContent = 'Job queued… polling progress';
+                const progressUrl = data.progress_url || `/api/jobs/${data.job_id}`;
+                let attempts = 0;
+                while (attempts < 120) {
+                    await new Promise(r => setTimeout(r, 500));
+                    const pr = await fetch(progressUrl);
+                    const prog = await pr.json();
+                    const job = prog.job || {};
+                    statusMsg.textContent = `Progress: ${Math.round(job.percent || 0)}% — ${job.stage || 'running'}`;
+                    if (job.status === 'completed' && job.result) {
+                        showSuccess(job.result.results);
+                        return;
+                    }
+                    if (job.status === 'failed') {
+                        statusMsg.textContent = 'Error: ' + (job.error || 'Job failed');
+                        btn.disabled = false;
+                        btn.textContent = 'Run live ranking (async demo)';
+                        return;
+                    }
+                    attempts += 1;
+                }
+                statusMsg.textContent = 'Timed out waiting for job';
+                btn.disabled = false;
+                btn.textContent = 'Run live ranking (async demo)';
+            } else if (data.status === 'success') {
+                showSuccess(data.results);
             } else {
                 statusMsg.textContent = 'Error: ' + (data.message || 'Unknown error');
                 btn.disabled = false;
-                    btn.textContent = '🚀 Run Live Search Now';
+                btn.textContent = 'Run live ranking (async demo)';
             }
         } catch (error) {
             statusMsg.textContent = 'Error: ' + error.message;
             btn.disabled = false;
-                btn.textContent = '🚀 Run Live Search Now';
+            btn.textContent = 'Run live ranking (async demo)';
         }
     });
     </script>

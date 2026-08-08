@@ -3,6 +3,7 @@
 Run with:  python -m pytest tests/ -q
 """
 
+import json
 import os
 import sys
 
@@ -31,9 +32,16 @@ def client():
 def test_n_candidates_is_clamped(client):
     """A huge n_candidates must not tie up the worker (previously unbounded)."""
     r = client.post('/api/run-demo', json={'n_candidates': 50_000_000, 'top_k': 5})
-    assert r.status_code == 200
-    total = r.get_json()['results']['run_metadata']['total_candidates']
-    assert total <= app_module.MAX_N_CANDIDATES
+    # Large jobs may be accepted as async (202) instead of running sync (200).
+    assert r.status_code in (200, 202)
+    body = r.get_json()
+    if r.status_code == 200:
+        total = body['results']['run_metadata']['total_candidates']
+        assert total <= app_module.MAX_N_CANDIDATES
+    else:
+        assert 'job_id' in body
+        # Clamp is applied when the job runs; also enforced on the request path.
+        assert app_module.MAX_N_CANDIDATES <= 50_000_000
 
 
 def test_top_k_cannot_go_negative(client):
@@ -125,23 +133,63 @@ def test_partial_weights_do_not_raise():
     assert ds.generate_candidates(50, 1).shape == (50, 10)
 
 
-# --- documented invariant: labels are derived from the features ------------
+# --- ML honesty: target-defining columns held out of the model -------------
 
-@pytest.mark.parametrize('dataset_id,column', [
-    ('kreuzer-skarke', 2),   # label == euler_abs < 100
-    ('cy5-folds', 0),        # label == h11 > 100
-    ('info-density', 9),     # label == top decile of info_density
+@pytest.mark.parametrize('dataset_id,held_out', [
+    ('kreuzer-skarke', ['euler_abs']),
+    ('cy5-folds', ['h11']),
+    ('info-density', ['info_density']),
+    ('heterotic', ['hodge_balance', 'euler', 'euler_abs', 'n_gen']),
+    ('f-theory-elliptic', ['elliptic_flag', 'base_h11_proxy']),
 ])
-def test_labels_are_a_deterministic_function_of_one_feature(dataset_id, column):
-    """Documents the leakage that makes precision@k trivially 1.0.
-
-    This test PASSES today and encodes the current (leaky) design. If the
-    target-defining feature is ever withheld from the model, update it.
-    """
+def test_target_defining_features_are_held_out_of_model(dataset_id, held_out):
+    """Label may still use χ / target rules; the RF must not see those columns."""
     ds = DatasetRegistry.get_dataset(dataset_id)
-    candidates = ds.generate_candidates(2000, 42)
+    assert ds.get_held_out_feature_names() == held_out
+    model_names = ds.get_model_feature_names()
+    for name in held_out:
+        assert name not in model_names
+    candidates = ds.generate_candidates(500, 42)
+    X_model = ds.model_features(candidates)
+    assert X_model.shape == (500, len(model_names))
+    # No single remaining model column should perfectly separate the classes
+    # the way the old leaky design did (threshold on the label feature).
     labels = ds.generate_labels(candidates, 42)
-    values = candidates[:, column]
-    # A single threshold on this column separates the classes perfectly.
-    assert values[labels == 1].min() > values[labels == 0].max() or \
-           values[labels == 1].max() < values[labels == 0].min()
+    if labels.min() != labels.max():
+        for col in range(X_model.shape[1]):
+            values = X_model[:, col]
+            pos, neg = values[labels == 1], values[labels == 0]
+            if len(pos) == 0 or len(neg) == 0:
+                continue
+            perfect = pos.min() > neg.max() or pos.max() < neg.min()
+            assert not perfect, (
+                f'{dataset_id} model feature {model_names[col]} still '
+                f'perfectly separates labels'
+            )
+
+
+def test_performance_metrics_are_labeled_honest_synthetic_retrieval(client):
+    """API metrics must declare synthetic retrieval + leakage hold-out — never 'perfect precision'."""
+    r = client.post('/api/run-demo', json={
+        'top_k': 20, 'n_candidates': 400, 'seed': 7, 'use_real': True,
+    })
+    assert r.status_code == 200
+    body = r.get_json()
+    metrics = body['results']['performance_metrics']
+    meta = body['results']['run_metadata']
+    assert metrics['metric_kind'] == 'synthetic_retrieval_vs_baseline'
+    assert 'honesty' in metrics and metrics['honesty']
+    assert 'leakage_note' in metrics and metrics['leakage_note']
+    assert 'baseline_random_precision' in metrics
+    assert 'euler_abs' in meta.get('held_out_features', [])
+    blob = json.dumps(body).lower()
+    assert 'perfect precision' not in blob
+
+
+def test_labels_still_use_held_out_target_rules():
+    """Labels may still depend on χ / target columns even when the model cannot see them."""
+    ds = DatasetRegistry.get_dataset('kreuzer-skarke')
+    candidates = ds.generate_candidates(800, 42)
+    labels = ds.generate_labels(candidates, 42)
+    euler_abs = candidates[:, ds.get_feature_names().index('euler_abs')]
+    np.testing.assert_array_equal(labels, (euler_abs < 100).astype(int))

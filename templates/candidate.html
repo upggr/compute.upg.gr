@@ -71,6 +71,7 @@
                 <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-fluxes" id="tabbtn-fluxes" data-tab="fluxes">Fluxes</button>
                 <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-phenomenology" id="tabbtn-phenomenology" data-tab="phenomenology">Phenomenology</button>
                 <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-construction" id="tabbtn-construction" data-tab="construction">Construction</button>
+                <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-model-building" id="tabbtn-model-building" data-tab="model-building">Model-building</button>
                 <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-certificates" id="tabbtn-certificates" data-tab="certificates">Certificates</button>
             </div>
 
@@ -530,8 +531,39 @@
                 <div class="callout callout-info" style="margin-top: 1rem;">
                     <strong>Curated construction:</strong> {{ tabs.construction.curated.name }}
                     <div class="note">{{ tabs.construction.curated.note }}</div>
-                    {% if tabs.construction.curated.reference %}
+                    {% if tabs.construction.curated.reference_url %}
+                    <div class="note">Ref:
+                        <a href="{{ tabs.construction.curated.reference_url }}" rel="noopener noreferrer" target="_blank">{{ tabs.construction.curated.reference or tabs.construction.curated.reference_url }}</a>
+                    </div>
+                    {% elif tabs.construction.curated.reference %}
                     <div class="note">Ref: {{ tabs.construction.curated.reference }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% if tabs.construction.citations %}
+                <h3>Citations</h3>
+                <ul class="meaning-list">
+                    {% for cite in tabs.construction.citations %}
+                    <li>
+                        {% if cite.url %}
+                        <a href="{{ cite.url }}" rel="noopener noreferrer" target="_blank">{{ cite.label }}</a>
+                        {% else %}
+                        <span>{{ cite.label }}</span>
+                        {% endif %}
+                        {% if cite.source %}
+                        <span class="note"> — {{ cite.source }}</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if tabs.construction.geometry_db and tabs.construction.geometry_db.reference %}
+                <div class="note" style="margin-top: 0.5rem;">
+                    Geometry DB citation:
+                    {% if tabs.construction.geometry_db.reference_url %}
+                    <a href="{{ tabs.construction.geometry_db.reference_url }}" rel="noopener noreferrer" target="_blank">{{ tabs.construction.geometry_db.reference }}</a>
+                    {% else %}
+                    {{ tabs.construction.geometry_db.reference }}
                     {% endif %}
                 </div>
                 {% endif %}
@@ -594,6 +626,89 @@
                     <li><strong>{{ u.label }}</strong> — {{ u.reason }}</li>
                     {% endfor %}
                 </ul>
+                {% endif %}
+            </div>
+
+            <div class="analysis-tabpanel" role="tabpanel" id="tab-model-building" aria-labelledby="tabbtn-model-building" data-tab-panel="model-building" hidden>
+                <p class="honesty-label"><span class="pill">model-building · necessary only</span> {{ tabs.model_building.honesty_banner or tabs.model_building.honesty }}</p>
+                <div class="callout callout-warning" style="margin-top: 0.75rem;">
+                    <strong>Honesty</strong>
+                    {{ tabs.model_building.honesty_banner or tabs.model_building.honesty }}
+                </div>
+
+                <h3>Geometry pipeline stage</h3>
+                {% set pipe = tabs.model_building.geometry_pipeline %}
+                <p class="note">{{ pipe.pipeline_note }}</p>
+                <ul class="check-list">
+                    {% for step in pipe.checklist %}
+                    <li class="{{ 'check-pass' if step.filled else 'check-fail' }}">
+                        <span class="check-mark">{{ 'PASS' if step.filled else 'PENDING' }}</span>
+                        <div>
+                            <strong>{{ step.label }}</strong>
+                            {% if pipe.stage == step.stage %}
+                            <div class="note">current stage</div>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% if pipe.intersections %}
+                <h3>Intersections (offline)</h3>
+                <pre class="vertex-matrix">{{ pipe.intersections | tojson(indent=2) }}</pre>
+                {% endif %}
+
+                <h3>Exclusion certificates</h3>
+                <p class="note">PASS = does not rule out under the stated assumptions; FAIL = rules out that model class under Y. Never sufficiency.</p>
+                <ul class="check-list">
+                    {% for ex in tabs.model_building.exclusions %}
+                    <li class="{{ 'check-pass' if ex.ok else 'check-fail' }}">
+                        <span class="check-mark">{{ 'PASS' if ex.ok else 'FAIL' }}</span>
+                        <div>
+                            <strong>{{ ex.label }}</strong>
+                            {% if ex.kind %}
+                            <span class="pill">{{ ex.kind }}</span>
+                            {% endif %}
+                            <div class="note"><strong>Rules out:</strong> {{ ex.rules_out }}</div>
+                            <div class="note">{{ ex.detail }}</div>
+                            {% if ex.assumptions %}
+                            <ul class="meaning-list">
+                                {% for a in ex.assumptions %}
+                                <li>{{ a }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                <h3>Literature model cards</h3>
+                {% set cards = tabs.model_building.cards or tabs.model_building.model_cards or [] %}
+                {% if cards %}
+                <ul class="meaning-list">
+                    {% for card in cards %}
+                    <li>
+                        <strong>{{ card.title }}</strong>
+                        <span class="pill">{{ card.framework }}</span>
+                        <span class="pill">{{ card.geometry_status }}</span>
+                        <div class="note">{{ card.spectrum_summary }}</div>
+                        <div class="note">{{ card.honesty }}</div>
+                        <div class="note">
+                            Ref:
+                            {% if card.reference_url %}
+                            <a href="{{ card.reference_url }}" rel="noopener noreferrer" target="_blank">{{ card.reference }}</a>
+                            {% else %}
+                            {{ card.reference }}
+                            {% endif %}
+                            {% if card.arxiv and not (card.reference_url and 'arxiv' in card.reference_url) %}
+                            · <a href="https://arxiv.org/abs/{{ card.arxiv }}" rel="noopener noreferrer" target="_blank">arXiv:{{ card.arxiv }}</a>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="note">No literature model card is seeded for this Hodge class yet.</p>
                 {% endif %}
             </div>
 

@@ -22,6 +22,8 @@ import hall_of_fame
 import geometry_store
 import physics_dossier
 import physics_extensions
+import model_exclusions
+import model_cards
 import job_store
 import threading
 
@@ -1145,6 +1147,99 @@ def featured_candidates():
         db_path=HALL_OF_FAME_PATH,
     )
     return jsonify({'status': 'success', 'candidates': candidates, 'source': 'hall_of_fame'})
+
+
+@app.route('/api/exclusions')
+def api_exclusions():
+    """Topological exclusion certificates for a Hodge key (necessary conditions)."""
+    dataset_id = request.args.get('dataset_id') or 'kreuzer-skarke'
+    try:
+        h11 = int(request.args.get('h11'))
+        h21 = int(request.args.get('h21'))
+    except (TypeError, ValueError):
+        return jsonify({
+            'status': 'error',
+            'message': 'h11 and h21 query parameters are required integers',
+        }), 400
+    h31 = None
+    if request.args.get('h31') not in (None, ''):
+        try:
+            h31 = int(request.args.get('h31'))
+        except (TypeError, ValueError):
+            return jsonify({'status': 'error', 'message': 'h31 must be an integer'}), 400
+    euler = None
+    if request.args.get('euler') not in (None, ''):
+        try:
+            euler = int(request.args.get('euler'))
+        except (TypeError, ValueError):
+            return jsonify({'status': 'error', 'message': 'euler must be an integer'}), 400
+    tadpole_L_min = 1.0
+    if request.args.get('tadpole_L_min') not in (None, ''):
+        try:
+            tadpole_L_min = float(request.args.get('tadpole_L_min'))
+        except (TypeError, ValueError):
+            return jsonify({
+                'status': 'error',
+                'message': 'tadpole_L_min must be a number',
+            }), 400
+    certs = model_exclusions.evaluate(
+        dataset_id, h11, h21, h31, euler, tadpole_L_min=tadpole_L_min,
+    )
+    return jsonify({
+        'status': 'success',
+        'dataset_id': dataset_id,
+        'h11': h11,
+        'h21': h21,
+        'h31': h31,
+        'exclusions': certs,
+        'honesty': (
+            'Necessary conditions under stated assumptions only — '
+            'never sufficiency from Hodge numbers alone.'
+        ),
+    })
+
+
+@app.route('/api/model-cards')
+def api_model_cards():
+    """Literature model cards matching a Hodge key (cited spectra only)."""
+    dataset_id = request.args.get('dataset_id') or 'kreuzer-skarke'
+    try:
+        h11 = int(request.args.get('h11'))
+        h21 = int(request.args.get('h21'))
+    except (TypeError, ValueError):
+        # Without Hodge filters, return all seeded cards.
+        cards = model_cards.all_cards()
+        return jsonify({
+            'status': 'success',
+            'count': len(cards),
+            'cards': cards,
+            'model_cards': cards,
+            'honesty': (
+                'Literature model cards only. Spectra quoted solely when present '
+                'in the cited reference.'
+            ),
+        })
+    h31 = None
+    if request.args.get('h31') not in (None, ''):
+        try:
+            h31 = int(request.args.get('h31'))
+        except (TypeError, ValueError):
+            return jsonify({'status': 'error', 'message': 'h31 must be an integer'}), 400
+    cards = model_cards.list_for_hodge(dataset_id, h11, h21, h31)
+    return jsonify({
+        'status': 'success',
+        'dataset_id': dataset_id,
+        'h11': h11,
+        'h21': h21,
+        'h31': h31,
+        'count': len(cards),
+        'cards': cards,
+        'model_cards': cards,
+        'honesty': (
+            'Literature model cards only. Spectra quoted solely when present '
+            'in the cited reference.'
+        ),
+    })
 
 
 @app.route('/api/geometry')

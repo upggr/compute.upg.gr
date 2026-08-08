@@ -14,6 +14,8 @@ import os
 from typing import Any, Dict, List, Optional, Tuple
 
 import geometry_store
+import model_cards
+import model_exclusions
 import physics_extensions
 
 
@@ -392,6 +394,22 @@ def external_geometry_links(
         })
     if dataset_id == 'cy5-folds':
         links.append({
+            'label': 'CI5F paper (arXiv:2310.15966)',
+            'url': 'https://arxiv.org/abs/2310.15966',
+            'detail': (
+                f'Constructive CI5F census (≤4 projective factors). Featured '
+                f'(h¹¹,h²¹,h³¹)=({h11},{h21},{h31}) is outside that h¹¹ range.'
+            ),
+        })
+        links.append({
+            'label': 'CI5F Dropbox dataset (cicy5f.json)',
+            'url': (
+                'https://www.dropbox.com/scl/fo/z7ii5idt6qxu36e0b8azq/h'
+                '?rlkey=0qfhx3tykytduobpld510gsfy&dl=0'
+            ),
+            'detail': '27 068 configuration matrices + partial Hodge data from the paper.',
+        })
+        links.append({
             'label': 'cymetric / CI5F resources',
             'url': 'https://github.com/pythoncymetric/cymetric',
             'detail': (
@@ -691,9 +709,10 @@ def construction_workplan(
                 'title': 'Look up a real CI5F configuration matrix',
                 'detail': (
                     f'Compatible with (h¹¹,h²¹,h³¹)=({h11},{h21},{h31}). '
-                    'Featured pages list Hodge-class examples only — attach a '
-                    'literature-backed multi-degree matrix before claiming a '
-                    'concrete fivefold.'
+                    'Start from arXiv:2310.15966 / Dropbox cicy5f.json (checked: '
+                    'featured HoF triples are not in that ≤4-factor census). '
+                    'Attach a literature-backed multi-degree matrix before claiming '
+                    'a concrete fivefold — never invent one from Hodge numbers alone.'
                 ),
             },
             {
@@ -764,7 +783,7 @@ def construction_payload(
         'geometry_name', 'geometry_note', 'geometry_status', 'geometry_uniqueness',
         'vertex_count', 'facet_count', 'point_count', 'dual_point_count',
         'ks_source_slice', 'geometry_source', 'geometry_db_id', 'periods',
-        'orientifold',
+        'orientifold', 'stage', 'intersections', 'pipeline_note',
     )
 
     def _present_from(src: Dict[str, Any]) -> Dict[str, Any]:
@@ -910,11 +929,66 @@ def construction_payload(
             'source': db_geometry.get('source'),
             'status': db_geometry.get('status'),
             'note': db_geometry.get('note'),
+            'stage': db_geometry.get('stage'),
+            'pipeline_note': db_geometry.get('pipeline_note'),
+            'intersections': db_geometry.get('intersections'),
+            'reference': db_geometry.get('reference'),
+            'reference_url': db_geometry.get('reference_url'),
         }
         if present_geometry.get('geometry_source') is None:
             present_geometry['geometry_source'] = db_geometry.get('source')
         if present_geometry.get('geometry_status') is None:
             present_geometry['geometry_status'] = db_geometry.get('status')
+        if present_geometry.get('stage') is None and db_geometry.get('stage'):
+            present_geometry['stage'] = db_geometry.get('stage')
+        if present_geometry.get('pipeline_note') is None and db_geometry.get('pipeline_note'):
+            present_geometry['pipeline_note'] = db_geometry.get('pipeline_note')
+        if present_geometry.get('intersections') is None and db_geometry.get('intersections'):
+            present_geometry['intersections'] = db_geometry.get('intersections')
+
+    citations: List[Dict[str, str]] = []
+    seen_cite: set = set()
+
+    def _add_citation(label: Optional[str], url: Optional[str], source: str) -> None:
+        if not label and not url:
+            return
+        key = (label or '', url or '')
+        if key in seen_cite:
+            return
+        seen_cite.add(key)
+        citations.append({
+            'label': label or url or 'Reference',
+            'url': url or '',
+            'source': source,
+        })
+
+    if curated:
+        _add_citation(curated.get('reference'), curated.get('reference_url'), 'curated')
+    if pack:
+        _add_citation(pack.get('reference'), pack.get('reference_url'), 'geometry-pack')
+    if db_geometry:
+        _add_citation(
+            db_geometry.get('reference'),
+            db_geometry.get('reference_url'),
+            'geometry-db',
+        )
+    if source_url:
+        _add_citation('Dataset / catalog source', source_url, 'dataset')
+
+    showcase = False
+    showcase_note = None
+    if pack and pack.get('showcase'):
+        showcase = True
+        showcase_note = pack.get('showcase_note')
+    if curated and curated.get('showcase'):
+        showcase = True
+        showcase_note = showcase_note or curated.get('showcase_note')
+    if candidate_id == 'kreuzer-skarke-66d611d18a9d':
+        showcase = True
+        showcase_note = showcase_note or (
+            'Flagship linking example: textbook quintic class (h¹¹,h²¹)=(1,101). '
+            'Cite or share this dossier — class-level, not a unique polytope proof.'
+        )
 
     return {
         'candidate_id': candidate_id,
@@ -928,9 +1002,19 @@ def construction_payload(
         'reconstruct_howto': reconstruct,
         'source_url': source_url,
         'curated': curated,
+        'citations': citations,
         'workplan': workplan,
         'honesty': honesty,
         'geometry_db': geometry_db_meta,
+        'showcase': showcase,
+        'showcase_note': showcase_note,
+        'pipeline_checklist': honest_pipeline_checklist(
+            dataset_id or 'kreuzer-skarke',
+            h11_i,
+            h21_i,
+            present_geometry,
+            pack=pack,
+        ),
     }
 
 
@@ -1292,6 +1376,62 @@ def build_tabs(
     out_construction['external_links'] = links
     out_construction['readiness'] = readiness
 
+    # --- Model-building tab (exclusions + literature cards + pipeline) -----
+    exclusions = model_exclusions.evaluate(
+        dataset_id, h11, h21, dossier.get('h31'), euler,
+    )
+    cards = model_cards.list_for_hodge(
+        dataset_id, h11, h21, dossier.get('h31'),
+    )
+    stage = None
+    pipeline = None
+    intersections_offline = None
+    if construction:
+        pg = construction.get('present_geometry') or {}
+        gdb = construction.get('geometry_db') or {}
+        stage = pg.get('stage') or gdb.get('stage')
+        pipeline = pg.get('pipeline_note') or gdb.get('pipeline_note')
+        intersections_offline = pg.get('intersections') or gdb.get('intersections')
+        if stage is None:
+            stage = geometry_store.infer_stage({
+                'polytope_vertices': pg.get('polytope_vertices'),
+                'vertex_matrix': pg.get('vertex_matrix'),
+                'triangulation': pg.get('triangulation'),
+                'intersections': intersections_offline,
+                'periods': pg.get('periods'),
+            })
+            pipeline = geometry_store.pipeline_note(stage)
+    stage_checklist = []
+    for name in geometry_store.PIPELINE_STAGES:
+        stage_checklist.append({
+            'stage': name,
+            'filled': geometry_store.stage_includes(stage, name),
+            'label': name,
+        })
+
+    model_building = {
+        'id': 'model-building',
+        'title': 'Model-building',
+        'honesty_banner': (
+            'Model-building aids: topological exclusions and literature cards. '
+            'Not a proof of string theory; spectra only when cited.'
+        ),
+        'honesty': (
+            'Exclusions are necessary conditions under stated assumptions only. '
+            'Model cards cite published literature. Geometry stages reflect '
+            'offline / seeded SQLite richness — never invented periods or spectra.'
+        ),
+        'exclusions': exclusions,
+        'cards': cards,
+        'model_cards': cards,  # alias for older callers
+        'geometry_pipeline': {
+            'stage': stage,
+            'pipeline_note': pipeline or geometry_store.pipeline_note(stage),
+            'checklist': stage_checklist,
+            'intersections': intersections_offline,
+        },
+    }
+
     return {
         'ok': True,
         'dataset_id': dataset_id,
@@ -1301,4 +1441,5 @@ def build_tabs(
         'phenomenology': pheno,
         'construction': out_construction,
         'certificates': certificates,
+        'model_building': model_building,
     }

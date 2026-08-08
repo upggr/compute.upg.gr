@@ -191,6 +191,16 @@ def pipeline_note(stage: Optional[str]) -> str:
     return '; '.join(parts)
 
 
+def stage_includes(current: Optional[str], required: str) -> bool:
+    """True if ``current`` is at least as advanced as ``required``."""
+    if not current:
+        return False
+    try:
+        return PIPELINE_STAGES.index(current) >= PIPELINE_STAGES.index(required)
+    except ValueError:
+        return False
+
+
 def _richness(record: Optional[Dict[str, Any]]) -> int:
     """Higher = prefer this hit when multiple share a Hodge key."""
     if not record:
@@ -366,6 +376,7 @@ def _row_to_record(row: sqlite3.Row) -> Dict[str, Any]:
             'geometry_uniqueness',
             'favourable',
             'reference',
+            'reference_url',
             'pipeline_note',
         ):
             if rec.get(key) is None and extra.get(key) is not None:
@@ -424,7 +435,8 @@ def upsert_geometry(
         'computed_at', 'updated_at', 'name', 'geometry_name', 'polytope_id',
         'triangulation_id', 'vertex_count', 'facet_count', 'point_count',
         'dual_point_count', 'source_slice', 'uniqueness', 'geometry_uniqueness',
-        'favourable', 'reference', 'stage', 'intersections', 'pipeline_note',
+        'favourable', 'reference', 'reference_url', 'stage', 'intersections',
+        'pipeline_note',
     }
     extra = dict(record.get('extra') or {}) if isinstance(record.get('extra'), dict) else {}
     for key, val in record.items():
@@ -434,7 +446,7 @@ def upsert_geometry(
         'name', 'geometry_name', 'polytope_id', 'triangulation_id',
         'vertex_count', 'facet_count', 'point_count', 'dual_point_count',
         'source_slice', 'uniqueness', 'geometry_uniqueness', 'favourable',
-        'reference',
+        'reference', 'reference_url',
     ):
         if record.get(key) is not None:
             extra.setdefault(key, record[key])
@@ -736,12 +748,16 @@ def record_to_pack(record: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]
         for key in (
             'name', 'polytope_id', 'triangulation_id', 'vertex_count',
             'facet_count', 'point_count', 'dual_point_count', 'source_slice',
-            'uniqueness', 'favourable', 'reference',
+            'uniqueness', 'favourable', 'reference', 'reference_url',
         ):
             if extra.get(key) is not None:
                 pack.setdefault(key, extra[key])
         if extra.get('uniqueness') is not None:
             pack.setdefault('geometry_uniqueness', extra['uniqueness'])
+    if record.get('reference') is not None:
+        pack.setdefault('reference', record['reference'])
+    if record.get('reference_url') is not None:
+        pack.setdefault('reference_url', record['reference_url'])
     if record.get('uniqueness') is not None:
         pack.setdefault('uniqueness', record['uniqueness'])
         pack.setdefault('geometry_uniqueness', record['uniqueness'])
@@ -859,7 +875,8 @@ def ingest_ks_sample(
                 k: item[k]
                 for k in (
                     'name', 'vertex_count', 'facet_count', 'point_count',
-                    'dual_point_count', 'source_slice', 'uniqueness', 'reference',
+                    'dual_point_count', 'source_slice', 'uniqueness',
+                    'reference', 'reference_url',
                 )
                 if item.get(k) is not None
             },
@@ -914,11 +931,14 @@ def ingest_geometry_pack(
             'weight_system': item.get('weight_system'),
             'configuration_matrix': item.get('configuration_matrix'),
             'ambient': item.get('ambient'),
+            'stage': item.get('stage'),
+            'intersections': item.get('intersections'),
             'extra': {
                 k: item[k]
                 for k in (
                     'name', 'polytope_id', 'triangulation_id', 'favourable',
-                    'reference', 'uniqueness',
+                    'reference', 'reference_url', 'uniqueness',
+                    'showcase', 'showcase_note', 'periods_literature_pointer',
                 )
                 if item.get(k) is not None
             },

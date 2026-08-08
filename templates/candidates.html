@@ -135,7 +135,7 @@
 
 {% block scripts %}
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-    <script src="https://unpkg.com/three@0.160.0/examples/js/geometries/ParametricGeometry.js"></script>
+    <script src="{{ url_for('static', filename='js/cy-shape.js') }}"></script>
     <script>
     const datasetDescriptions = {
         'kreuzer-skarke': 'Searching for manifolds with |chi| < 100.',
@@ -424,143 +424,49 @@
         draw();
     }
 
-    function applyVertexColors(geometry, seed) {
-        const rand = mulberry32(seed + 91);
-        const color = new THREE.Color();
-        const position = geometry.attributes.position;
-        const colors = [];
-        const baseHue = rand();
-
-        for (let i = 0; i < position.count; i++) {
-            const x = position.getX(i);
-            const y = position.getY(i);
-            const z = position.getZ(i);
-            const hue = (baseHue + (Math.atan2(y, x) / (Math.PI * 2)) + 0.5) % 1;
-            const light = 0.45 + 0.2 * Math.sin(z * 0.9);
-            color.setHSL(hue, 0.7, light);
-            colors.push(color.r, color.g, color.b);
-        }
-
-        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-        return geometry;
-    }
-
-    function createParametricGeometry(seed, params) {
-        const rand = mulberry32(seed + 777);
-        const a = params.a ?? (1.1 + rand() * 0.6);
-        const b = params.b ?? (0.5 + rand() * 0.6);
-        const c = params.c ?? (0.4 + rand() * 0.6);
-        const f1 = params.f1 ?? (2 + Math.floor(rand() * 4));
-        const f2 = params.f2 ?? (2 + Math.floor(rand() * 5));
-        const f3 = params.f3 ?? (3 + Math.floor(rand() * 4));
-        const f4 = params.f4 ?? (2 + Math.floor(rand() * 6));
-        const f5 = params.f5 ?? (3 + Math.floor(rand() * 5));
-        const warp = params.warp ?? (0.2 + rand() * 0.4);
-        const twist = params.twist ?? (0.15 + rand() * 0.35);
-
-        const surface = (u, v, target) => {
-            const U = u * Math.PI * 2;
-            const V = v * Math.PI * 2;
-
-            const r = 1
-                + warp * Math.cos(f1 * U) * Math.sin(f2 * V)
-                + 0.18 * Math.sin(f3 * (U + V));
-            const x = (a * Math.cos(U) + b * Math.cos(f1 * U)) * r;
-            const y = (a * Math.sin(U) - b * Math.sin(f2 * U)) * r;
-            const z = c * Math.sin(f3 * V) + twist * Math.sin(f4 * U - f5 * V);
-
-            target.set(x, y, z);
-        };
-
-        if (typeof THREE.ParametricGeometry !== 'undefined') {
-            const geometry = new THREE.ParametricGeometry(surface, 140, 80);
-            return applyVertexColors(geometry, seed);
-        }
-        return null;
-    }
-
     function renderWebGL(detail) {
-        if (!window.THREE || !webglCanvas) return;
+        if (!window.THREE || !window.CYShape || !webglCanvas) return;
         if (webglAnimationId) {
             cancelAnimationFrame(webglAnimationId);
         }
 
-        const colors = getThemeColors();
         const width = webglCanvas.clientWidth || 320;
         const height = webglCanvas.clientHeight || 200;
 
         webglRenderer = new THREE.WebGLRenderer({
             canvas: webglCanvas,
             antialias: true,
-            alpha: true
+            alpha: false
         });
         webglRenderer.setSize(width, height, false);
-        webglRenderer.setPixelRatio(window.devicePixelRatio || 1);
-        webglRenderer.setClearColor(0x000000, 0);
+        webglRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
         webglScene = new THREE.Scene();
         webglCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-        webglCamera.position.set(0, 0, 6);
+        window.CYShape.configureScene(THREE, { renderer: webglRenderer, scene: webglScene });
 
-        const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-        webglScene.add(ambient);
-
-        const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
-        keyLight.position.set(3, 4, 6);
-        webglScene.add(keyLight);
-
-        const fillLight = new THREE.PointLight(0x6db7ff, 0.6);
-        fillLight.position.set(-4, -2, 4);
-        webglScene.add(fillLight);
-
-        const seed = detail.viz_seed || 42;
-        const seedRand = mulberry32(seed + 31);
-        const params = (() => {
-            const features = detail.features || [];
-            const featureMap = Object.fromEntries(features);
-            const h11 = Number(featureMap.h11 ?? featureMap['h11'] ?? 10);
-            const h21 = Number(featureMap.h21 ?? featureMap['h21'] ?? 12);
-            const chi = Number(featureMap['χ'] ?? 0);
-            return {
-                a: 1.0 + (h11 % 7) * 0.06,
-                b: 0.5 + (h21 % 9) * 0.05,
-                c: 0.35 + (Math.abs(chi) % 11) * 0.03,
-                f1: 2 + (h11 % 5),
-                f2: 2 + (h21 % 6),
-                f3: 3 + (Math.abs(chi) % 4),
-                f4: 2 + ((h11 + h21) % 6),
-                f5: 3 + ((h11 + Math.abs(chi)) % 5),
-                warp: 0.22 + ((h11 % 10) / 50),
-                twist: 0.18 + ((h21 % 10) / 50)
-            };
-        })();
-        const geometry = createParametricGeometry(seed, params) ||
-            applyVertexColors(new THREE.TorusKnotGeometry(1.4, 0.48, 160, 32, 2, 3), seed);
-        const hue = seedRand();
-        const meshColor = new THREE.Color().setHSL(hue, 0.65, 0.52);
-        const material = new THREE.MeshStandardMaterial({
-            color: meshColor,
-            vertexColors: true,
-            metalness: 0.6,
-            roughness: 0.25,
-            emissive: new THREE.Color(colors.secondary),
-            emissiveIntensity: 0.2
-        });
+        const features = detail.features || [];
+        const featureMap = Object.fromEntries(features);
+        const h11 = Number(featureMap.h11 ?? featureMap['h11'] ?? 10);
+        const h21 = Number(featureMap.h21 ?? featureMap['h21'] ?? 12);
+        const chi = Number(featureMap['χ'] ?? featureMap.chi ?? 0);
+        const shapeParams = window.CYShape.paramsFor(h11, h21, chi);
+        const geometry = window.CYShape.geometryFor(THREE, shapeParams, 160, 72);
+        const material = window.CYShape.materialFor(THREE, shapeParams);
 
         webglMesh = new THREE.Mesh(geometry, material);
-        const scale = 0.9 + seedRand() * 0.25;
-        webglMesh.scale.set(scale, scale, scale);
-        webglMesh.rotation.set(seedRand() * Math.PI, seedRand() * Math.PI, seedRand() * Math.PI);
-        webglScene.add(webglMesh);
+        webglMesh.rotation.set(-0.42, 0.55, 0.1);
+        window.CYShape.frameMesh(webglCamera, webglMesh, geometry, 1.22);
+
+        const pivot = new THREE.Group();
+        pivot.add(webglMesh);
+        webglScene.add(pivot);
 
         const animate = () => {
-            webglMesh.rotation.x += 0.007;
-            webglMesh.rotation.y += 0.01;
-            webglMesh.rotation.z += 0.004;
+            pivot.rotation.y += 0.008;
             webglRenderer.render(webglScene, webglCamera);
             webglAnimationId = requestAnimationFrame(animate);
         };
-
         animate();
     }
 

@@ -1589,3 +1589,15 @@ html[data-theme="dark"] tr.exact-match {
     cursor: pointer;
     font-weight: 600;
 }
+
+.lookup-id-link {
+    color: var(--primary-color);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85rem;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.lookup-id-link:hover {
+    color: var(--primary-dark, #134070);
+}

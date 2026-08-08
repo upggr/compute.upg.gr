@@ -200,6 +200,18 @@
 
             if (data.warning) showError(data.warning);
             identityEl.hidden = false;
+
+            let openLink = document.getElementById('lk-open-page');
+            if (!openLink) {
+                openLink = document.createElement('p');
+                openLink.id = 'lk-open-page';
+                openLink.style.marginTop = '1rem';
+                identityEl.appendChild(openLink);
+            }
+            const href = data.detail_url || `/candidate/${encodeURIComponent(data.candidate_id)}`;
+            openLink.innerHTML = data.in_hall_of_fame
+                ? `<a class="btn btn-primary" href="${href}">Open detail page</a>`
+                : `<a class="btn btn-secondary" href="${href}">Open detail page</a> <span class="note">(may 404 until this geometry is on the Hall of Fame)</span>`;
         } catch (err) {
             identityEl.hidden = true;
             showError(err.message);
@@ -219,23 +231,24 @@
                 const row = document.createElement('tr');
                 if (match.exact_match) row.className = 'exact-match';
 
-                const cells = [
-                    match.candidate_id,
+                const idCell = document.createElement('td');
+                const link = document.createElement('a');
+                link.href = `/candidate/${encodeURIComponent(match.candidate_id)}`;
+                link.textContent = match.candidate_id;
+                link.className = 'lookup-id-link';
+                idCell.appendChild(link);
+                row.appendChild(idCell);
+
+                const rest = [
                     (match.features || []).map(f => f[0] + '=' + f[1]).join(', '),
                     match.distance === 0 ? 'exact' : match.distance,
                     match.rank,
                     typeof match.score === 'number' ? match.score.toFixed(4) : match.score,
                     match.verified_target ? 'yes' : 'no',
                 ];
-                cells.forEach(function (text, index) {
+                rest.forEach(function (text) {
                     const cell = document.createElement('td');
-                    if (index === 0) {
-                        const code = document.createElement('code');
-                        code.textContent = text;
-                        cell.appendChild(code);
-                    } else {
-                        cell.textContent = text;
-                    }
+                    cell.textContent = text;
                     row.appendChild(cell);
                 });
                 tbody.appendChild(row);

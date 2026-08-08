@@ -111,10 +111,9 @@
         </div>
 
         <div class="analysis-header" style="margin-top: 1.25rem;">
-            <h3>On-demand analysis</h3>
-            <button id="run-analysis" class="btn btn-primary" type="button">Run analysis</button>
+            <h3>Analysis</h3>
         </div>
-        <p id="analysis-status" class="note">Computes the certificate + exportable bundle for this id.</p>
+        <p id="analysis-status" class="note">Loading analysis…</p>
         <div id="analysis-results" class="details-grid"></div>
         <a id="analysis-download" class="btn btn-secondary" style="display:none; margin-top: 0.75rem;">Download analysis bundle</a>
     </section>
@@ -177,12 +176,6 @@
         <div class="renderer-shell">
             <canvas id="candidate-canvas" class="renderer-canvas"></canvas>
         </div>
-        <p style="margin-top: 1rem;">
-            <a class="btn btn-primary"
-               href="/render.html?candidate_id={{ candidate.candidate_id }}&dataset_id={{ candidate.dataset_id }}&seed={{ candidate.viz_seed or 42 }}&h11={{ h11 or '' }}&h21={{ h21 or '' }}&chi={{ chi or '' }}">
-                Open interactive renderer
-            </a>
-        </p>
     </section>
     {% endif %}
 </main>
@@ -234,15 +227,15 @@
         });
     }
 
-    const runBtn = document.getElementById('run-analysis');
-    if (runBtn) {
-        runBtn.addEventListener('click', async () => {
-            const status = document.getElementById('analysis-status');
-            const results = document.getElementById('analysis-results');
-            const download = document.getElementById('analysis-download');
-            status.textContent = 'Running analysis...';
-            results.innerHTML = '';
-            download.style.display = 'none';
+    async function runAnalysis() {
+        const status = document.getElementById('analysis-status');
+        const results = document.getElementById('analysis-results');
+        const download = document.getElementById('analysis-download');
+        if (!status || !results || !download) return;
+        status.textContent = 'Loading analysis…';
+        results.innerHTML = '';
+        download.style.display = 'none';
+        try {
             const response = await fetch('/api/analyze-candidate', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -271,8 +264,12 @@
             `).join('');
             download.href = `/api/analysis/${encodeURIComponent(candidateId)}/bundle`;
             download.style.display = 'inline-block';
-        });
+        } catch (err) {
+            status.textContent = 'Analysis failed.';
+            console.error(err);
+        }
     }
+    runAnalysis();
 
     // Landscape plot
     const lc = document.getElementById('landscape-canvas');

@@ -336,10 +336,38 @@ Scales to:
 - 10K candidates: ~10 seconds
 - 25K candidates: ~30 seconds
 
+## Offline geometry DB
+
+Heavy geometry (CYTools / PALP / periods) is computed **offline**, written into SQLite, and **queried** by the web app. The Flask container does **not** ship or require CYTools.
+
+| Piece | Role |
+|-------|------|
+| `geometry_store.py` | Schema + upsert/lookup API (`static/data/geometry.sqlite`) |
+| `data/ks_geometry_sample.json` + `data/geometry_pack.json` | Baked seeds upserted on boot |
+| `scripts/ingest_geometry_db.py` | Idempotent ingest of seeds |
+| `scripts/geometry_worker_stub.py` | Upsert a CYTools/PALP JSON dump from an offline machine |
+| `GET /api/geometry/lookup?dataset_id=&h11=&h21=` | Best Hodge hit |
+| `GET /api/geometry/<candidate_id>` | HoF-linked / Hodge-resolved geometry |
+| `GET /api/geometry` | Bounded list |
+
+**Add an offline CYTools record**
+
+```bash
+# On a machine with CYTools: dump vertices / triangulation to JSON
+# (see scripts/geometry_record.schema.json), then:
+python scripts/geometry_worker_stub.py -i my_polytope.json --db static/data/geometry.sqlite
+# scp the sqlite (or JSON) onto the Coolify volume at /app/static/data/
+```
+
+Construction / analyze / CYTools export prefer DB hits over static JSON when the row has vertices. Hodge-shared polytopes stay labeled `status=representative`.
+
+Roadmap vs full CYTools: this is the **offline → DB → query** path. In-process CYTools inside the web image remains out of scope.
+
 ## Roadmap
 
 ### Dataset Expansion
-- [ ] Integrate actual CYTools library for full KS database access
+- [ ] Integrate actual CYTools library for full KS database access (offline worker path exists; not in web image)
+- [x] Offline geometry SQLite (`geometry_store.py`) seeded from KS sample + geometry pack; web queries only
 - [x] Add F-theory compactification datasets (elliptic **proxy** dataset + literature seeds; not a Weierstrass DB)
 - [x] Include mirror symmetry pair databases (Hodge-level mirror link on candidate pages + textbook seeds)
 - [ ] Support flux compactification vacua

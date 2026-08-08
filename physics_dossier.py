@@ -13,6 +13,7 @@ import math
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
+import geometry_store
 import physics_extensions
 
 
@@ -762,7 +763,8 @@ def construction_payload(
         'weight_system', 'favourable', 'ambient', 'configuration_matrix',
         'geometry_name', 'geometry_note', 'geometry_status', 'geometry_uniqueness',
         'vertex_count', 'facet_count', 'point_count', 'dual_point_count',
-        'ks_source_slice',
+        'ks_source_slice', 'geometry_source', 'geometry_db_id', 'periods',
+        'orientifold',
     )
 
     def _present_from(src: Dict[str, Any]) -> Dict[str, Any]:
@@ -781,12 +783,23 @@ def construction_payload(
 
     curated = None
     pack = None
+    db_geometry = None
     if h11_i is not None and h21_i is not None:
         curated = lookup_known_construction(dataset_id or 'kreuzer-skarke', h11_i, h21_i)
         pack = physics_extensions.lookup_geometry_pack(
             dataset_id or 'kreuzer-skarke', h11_i, h21_i, h31_i
         )
         raw = physics_extensions.merge_geometry_into_raw(raw, pack)
+        # Prefer SQLite geometry DB when present / richer (has vertices).
+        db_geometry = geometry_store.resolve_geometry(
+            candidate_id=candidate_id,
+            dataset_id=dataset_id or 'kreuzer-skarke',
+            h11=h11_i,
+            h21=h21_i,
+            h31=h31_i,
+        )
+        if db_geometry:
+            raw = geometry_store.merge_db_into_raw(raw, db_geometry)
         present_geometry = _present_from(raw)
         if curated:
             for key in (
@@ -799,7 +812,7 @@ def construction_payload(
         if pack and physics_extensions.is_real_configuration_matrix(
             pack.get('configuration_matrix')
         ):
-            present_geometry['configuration_matrix'] = pack['configuration_matrix']
+            present_geometry.setdefault('configuration_matrix', pack['configuration_matrix'])
         if pack and pack.get('name'):
             present_geometry.setdefault('geometry_name', pack['name'])
         if pack and pack.get('note'):
@@ -886,8 +899,22 @@ def construction_payload(
     honesty = (
         'Exact: stored metadata keys and Hodge invariants. '
         'Curated: textbook constructions when (h¹¹,h²¹) matches a known class. '
-        'Unavailable: unique polytope vertices / triangulation unless stored in raw.'
+        'Geometry DB: offline / seeded SQLite hits preferred when richer (vertices). '
+        'Unavailable: unique polytope vertices / triangulation unless stored.'
     )
+
+    geometry_db_meta = None
+    if db_geometry:
+        geometry_db_meta = {
+            'id': db_geometry.get('id'),
+            'source': db_geometry.get('source'),
+            'status': db_geometry.get('status'),
+            'note': db_geometry.get('note'),
+        }
+        if present_geometry.get('geometry_source') is None:
+            present_geometry['geometry_source'] = db_geometry.get('source')
+        if present_geometry.get('geometry_status') is None:
+            present_geometry['geometry_status'] = db_geometry.get('status')
 
     return {
         'candidate_id': candidate_id,
@@ -903,6 +930,7 @@ def construction_payload(
         'curated': curated,
         'workplan': workplan,
         'honesty': honesty,
+        'geometry_db': geometry_db_meta,
     }
 
 

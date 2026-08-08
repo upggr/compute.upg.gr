@@ -11,6 +11,7 @@ from cy_search import run_search, get_sample_results  # Demo implementation
 from cy_search_real import run_real_search, list_available_datasets, CYSearchEngine  # Real implementation
 from datasets_registry import DatasetRegistry, get_info_density_dataset
 import hall_of_fame
+import geometry_store
 import physics_dossier
 import physics_extensions
 import job_store
@@ -36,6 +37,7 @@ CANDIDATE_CACHE_MAXSIZE = 64
 CANDIDATE_CACHE = OrderedDict()
 FEATURED_PATH = os.path.join('data', 'featured_candidates.json')
 HALL_OF_FAME_PATH = os.path.join('static', 'data', 'hall_of_fame.sqlite')
+GEOMETRY_DB_PATH = os.path.join('static', 'data', 'geometry.sqlite')
 
 
 def _utcnow_iso():
@@ -113,6 +115,11 @@ hall_of_fame.ensure_featured_by_tags(
     db_path=HALL_OF_FAME_PATH,
     required_tags=['textbook', 'curated'],
 )
+
+# Geometry SQLite: create on boot and upsert baked KS sample + geometry pack.
+# Offline-computed rows (other source hashes) are preserved; curated seeds refresh.
+geometry_store.init_db(GEOMETRY_DB_PATH)
+geometry_store.seed_baked_geometry(db_path=GEOMETRY_DB_PATH)
 
 
 @app.route('/')
@@ -833,6 +840,85 @@ def featured_candidates():
     return jsonify({'status': 'success', 'candidates': candidates, 'source': 'hall_of_fame'})
 
 
+@app.route('/api/geometry')
+def api_geometry_list():
+    """List geometry DB rows (bounded). Offline / seeded SQLite, not live CYTools."""
+    rows = geometry_store.list_geometries(
+        dataset_id=request.args.get('dataset_id') or None,
+        status=request.args.get('status') or None,
+        source=request.args.get('source') or None,
+        limit=_bounded_int(request.args.get('limit'), 50, 1, 500),
+        offset=_bounded_int(request.args.get('offset'), 0, 0, 100000),
+        db_path=GEOMETRY_DB_PATH,
+    )
+    return jsonify({
+        'status': 'success',
+        'count': len(rows),
+        'geometries': rows,
+        'source': 'geometry_db',
+    })
+
+
+@app.route('/api/geometry/lookup')
+def api_geometry_lookup():
+    """Best geometry hit for a Hodge key (preferring richer / vertex-bearing rows)."""
+    dataset_id = request.args.get('dataset_id') or 'kreuzer-skarke'
+    try:
+        h11 = int(request.args.get('h11'))
+        h21 = int(request.args.get('h21'))
+    except (TypeError, ValueError):
+        return jsonify({
+            'status': 'error',
+            'message': 'h11 and h21 query parameters are required integers',
+        }), 400
+    h31 = None
+    if request.args.get('h31') not in (None, ''):
+        try:
+            h31 = int(request.args.get('h31'))
+        except (TypeError, ValueError):
+            return jsonify({'status': 'error', 'message': 'h31 must be an integer'}), 400
+    hit = geometry_store.lookup_by_hodge(
+        dataset_id, h11, h21, h31, db_path=GEOMETRY_DB_PATH,
+    )
+    if not hit:
+        return jsonify({
+            'status': 'not_found',
+            'message': 'No geometry DB row for this Hodge key',
+            'query': {
+                'dataset_id': dataset_id, 'h11': h11, 'h21': h21, 'h31': h31,
+            },
+        }), 404
+    return jsonify({'status': 'success', 'geometry': hit, 'source': 'geometry_db'})
+
+
+@app.route('/api/geometry/<path:candidate_id>')
+def api_geometry_by_candidate(candidate_id):
+    """Geometry linked to a Hall-of-Fame candidate id, else Hodge resolve from HoF."""
+    hit = geometry_store.get_by_candidate_id(candidate_id, db_path=GEOMETRY_DB_PATH)
+    if not hit:
+        hof = hall_of_fame.get_candidate(candidate_id, db_path=HALL_OF_FAME_PATH)
+        if hof and hof.get('h11') is not None and hof.get('h21') is not None:
+            hit = geometry_store.lookup_by_hodge(
+                hof.get('dataset_id') or 'kreuzer-skarke',
+                int(hof['h11']),
+                int(hof['h21']),
+                hof.get('h31'),
+                db_path=GEOMETRY_DB_PATH,
+            )
+    if not hit:
+        return jsonify({
+            'status': 'not_found',
+            'message': 'No geometry DB row for this candidate',
+            'candidate_id': candidate_id,
+        }), 404
+    return jsonify({
+        'status': 'success',
+        'candidate_id': candidate_id,
+        'geometry': hit,
+        'source': 'geometry_db',
+    })
+
+
 @app.route('/api/identify', methods=['POST'])
 def identify():
     """Look up a geometry by its invariants rather than by rank position.
@@ -1069,16 +1155,35 @@ def _make_export_payload(results, schema_name):
     candidates = []
     for cand in _export_candidates(results):
         enriched = dict(cand)
+        dataset_id = (
+            metadata.get('dataset_id') or cand.get('dataset_id') or 'kreuzer-skarke'
+        )
         # Attach curated / sample geometry when Hodge matches.
         try:
             pack = physics_extensions.lookup_geometry_pack(
-                metadata.get('dataset_id') or cand.get('dataset_id') or 'kreuzer-skarke',
+                dataset_id,
                 int(cand.get('h11')),
                 int(cand.get('h21')),
                 cand.get('h31'),
             )
             if pack:
                 enriched = physics_extensions.merge_geometry_into_raw(enriched, pack)
+        except (TypeError, ValueError):
+            pass
+        # Prefer offline geometry DB when richer (vertices / CYTools dump).
+        try:
+            db_hit = geometry_store.resolve_geometry(
+                candidate_id=cand.get('candidate_id'),
+                dataset_id=dataset_id,
+                h11=int(cand['h11']) if cand.get('h11') is not None else None,
+                h21=int(cand['h21']) if cand.get('h21') is not None else None,
+                h31=cand.get('h31'),
+                db_path=GEOMETRY_DB_PATH,
+            )
+            if db_hit:
+                enriched = geometry_store.merge_db_into_raw(enriched, db_hit)
+                if schema_name.startswith('cytools'):
+                    enriched.update(geometry_store.export_cytools_fields(db_hit))
         except (TypeError, ValueError):
             pass
         if schema_name.startswith('cytools'):

@@ -505,6 +505,27 @@
                     <div class="detail-item"><span>Candidate id</span><strong><code>{{ tabs.construction.candidate_id }}</code></strong></div>
                     <div class="detail-item"><span>Raw field keys</span><strong>{{ tabs.construction.raw_keys|join(', ') if tabs.construction.raw_keys else '—' }}</strong></div>
                 </div>
+                {% if tabs.construction.geometry_db %}
+                <div class="callout callout-info" style="margin-top: 1rem;">
+                    <strong>From geometry DB</strong>
+                    · {{ tabs.construction.geometry_db.source or 'unknown' }}
+                    · {{ tabs.construction.geometry_db.status or 'pending' }}
+                    {% if tabs.construction.geometry_db.note %}
+                    <div class="note">{{ tabs.construction.geometry_db.note }}</div>
+                    {% endif %}
+                    {% if tabs.construction.geometry_db.status == 'representative' %}
+                    <div class="note">Honesty: this is a labeled representative — Hodge numbers do not uniquely fix a polytope.</div>
+                    {% endif %}
+                </div>
+                {% elif tabs.construction.present_geometry.geometry_source %}
+                <div class="callout callout-info" style="margin-top: 1rem;">
+                    <strong>Geometry source:</strong>
+                    {{ tabs.construction.present_geometry.geometry_source }}
+                    {% if tabs.construction.present_geometry.geometry_status %}
+                    · {{ tabs.construction.present_geometry.geometry_status }}
+                    {% endif %}
+                </div>
+                {% endif %}
                 {% if tabs.construction.curated %}
                 <div class="callout callout-info" style="margin-top: 1rem;">
                     <strong>Curated construction:</strong> {{ tabs.construction.curated.name }}

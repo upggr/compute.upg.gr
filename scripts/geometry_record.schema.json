@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compute.upg.gr/schemas/geometry_record.schema.json",
+  "title": "Offline geometry record",
+  "type": "object",
+  "required": ["dataset_id", "h11", "h21"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Optional; defaults to dataset:h11:h21[:h31]:source_hash"
+    },
+    "candidate_id": {
+      "type": ["string", "null"],
+      "description": "Optional Hall-of-Fame candidate id link"
+    },
+    "dataset_id": { "type": "string" },
+    "h11": { "type": "integer" },
+    "h21": { "type": "integer" },
+    "h31": { "type": ["integer", "null"] },
+    "euler_char": { "type": ["integer", "null"] },
+    "source": {
+      "type": "string",
+      "description": "e.g. cytools-offline, palp-offline, manual"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["representative", "unique", "curated", "pending", "failed"]
+    },
+    "note": { "type": ["string", "null"] },
+    "vertex_matrix": {
+      "type": ["array", "null"],
+      "items": { "type": "array", "items": { "type": "number" } }
+    },
+    "polytope_vertices": {
+      "type": ["array", "null"],
+      "items": { "type": "array", "items": { "type": "number" } }
+    },
+    "triangulation": { "type": ["string", "object", "array", "null"] },
+    "hypersurface_equation": { "type": ["string", "null"] },
+    "weight_system": { "type": ["array", "null"] },
+    "configuration_matrix": { "type": ["array", "null"] },
+    "ambient": { "type": ["string", "null"] },
+    "periods": { "type": ["object", "array", "null"] },
+    "orientifold": { "type": ["object", "null"] },
+    "extra": {
+      "type": ["object", "null"],
+      "description": "Catch-all for CYTools dumps (name, counts, …)"
+    },
+    "computed_at": { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

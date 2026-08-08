@@ -12,6 +12,7 @@ COPY cy_search.py .
 COPY cy_search_real.py .
 COPY datasets_registry.py .
 COPY hall_of_fame.py .
+COPY geometry_store.py .
 COPY physics_dossier.py .
 COPY physics_extensions.py .
 COPY job_store.py .
@@ -30,4 +31,6 @@ EXPOSE 5102
 # Run with gunicorn (Coolify sets PORT dynamically)
 CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5102} --workers 4 --timeout 120 app:app"]
 
-# Persistent Coolify volume mounts at /app/static/data (hall_of_fame.sqlite).
+# Persistent Coolify volume mounts at /app/static/data
+# (hall_of_fame.sqlite, geometry.sqlite). geometry.sqlite is created on boot
+# if missing; baked seeds are upserted from data/*.json without wiping offline rows.

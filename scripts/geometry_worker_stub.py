@@ -25,14 +25,23 @@ Example input JSON
   "polytope_vertices": [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1],[-1,-1,-1,-1]],
   "vertex_matrix": [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1],[-1,-1,-1,-1]],
   "triangulation": {"kind": "frst", "id": "example"},
+  "intersections": {"triple_summary": "offline-provided; not invented"},
+  "periods": null,
+  "stage": "triangulated",
   "candidate_id": null,
   "extra": {"cytools_version": "1.x", "polytope_id": "offline-demo"}
 }
 
-Batch mode: pass a JSON array of records, or ``{"geometries":[...]}``.
+Pipeline stages (inferred from richness if ``stage`` omitted)
+-------------------------------------------------------------
+``vertices`` → ``triangulated`` → ``intersections`` → ``periods``
 
-Honesty: when multiple polytopes share Hodge numbers, set
-``status=representative`` and explain non-uniqueness in ``note``.
+Honesty: never invent soft spectra, Yukawas, unique polytopes, or numerical
+periods. Only upsert fields that an offline CYTools/PALP run actually produced.
+When multiple polytopes share Hodge numbers, set ``status=representative`` and
+explain non-uniqueness in ``note``.
+
+Batch mode: pass a JSON array of records, or ``{"geometries":[...]}``.
 """
 
 from __future__ import annotations
@@ -108,7 +117,10 @@ def main() -> int:
         rec.setdefault('status', args.default_status)
         stored = geometry_store.upsert_geometry(rec, db_path=args.db)
         upserted += 1
-        print(f"upserted id={stored['id']} status={stored.get('status')} source={stored.get('source')}")
+        print(
+            f"upserted id={stored['id']} status={stored.get('status')} "
+            f"stage={stored.get('stage')} source={stored.get('source')}"
+        )
 
     print(f'Done: {upserted}/{len(records)} → {args.db}')
     return 0

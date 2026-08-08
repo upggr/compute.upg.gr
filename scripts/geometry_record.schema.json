@@ -42,6 +42,15 @@
     "ambient": { "type": ["string", "null"] },
     "periods": { "type": ["object", "array", "null"] },
     "orientifold": { "type": ["object", "null"] },
+    "stage": {
+      "type": ["string", "null"],
+      "enum": ["vertices", "triangulated", "intersections", "periods", null],
+      "description": "Pipeline stage; inferred from richness if omitted. Never claim periods without a periods payload."
+    },
+    "intersections": {
+      "type": ["object", "array", "null"],
+      "description": "Offline-provided triple-intersection summary only — never invent."
+    },
     "extra": {
       "type": ["object", "null"],
       "description": "Catch-all for CYTools dumps (name, counts, …)"

@@ -10,6 +10,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import geometry_store  # noqa: E402
 import model_cards  # noqa: E402
 import model_exclusions  # noqa: E402
 
@@ -96,3 +97,56 @@ def test_model_cards_match_quintic_and_heterotic():
 
 def test_model_card_lookup_miss():
     assert model_cards.lookup('kreuzer-skarke', 99999, 99999) is None
+
+
+# --- geometry pipeline stage -----------------------------------------------
+
+def test_infer_stage_from_richness():
+    assert geometry_store.infer_stage({
+        'polytope_vertices': [[1, 0, 0, 0]],
+    }) == 'vertices'
+    assert geometry_store.infer_stage({
+        'polytope_vertices': [[1, 0, 0, 0]],
+        'triangulation': 'frst-example',
+    }) == 'triangulated'
+    assert geometry_store.infer_stage({
+        'polytope_vertices': [[1, 0, 0, 0]],
+        'triangulation': {'kind': 'frst'},
+        'intersections': {'d111': 5},
+    }) == 'intersections'
+    assert geometry_store.infer_stage({
+        'polytope_vertices': [[1, 0, 0, 0]],
+        'triangulation': 't',
+        'intersections': {'d111': 5},
+        'periods': {'K': 4},
+    }) == 'periods'
+    # Never honor a claimed periods stage without periods payload.
+    assert geometry_store.infer_stage({
+        'stage': 'periods',
+        'polytope_vertices': [[1, 0, 0, 0]],
+    }) == 'vertices'
+
+
+def test_upsert_persists_stage_and_intersections(tmp_path):
+    db = str(tmp_path / 'g.sqlite')
+    geometry_store.init_db(db)
+    stored = geometry_store.upsert_geometry(
+        {
+            'dataset_id': 'kreuzer-skarke',
+            'h11': 2,
+            'h21': 86,
+            'source': 'cytools-offline',
+            'status': 'representative',
+            'polytope_vertices': [[1, 0, 0, 0]],
+            'triangulation': {'kind': 'frst'},
+            'intersections': {'triple_summary': 'offline-only'},
+        },
+        db_path=db,
+    )
+    assert stored['stage'] == 'intersections'
+    assert stored['intersections']['triple_summary'] == 'offline-only'
+    assert 'pending' in stored['pipeline_note']
+    assert 'periods' in stored['pipeline_note']
+    hit = geometry_store.lookup_by_hodge('kreuzer-skarke', 2, 86, db_path=db)
+    assert hit is not None
+    assert hit['stage'] == 'intersections'

@@ -17,10 +17,12 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 DEFAULT_DB_PATH = os.path.join('static', 'data', 'geometry.sqlite')
 KS_SAMPLE_PATH = os.path.join('data', 'ks_geometry_sample.json')
 GEOMETRY_PACK_PATH = os.path.join('data', 'geometry_pack.json')
+
+PIPELINE_STAGES = ('vertices', 'triangulated', 'intersections', 'periods')
 
 # Prefer unique/curated/offline-complete over sample representatives.
 _STATUS_RANK = {
@@ -29,6 +31,13 @@ _STATUS_RANK = {
     'representative': 30,
     'pending': 10,
     'failed': 0,
+}
+
+_STAGE_RANK = {
+    'periods': 40,
+    'intersections': 30,
+    'triangulated': 20,
+    'vertices': 10,
 }
 
 def _utcnow() -> str:
@@ -92,6 +101,96 @@ def _has_vertices(record: Optional[Dict[str, Any]]) -> bool:
     return isinstance(verts, (list, tuple)) and len(verts) > 0
 
 
+def _has_triangulation(record: Optional[Dict[str, Any]]) -> bool:
+    if not record:
+        return False
+    tri = record.get('triangulation')
+    if tri is None:
+        return False
+    if isinstance(tri, str):
+        return bool(tri.strip())
+    if isinstance(tri, (list, tuple, dict)):
+        return len(tri) > 0
+    return True
+
+
+def _has_intersections(record: Optional[Dict[str, Any]]) -> bool:
+    if not record:
+        return False
+    ix = record.get('intersections')
+    if ix is None and isinstance(record.get('extra'), dict):
+        ix = record['extra'].get('intersections')
+    if ix is None:
+        return False
+    if isinstance(ix, (list, tuple, dict)):
+        return len(ix) > 0
+    return True
+
+
+def _has_periods(record: Optional[Dict[str, Any]]) -> bool:
+    if not record:
+        return False
+    periods = record.get('periods')
+    if periods is None:
+        return False
+    if isinstance(periods, (list, tuple, dict)):
+        return len(periods) > 0
+    if isinstance(periods, str):
+        return bool(periods.strip())
+    return True
+
+
+def infer_stage(record: Optional[Dict[str, Any]]) -> Optional[str]:
+    """Highest pipeline stage justified by stored fields (never invent periods)."""
+    if not record:
+        return None
+    explicit = record.get('stage')
+    if isinstance(explicit, str) and explicit.strip():
+        stage = explicit.strip().lower()
+        if stage in PIPELINE_STAGES:
+            # Trust explicit stage only if data can support it; never claim
+            # periods/intersections without payloads.
+            if stage == 'periods' and not _has_periods(record):
+                pass  # fall through to inferred
+            elif stage == 'intersections' and not (
+                _has_intersections(record) or _has_periods(record)
+            ):
+                pass
+            else:
+                return stage
+    if _has_periods(record):
+        return 'periods'
+    if _has_intersections(record):
+        return 'intersections'
+    if _has_triangulation(record):
+        return 'triangulated'
+    if _has_vertices(record):
+        return 'vertices'
+    return None
+
+
+def pipeline_note(stage: Optional[str]) -> str:
+    """Human-readable note: what is filled vs still pending."""
+    order = list(PIPELINE_STAGES)
+    if not stage:
+        return (
+            'Pipeline pending: no vertices, triangulation, intersections, '
+            'or periods stored yet (offline CYTools/PALP worker fills stages).'
+        )
+    try:
+        idx = order.index(stage)
+    except ValueError:
+        return f'Pipeline stage={stage} (non-standard).'
+    filled = order[: idx + 1]
+    pending = order[idx + 1 :]
+    parts = [f"filled: {', '.join(filled)}"]
+    if pending:
+        parts.append(f"pending: {', '.join(pending)}")
+    else:
+        parts.append('pending: none (full offline dump present)')
+    return '; '.join(parts)
+
+
 def _richness(record: Optional[Dict[str, Any]]) -> int:
     """Higher = prefer this hit when multiple share a Hodge key."""
     if not record:
@@ -99,17 +198,35 @@ def _richness(record: Optional[Dict[str, Any]]) -> int:
     score = _STATUS_RANK.get(str(record.get('status') or ''), 5)
     if _has_vertices(record):
         score += 100
+    score += _STAGE_RANK.get(str(record.get('stage') or ''), 0)
     for key in (
         'hypersurface_equation',
         'triangulation',
         'configuration_matrix',
         'periods',
+        'intersections',
         'weight_system',
         'ambient',
     ):
         if record.get(key) is not None:
             score += 5
     return score
+
+
+def _ensure_pipeline_columns(conn: sqlite3.Connection) -> None:
+    cols = {
+        row['name']
+        for row in conn.execute('PRAGMA table_info(geometries)').fetchall()
+    }
+    if 'stage' not in cols:
+        conn.execute('ALTER TABLE geometries ADD COLUMN stage TEXT')
+    if 'intersections' not in cols:
+        conn.execute('ALTER TABLE geometries ADD COLUMN intersections TEXT')
+    conn.execute(
+        "INSERT INTO schema_meta (key, value) VALUES ('version', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        (str(SCHEMA_VERSION),),
+    )
 
 
 def make_geometry_id(
@@ -173,6 +290,8 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 ambient                 TEXT,
                 periods                 TEXT,
                 orientifold             TEXT,
+                stage                   TEXT,
+                intersections           TEXT,
                 extra                   TEXT,
                 computed_at             TEXT,
                 updated_at              TEXT NOT NULL
@@ -187,6 +306,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
             'CREATE INDEX IF NOT EXISTS idx_geom_candidate '
             'ON geometries (candidate_id)'
         )
+        _ensure_pipeline_columns(conn)
         row = conn.execute(
             "SELECT value FROM schema_meta WHERE key = 'version'"
         ).fetchone()
@@ -200,6 +320,9 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
 def _row_to_record(row: sqlite3.Row) -> Dict[str, Any]:
     triangulation_raw = row['triangulation']
     triangulation = _loads(triangulation_raw)
+    keys = row.keys()
+    stage_raw = row['stage'] if 'stage' in keys else None
+    intersections_raw = row['intersections'] if 'intersections' in keys else None
     rec: Dict[str, Any] = {
         'id': row['id'],
         'candidate_id': row['candidate_id'],
@@ -220,6 +343,8 @@ def _row_to_record(row: sqlite3.Row) -> Dict[str, Any]:
         'ambient': row['ambient'],
         'periods': _loads(row['periods']),
         'orientifold': _loads(row['orientifold']),
+        'stage': stage_raw,
+        'intersections': _loads(intersections_raw),
         'extra': _loads(row['extra']),
         'computed_at': row['computed_at'],
         'updated_at': row['updated_at'],
@@ -241,9 +366,19 @@ def _row_to_record(row: sqlite3.Row) -> Dict[str, Any]:
             'geometry_uniqueness',
             'favourable',
             'reference',
+            'pipeline_note',
         ):
             if rec.get(key) is None and extra.get(key) is not None:
                 rec[key] = extra[key]
+        if rec.get('intersections') is None and extra.get('intersections') is not None:
+            rec['intersections'] = _loads(extra.get('intersections'))
+        if rec.get('stage') is None and extra.get('stage') is not None:
+            rec['stage'] = extra.get('stage')
+    # Always re-infer stage from richness so stale/overclaimed stages are corrected.
+    inferred = infer_stage(rec)
+    if inferred:
+        rec['stage'] = inferred
+    rec['pipeline_note'] = pipeline_note(rec.get('stage'))
     return rec
 
 
@@ -289,7 +424,7 @@ def upsert_geometry(
         'computed_at', 'updated_at', 'name', 'geometry_name', 'polytope_id',
         'triangulation_id', 'vertex_count', 'facet_count', 'point_count',
         'dual_point_count', 'source_slice', 'uniqueness', 'geometry_uniqueness',
-        'favourable', 'reference',
+        'favourable', 'reference', 'stage', 'intersections', 'pipeline_note',
     }
     extra = dict(record.get('extra') or {}) if isinstance(record.get('extra'), dict) else {}
     for key, val in record.items():
@@ -321,6 +456,23 @@ def upsert_geometry(
     else:
         triangulation_store = triangulation
 
+    intersections = record.get('intersections')
+    if intersections is None and isinstance(extra, dict):
+        intersections = extra.pop('intersections', None)
+
+    stage_probe = {
+        'stage': record.get('stage'),
+        'polytope_vertices': verts,
+        'vertex_matrix': vmat,
+        'triangulation': triangulation,
+        'intersections': intersections,
+        'periods': record.get('periods'),
+        'extra': extra,
+    }
+    stage = infer_stage(stage_probe)
+    if stage:
+        extra['pipeline_note'] = pipeline_note(stage)
+
     with _db(db_path) as conn:
         conn.execute(
             '''
@@ -328,13 +480,15 @@ def upsert_geometry(
                 id, candidate_id, dataset_id, h11, h21, h31, euler_char,
                 source, status, note, vertex_matrix, polytope_vertices,
                 triangulation, hypersurface_equation, weight_system,
-                configuration_matrix, ambient, periods, orientifold, extra,
+                configuration_matrix, ambient, periods, orientifold,
+                stage, intersections, extra,
                 computed_at, updated_at
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
                 ?, ?, ?,
-                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?,
                 ?, ?
             )
             ON CONFLICT(id) DO UPDATE SET
@@ -360,6 +514,8 @@ def upsert_geometry(
                 ambient = COALESCE(excluded.ambient, geometries.ambient),
                 periods = COALESCE(excluded.periods, geometries.periods),
                 orientifold = COALESCE(excluded.orientifold, geometries.orientifold),
+                stage = COALESCE(excluded.stage, geometries.stage),
+                intersections = COALESCE(excluded.intersections, geometries.intersections),
                 extra = COALESCE(excluded.extra, geometries.extra),
                 computed_at = COALESCE(geometries.computed_at, excluded.computed_at),
                 updated_at = excluded.updated_at
@@ -384,6 +540,8 @@ def upsert_geometry(
                 record.get('ambient'),
                 _dumps(record.get('periods')),
                 _dumps(record.get('orientifold')),
+                stage,
+                _dumps(intersections),
                 _dumps(extra) if extra else None,
                 computed_at,
                 now,
@@ -531,6 +689,14 @@ def export_cytools_fields(record: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         payload['triangulation'] = record['triangulation']
     if record.get('hypersurface_equation') is not None:
         payload['hypersurface_equation'] = record['hypersurface_equation']
+    if record.get('stage') is not None:
+        payload['stage'] = record['stage']
+    if record.get('pipeline_note') is not None:
+        payload['pipeline_note'] = record['pipeline_note']
+    if record.get('intersections') is not None:
+        payload['intersections'] = record['intersections']
+    if record.get('periods') is not None:
+        payload['periods'] = record['periods']
     if record.get('note'):
         payload['note'] = record['note']
     return payload
@@ -559,6 +725,9 @@ def record_to_pack(record: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]
         'configuration_matrix': record.get('configuration_matrix'),
         'periods': record.get('periods'),
         'orientifold': record.get('orientifold'),
+        'stage': record.get('stage'),
+        'intersections': record.get('intersections'),
+        'pipeline_note': record.get('pipeline_note'),
         'geometry_db_id': record.get('id'),
         'geometry_source': record.get('source'),
     }

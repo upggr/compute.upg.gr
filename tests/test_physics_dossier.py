@@ -163,3 +163,32 @@ def test_analyze_includes_tabs():
     assert 'moduli' in tabs
     assert tabs['phenomenology']['indices']['n_generations'] == 26
     assert tabs['fluxes']['budget']['log_N_flux'] is not None
+
+
+def test_period_and_intersection_proxies():
+    p = physics_dossier.period_structure(12)
+    assert p['picard_fuchs_order'] == 13
+    assert p['h3_betti'] == 26
+    ix = physics_dossier.intersection_proxies(3)
+    assert ix['symmetric_triple_independent'] == 10
+
+
+def test_scan_readiness_and_links():
+    d = physics_dossier.build_dossier('kreuzer-skarke', 1, 101, euler_char=-200)
+    c = physics_dossier.construction_payload(
+        'kreuzer-skarke', 'q', h11=1, h21=101, euler_char=-200,
+    )
+    tabs = physics_dossier.build_tabs(d, construction=c)
+    assert tabs['fluxes']['readiness']['total'] >= 6
+    assert tabs['fluxes']['readiness']['score'] >= 3
+    assert tabs['overview']['external_links']
+    assert tabs['construction']['external_links']
+    assert tabs['moduli']['counts']['picard_fuchs_order'] == 102
+    assert any(ch['id'] == 'scan_readiness' for ch in tabs['certificates']['checks'])
+
+
+def test_heterotic_sketch_on_pheno_tab():
+    d = physics_dossier.build_dossier('heterotic', 73, 70)
+    tabs = physics_dossier.build_tabs(d)
+    assert tabs['phenomenology']['heterotic']['three_generation_target'] is True
+    assert tabs['phenomenology']['heterotic']['checklist']

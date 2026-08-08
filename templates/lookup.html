@@ -179,8 +179,19 @@
                 abs_euler: '|χ|',
                 total_moduli: 'Total moduli',
                 tadpole_charge_chi_over_24: 'Tadpole charge (χ/24)',
+                n_generations: 'Generation index |χ|/2',
+                picard_fuchs_order: 'Picard–Fuchs order K',
+                flux_density: 'Flux density proxy',
+                vacuum_stability: 'Vacuum stability proxy',
+                c2_J_proxy: 'c₂·J proxy',
+                scan_readiness_pct: 'Flux-scan readiness %',
+                N_flux_est_sci: 'N_flux estimate',
             };
-            const order = ['euler_char', 'abs_euler', 'tadpole_charge_chi_over_24', 'total_moduli'];
+            const order = [
+                'euler_char', 'abs_euler', 'tadpole_charge_chi_over_24', 'n_generations',
+                'picard_fuchs_order', 'N_flux_est_sci', 'scan_readiness_pct',
+                'flux_density', 'vacuum_stability', 'c2_J_proxy', 'total_moduli',
+            ];
             Object.entries(data.derived).sort(function (a, b) {
                 const ia = order.indexOf(a[0]), ib = order.indexOf(b[0]);
                 return (ia < 0 ? order.length : ia) - (ib < 0 ? order.length : ib);

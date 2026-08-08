@@ -105,14 +105,21 @@ class KreuzerSkarkeDataset(BaseDataset):
     def format_result(self, candidate: np.ndarray, score: float, verified: bool, rank: int) -> Dict[str, Any]:
         h11, h21, euler_abs, hodge_ratio, c2_h11 = candidate
         euler_char = int(2 * (h11 - h21))
+        h11_i, h21_i = int(h11), int(h21)
 
         return {
             'rank': rank,
-            'h11': int(h11),
-            'h21': int(h21),
+            'h11': h11_i,
+            'h21': h21_i,
             'euler_char': euler_char,
             'score': float(score),
-            'verified_target': bool(verified)
+            'verified_target': bool(verified),
+            'tadpole_L': round(abs(euler_char) / 24.0, 4),
+            'n_generations': abs(euler_char) // 2,
+            'c2_J_proxy': int(12 * h11_i + 6 * h21_i),
+            'c2_h11_feature': float(c2_h11),
+            'hodge_ratio': float(hodge_ratio),
+            'picard_fuchs_order': h21_i + 1,
         }
 
 
@@ -161,15 +168,19 @@ class CY5FoldsDataset(BaseDataset):
 
     def format_result(self, candidate: np.ndarray, score: float, verified: bool, rank: int) -> Dict[str, Any]:
         h11, h21, h31, euler, euler_abs, hodge_sum = candidate
+        h11_i, h21_i, h31_i = int(h11), int(h21), int(h31)
+        euler_i = int(euler)
 
         return {
             'rank': rank,
-            'h11': int(h11),
-            'h21': int(h21),
-            'h31': int(h31),
-            'euler_char': int(euler),
+            'h11': h11_i,
+            'h21': h21_i,
+            'h31': h31_i,
+            'euler_char': euler_i,
             'score': float(score),
-            'verified_target': bool(verified)
+            'verified_target': bool(verified),
+            'tadpole_L': round(abs(euler_i) / 24.0, 4),
+            'hodge_sum': int(hodge_sum),
         }
 
 
@@ -205,11 +216,25 @@ class InformationDensityDataset(BaseDataset):
     }
 
     def __init__(self, weights: Optional[Dict[str, float]] = None):
-        self.weights = weights or self.DEFAULT_WEIGHTS.copy()
+        # Copy defensively: storing the caller's dict by reference means
+        # set_weights() would mutate an object owned by someone else.
+        self.weights = dict(weights) if weights else self.DEFAULT_WEIGHTS.copy()
 
     def set_weights(self, weights: Dict[str, float]):
-        """Set custom weights for the composite score components"""
+        """Set custom weights for the composite score components.
+
+        NOTE: this mutates process-global state shared by every request served
+        by this worker. Prefer passing `weights` to generate_candidates().
+        """
         self.weights.update(weights)
+
+    def resolve_weights(self, weights: Optional[Dict[str, float]] = None) -> Dict[str, float]:
+        """Merge caller-supplied weights over the defaults without mutating self."""
+        resolved = self.DEFAULT_WEIGHTS.copy()
+        resolved.update(self.weights)
+        if weights:
+            resolved.update(weights)
+        return resolved
 
     def get_metadata(self) -> DatasetMetadata:
         return DatasetMetadata(
@@ -222,8 +247,13 @@ class InformationDensityDataset(BaseDataset):
             source_url="http://hep.itp.tuwien.ac.at/~kreuzer/CY/"
         )
 
-    def generate_candidates(self, n_candidates: int, seed: int) -> np.ndarray:
-        """Generate candidates with information density features"""
+    def generate_candidates(self, n_candidates: int, seed: int,
+                            weights: Optional[Dict[str, float]] = None) -> np.ndarray:
+        """Generate candidates with information density features.
+
+        `weights` overrides the instance weights for this call only, so a
+        request can tune the composite score without affecting other requests.
+        """
         np.random.seed(seed)
 
         # Base Hodge numbers (from KS-like distribution)
@@ -285,7 +315,7 @@ class InformationDensityDataset(BaseDataset):
         vacuum_stability = (0.4 * tadpole_headroom + 0.4 * stabilization_ratio + 0.2 * moduli_penalty)
 
         # 7. Information density composite score (customizable weights)
-        w = self.weights
+        w = self.resolve_weights(weights)
         info_density = (
             w['entropy'] * hodge_entropy_norm +
             w['efficiency'] * np.tanh(topo_efficiency) +
@@ -389,16 +419,22 @@ class HeteroticDataset(BaseDataset):
 
     def format_result(self, candidate: np.ndarray, score: float, verified: bool, rank: int) -> Dict[str, Any]:
         h11, h21, euler, euler_abs, hodge_ratio, hodge_balance, n_gen = candidate
+        h11_i, h21_i = int(h11), int(h21)
+        euler_i = int(euler)
 
         return {
             'rank': rank,
-            'h11': int(h11),
-            'h21': int(h21),
-            'euler_char': int(euler),
+            'h11': h11_i,
+            'h21': h21_i,
+            'euler_char': euler_i,
             'hodge_balance': float(hodge_balance),
             'n_generations': int(n_gen),
             'score': float(score),
-            'verified_target': bool(verified)
+            'verified_target': bool(verified),
+            'tadpole_L': round(abs(euler_i) / 24.0, 4),
+            'three_generation_target': abs(euler_i) == 6,
+            'c2_J_proxy': int(12 * h11_i + 6 * h21_i),
+            'picard_fuchs_order': h21_i + 1,
         }
 
 

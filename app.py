@@ -745,6 +745,34 @@ def identify():
 
     cid = canonical_id(dataset_id, record)
     hof = hall_of_fame.get_candidate(cid, db_path=HALL_OF_FAME_PATH)
+    dossier = physics_dossier.build_dossier(
+        dataset_id=dataset_id,
+        h11=record.get('h11'),
+        h21=record.get('h21'),
+        h31=record.get('h31'),
+        euler_char=euler,
+        verified_target=(hof or {}).get('verified_target'),
+    )
+    tabs = None
+    if dossier.get('ok'):
+        construction = physics_dossier.construction_payload(
+            dataset_id=dataset_id,
+            candidate_id=cid,
+            raw=(hof or {}).get('raw') or record,
+            features=(hof or {}).get('features'),
+            tags=(hof or {}).get('tags'),
+            summary=(hof or {}).get('summary'),
+            h11=dossier['h11'],
+            h21=dossier['h21'],
+            h31=dossier.get('h31'),
+            euler_char=dossier['euler_char'],
+        )
+        tabs = physics_dossier.build_tabs(
+            dossier,
+            construction=construction,
+            tags=(hof or {}).get('tags'),
+        )
+
     response = {
         'status': 'success',
         'candidate_id': cid,
@@ -765,6 +793,8 @@ def identify():
             'total_moduli': sum(provided.values()),
             'tadpole_charge_chi_over_24': round(abs(euler) / 24, 4),
         },
+        'dossier': dossier if dossier.get('ok') else None,
+        'tabs': tabs if tabs and tabs.get('ok') else None,
         'identifier_note': (
             'This id is local to upg-strings and is NOT a community-standard '
             'identifier. Hodge numbers do not uniquely determine a Calabi-Yau '
@@ -774,6 +804,19 @@ def identify():
         ),
         'uniqueness': 'non-unique: many manifolds may share these invariants',
     }
+    if dossier.get('ok'):
+        response['derived'].update({
+            'n_generations': abs(euler) // 2,
+            'picard_fuchs_order': dossier['h21'] + 1,
+            'flux_density': dossier['scalars'].get('flux_density'),
+            'vacuum_stability': dossier['scalars'].get('vacuum_stability'),
+            'c2_J_proxy': physics_dossier.second_chern_proxy(
+                dossier['h11'], dossier['h21']
+            )['c2_J_proxy'],
+        })
+        if tabs and tabs.get('ok'):
+            response['derived']['scan_readiness_pct'] = tabs['fluxes']['readiness']['pct']
+            response['derived']['N_flux_est_sci'] = tabs['fluxes']['budget']['N_flux_est_sci']
     if euler_mismatch:
         response['warning'] = euler_mismatch
 

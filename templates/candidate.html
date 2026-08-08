@@ -105,7 +105,20 @@
                             <div class="detail-item"><span>Flux density proxy</span><strong>{{ tabs.overview.scalars_highlight.flux_density }}</strong></div>
                             <div class="detail-item"><span>Generation index |χ|/2</span><strong>{{ tabs.overview.scalars_highlight.n_generations }}</strong></div>
                             <div class="detail-item"><span>N_flux estimate</span><strong>{{ tabs.overview.scalars_highlight.N_flux_est_sci }}</strong></div>
+                            <div class="detail-item"><span>Picard–Fuchs K</span><strong>{{ tabs.overview.scalars_highlight.picard_fuchs_order }}</strong></div>
+                            <div class="detail-item"><span>Scan readiness</span><strong>{{ tabs.overview.scalars_highlight.scan_readiness_pct }}%</strong></div>
                         </div>
+                        {% if tabs.overview.external_links %}
+                        <h3 style="margin-top:1rem;">External catalogs</h3>
+                        <ul class="meaning-list">
+                            {% for link in tabs.overview.external_links %}
+                            <li>
+                                <a href="{{ link.url }}" rel="noopener noreferrer" target="_blank">{{ link.label }}</a>
+                                <span class="note"> — {{ link.detail }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="analysis-header" style="margin-top: 1.25rem;">
@@ -129,8 +142,17 @@
                     <div class="detail-item"><span>Hodge balance</span><strong>{{ tabs.moduli.counts.hodge_balance }}</strong></div>
                     <div class="detail-item"><span>Mirror (h¹¹, h²¹)</span><strong>({{ tabs.moduli.mirror.h11 }}, {{ tabs.moduli.mirror.h21 }})</strong></div>
                     <div class="detail-item"><span>Mirror χ</span><strong>{{ tabs.moduli.mirror.euler }}</strong></div>
+                    <div class="detail-item"><span>Picard–Fuchs order K</span><strong>{{ tabs.moduli.counts.picard_fuchs_order }}</strong></div>
+                    <div class="detail-item"><span>b₃ (CY3)</span><strong>{{ tabs.moduli.counts.h3_betti }}</strong></div>
+                    <div class="detail-item"><span>Triple ∩ unknowns (generic)</span><strong>{{ tabs.moduli.counts.triple_intersection_unknowns }}</strong></div>
                 </div>
                 <p class="note" style="margin-top: 0.75rem;">{{ tabs.moduli.mirror.note }}</p>
+                {% if tabs.moduli.mirror.compare %}
+                <p class="note">Mirror compare: {{ tabs.moduli.mirror.compare.moduli_swap }} · {{ tabs.moduli.mirror.compare.kahler_vs_cs }}</p>
+                {% endif %}
+                {% if tabs.moduli.intersections %}
+                <p class="note">{{ tabs.moduli.intersections.note }}</p>
+                {% endif %}
                 {% if tabs.moduli.mirror.partner %}
                 <p class="mirror-partner">
                     Hodge mirror:
@@ -175,8 +197,25 @@
                     <div class="detail-item"><span>K = h²¹+1</span><strong>{{ tabs.fluxes.budget.K_proxy }}</strong></div>
                     <div class="detail-item"><span>log N_flux</span><strong>{{ tabs.fluxes.budget.log_N_flux }}</strong></div>
                     <div class="detail-item"><span>N_flux ~</span><strong>{{ tabs.fluxes.budget.N_flux_est_sci }}</strong></div>
+                    <div class="detail-item"><span>Picard–Fuchs K</span><strong>{{ tabs.fluxes.budget.picard_fuchs_order }}</strong></div>
+                    <div class="detail-item"><span>b₃</span><strong>{{ tabs.fluxes.budget.h3_betti }}</strong></div>
                     <div class="detail-item"><span>Flux density (ranking)</span><strong>{{ tabs.fluxes.budget.flux_density_proxy }}</strong></div>
                 </div>
+                {% if tabs.fluxes.readiness %}
+                <h3>Flux-scan readiness ({{ tabs.fluxes.readiness.score }}/{{ tabs.fluxes.readiness.total }} · {{ tabs.fluxes.readiness.pct }}%)</h3>
+                <p class="note">{{ tabs.fluxes.readiness.note }}</p>
+                <ul class="check-list readiness-list">
+                    {% for item in tabs.fluxes.readiness.items %}
+                    <li class="{{ 'check-pass' if item.ok else 'check-fail' }}">
+                        <span class="check-mark">{{ 'HAVE' if item.ok else 'NEED' }}</span>
+                        <div>
+                            <strong>{{ item.label }}</strong>
+                            <div class="note">{{ item.detail }}</div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
                 <h3>Constraints</h3>
                 <ul class="identity-list">
                     {% for c in tabs.fluxes.constraints %}
@@ -224,6 +263,21 @@
                     This is a necessary topological condition for heterotic net chirality —
                     not a Standard Model vacuum by itself.
                 </div>
+                {% endif %}
+                {% if tabs.phenomenology.heterotic %}
+                <h3>Heterotic model sketch</h3>
+                <p class="note">{{ tabs.phenomenology.heterotic.anomaly_cancellation_sketch }}</p>
+                <ul class="check-list readiness-list">
+                    {% for item in tabs.phenomenology.heterotic.checklist %}
+                    <li class="{{ 'check-pass' if item.ok else 'check-fail' }}">
+                        <span class="check-mark">{{ 'OK' if item.ok else 'TODO' }}</span>
+                        <div>
+                            <strong>{{ item.label }}</strong>
+                            <div class="note">{{ item.detail }}</div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
                 {% endif %}
                 {% if tabs.phenomenology.computed %}
                 <h3>Computed from topology</h3>
@@ -303,6 +357,17 @@
                     </li>
                     {% endfor %}
                 </ol>
+                {% endif %}
+                {% if tabs.construction.external_links %}
+                <h3>Look up geometry externally</h3>
+                <ul class="meaning-list">
+                    {% for link in tabs.construction.external_links %}
+                    <li>
+                        <a href="{{ link.url }}" rel="noopener noreferrer" target="_blank">{{ link.label }}</a>
+                        <span class="note"> — {{ link.detail }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
                 {% endif %}
                 <h3>How one would reconstruct</h3>
                 <p>{{ tabs.construction.reconstruct_howto }}</p>

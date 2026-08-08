@@ -7,9 +7,26 @@
       "rank": 1,
       "score": 0.9921,
       "verified_target": true,
-      "features": [["h11", 38], ["h21", 12], ["χ", 52]],
-      "tags": ["low-euler", "phenomenology", "verified"],
-      "summary": "Low |χ| candidate with compact Hodge numbers.",
+      "features": [
+        [
+          "h11",
+          38
+        ],
+        [
+          "h21",
+          12
+        ],
+        [
+          "\u03c7",
+          52
+        ]
+      ],
+      "tags": [
+        "low-euler",
+        "phenomenology",
+        "verified"
+      ],
+      "summary": "Low |\u03c7| candidate with compact Hodge numbers.",
       "viz_seed": 48291
     },
     {
@@ -19,8 +36,25 @@
       "rank": 4,
       "score": 0.9716,
       "verified_target": true,
-      "features": [["h11", 25], ["h21", 26], ["χ", -2]],
-      "tags": ["balanced", "low-euler", "verified"],
+      "features": [
+        [
+          "h11",
+          25
+        ],
+        [
+          "h21",
+          26
+        ],
+        [
+          "\u03c7",
+          -2
+        ]
+      ],
+      "tags": [
+        "balanced",
+        "low-euler",
+        "verified"
+      ],
       "summary": "Near-balanced Hodge numbers with tiny Euler characteristic.",
       "viz_seed": 19428
     },
@@ -31,8 +65,25 @@
       "rank": 2,
       "score": 0.9834,
       "verified_target": true,
-      "features": [["h11", 140], ["h21", 62], ["h31", 18]],
-      "tags": ["large-volume", "verified", "ci5f"],
+      "features": [
+        [
+          "h11",
+          140
+        ],
+        [
+          "h21",
+          62
+        ],
+        [
+          "h31",
+          18
+        ]
+      ],
+      "tags": [
+        "large-volume",
+        "verified",
+        "ci5f"
+      ],
       "summary": "High h11 with moderate higher Hodge numbers.",
       "viz_seed": 78231
     },
@@ -43,8 +94,24 @@
       "rank": 7,
       "score": 0.9482,
       "verified_target": false,
-      "features": [["h11", 112], ["h21", 48], ["h31", 33]],
-      "tags": ["large-volume", "ci5f"],
+      "features": [
+        [
+          "h11",
+          112
+        ],
+        [
+          "h21",
+          48
+        ],
+        [
+          "h31",
+          33
+        ]
+      ],
+      "tags": [
+        "large-volume",
+        "ci5f"
+      ],
       "summary": "Large volume candidate awaiting verification.",
       "viz_seed": 22119
     },
@@ -55,8 +122,25 @@
       "rank": 3,
       "score": 0.9678,
       "verified_target": true,
-      "features": [["h11", 64], ["h21", 60], ["balance", 0.031]],
-      "tags": ["balanced", "yukawa", "verified"],
+      "features": [
+        [
+          "h11",
+          64
+        ],
+        [
+          "h21",
+          60
+        ],
+        [
+          "balance",
+          0.031
+        ]
+      ],
+      "tags": [
+        "balanced",
+        "yukawa",
+        "verified"
+      ],
       "summary": "Balanced moduli with small Hodge asymmetry.",
       "viz_seed": 34512
     },
@@ -67,8 +151,24 @@
       "rank": 8,
       "score": 0.9314,
       "verified_target": false,
-      "features": [["h11", 89], ["h21", 92], ["balance", 0.016]],
-      "tags": ["balanced", "yukawa"],
+      "features": [
+        [
+          "h11",
+          89
+        ],
+        [
+          "h21",
+          92
+        ],
+        [
+          "balance",
+          0.016
+        ]
+      ],
+      "tags": [
+        "balanced",
+        "yukawa"
+      ],
       "summary": "Strong balance signal, pending verification.",
       "viz_seed": 55392
     },
@@ -79,8 +179,24 @@
       "rank": 9,
       "score": 0.9238,
       "verified_target": true,
-      "features": [["h11", 14], ["h21", 62], ["χ", -96]],
-      "tags": ["low-euler", "verified"],
+      "features": [
+        [
+          "h11",
+          14
+        ],
+        [
+          "h21",
+          62
+        ],
+        [
+          "\u03c7",
+          -96
+        ]
+      ],
+      "tags": [
+        "low-euler",
+        "verified"
+      ],
       "summary": "Low Euler magnitude with asymmetric Hodge numbers.",
       "viz_seed": 66832
     },
@@ -91,8 +207,25 @@
       "rank": 10,
       "score": 0.9025,
       "verified_target": true,
-      "features": [["h11", 151], ["h21", 41], ["h31", 22]],
-      "tags": ["large-volume", "verified", "ci5f"],
+      "features": [
+        [
+          "h11",
+          151
+        ],
+        [
+          "h21",
+          41
+        ],
+        [
+          "h31",
+          22
+        ]
+      ],
+      "tags": [
+        "large-volume",
+        "verified",
+        "ci5f"
+      ],
       "summary": "High h11 candidate with strong score.",
       "viz_seed": 99821
     },
@@ -103,9 +236,26 @@
       "rank": 11,
       "score": 0.9143,
       "verified_target": true,
-      "features": [["h11", 73], ["h21", 70], ["balance", 0.021]],
-      "tags": ["balanced", "verified", "three-generation"],
-      "summary": "Balanced moduli with |χ|=6 ⇒ topological 3-generation index.",
+      "features": [
+        [
+          "h11",
+          73
+        ],
+        [
+          "h21",
+          70
+        ],
+        [
+          "balance",
+          0.021
+        ]
+      ],
+      "tags": [
+        "balanced",
+        "verified",
+        "three-generation"
+      ],
+      "summary": "Balanced moduli with |\u03c7|=6 \u21d2 topological 3-generation index.",
       "viz_seed": 77351
     },
     {
@@ -115,8 +265,24 @@
       "rank": 12,
       "score": 0.8994,
       "verified_target": false,
-      "features": [["h11", 44], ["h21", 33], ["χ", 22]],
-      "tags": ["low-euler", "phenomenology"],
+      "features": [
+        [
+          "h11",
+          44
+        ],
+        [
+          "h21",
+          33
+        ],
+        [
+          "\u03c7",
+          22
+        ]
+      ],
+      "tags": [
+        "low-euler",
+        "phenomenology"
+      ],
       "summary": "Shortlisted low Euler candidate.",
       "viz_seed": 41206
     },
@@ -127,8 +293,24 @@
       "rank": 13,
       "score": 0.8872,
       "verified_target": true,
-      "features": [["h11", 131], ["h21", 55], ["h31", 29]],
-      "tags": ["large-volume", "verified"],
+      "features": [
+        [
+          "h11",
+          131
+        ],
+        [
+          "h21",
+          55
+        ],
+        [
+          "h31",
+          29
+        ]
+      ],
+      "tags": [
+        "large-volume",
+        "verified"
+      ],
       "summary": "Balanced high h11 for large volume scenarios.",
       "viz_seed": 32166
     },
@@ -139,11 +321,35 @@
       "rank": 0,
       "score": 0.9999,
       "verified_target": true,
-      "features": [["h11", 1], ["h21", 101], ["χ", -200]],
-      "tags": ["textbook", "curated", "quintic", "verified"],
-      "summary": "Textbook quintic threefold class in ℂP⁴ (h¹¹=1, h²¹=101).",
+      "features": [
+        [
+          "h11",
+          1
+        ],
+        [
+          "h21",
+          101
+        ],
+        [
+          "\u03c7",
+          -200
+        ]
+      ],
+      "tags": [
+        "textbook",
+        "curated",
+        "quintic",
+        "verified"
+      ],
+      "summary": "Textbook quintic threefold class in \u2102P\u2074 (h\u00b9\u00b9=1, h\u00b2\u00b9=101).",
       "ambient": "P^4",
-      "weight_system": [1, 1, 1, 1, 1],
+      "weight_system": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
       "hypersurface_equation": "Generic degree-5 hypersurface",
       "favourable": true,
       "viz_seed": 50001
@@ -155,11 +361,35 @@
       "rank": 0,
       "score": 0.9998,
       "verified_target": true,
-      "features": [["h11", 101], ["h21", 1], ["χ", 200]],
-      "tags": ["textbook", "curated", "mirror", "verified"],
-      "summary": "Mirror quintic Hodge class (h¹¹=101, h²¹=1).",
+      "features": [
+        [
+          "h11",
+          101
+        ],
+        [
+          "h21",
+          1
+        ],
+        [
+          "\u03c7",
+          200
+        ]
+      ],
+      "tags": [
+        "textbook",
+        "curated",
+        "mirror",
+        "verified"
+      ],
+      "summary": "Mirror quintic Hodge class (h\u00b9\u00b9=101, h\u00b2\u00b9=1).",
       "ambient": "Toric mirror of P^4[5]",
-      "weight_system": [1, 1, 1, 1, 1],
+      "weight_system": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
       "hypersurface_equation": "Mirror family of the quintic",
       "favourable": true,
       "viz_seed": 50002
@@ -171,10 +401,28 @@
       "rank": 0,
       "score": 0.9997,
       "verified_target": true,
-      "features": [["h11", 2], ["h21", 83], ["χ", -162]],
-      "tags": ["textbook", "curated", "cicy", "verified"],
-      "summary": "Bicubic hypersurface class in P²×P².",
-      "ambient": "P^2 × P^2",
+      "features": [
+        [
+          "h11",
+          2
+        ],
+        [
+          "h21",
+          83
+        ],
+        [
+          "\u03c7",
+          -162
+        ]
+      ],
+      "tags": [
+        "textbook",
+        "curated",
+        "cicy",
+        "verified"
+      ],
+      "summary": "Bicubic hypersurface class in P\u00b2\u00d7P\u00b2.",
+      "ambient": "P^2 \u00d7 P^2",
       "hypersurface_equation": "Bidegree (3,3) hypersurface",
       "favourable": true,
       "viz_seed": 50003
@@ -186,10 +434,28 @@
       "rank": 0,
       "score": 0.9996,
       "verified_target": true,
-      "features": [["h11", 4], ["h21", 68], ["χ", -128]],
-      "tags": ["textbook", "curated", "cicy", "verified"],
-      "summary": "Tetraquadric class in (P¹)⁴.",
-      "ambient": "P^1 × P^1 × P^1 × P^1",
+      "features": [
+        [
+          "h11",
+          4
+        ],
+        [
+          "h21",
+          68
+        ],
+        [
+          "\u03c7",
+          -128
+        ]
+      ],
+      "tags": [
+        "textbook",
+        "curated",
+        "cicy",
+        "verified"
+      ],
+      "summary": "Tetraquadric class in (P\u00b9)\u2074.",
+      "ambient": "P^1 \u00d7 P^1 \u00d7 P^1 \u00d7 P^1",
       "hypersurface_equation": "Multidegree (2,2,2,2) hypersurface",
       "favourable": true,
       "viz_seed": 50004
@@ -201,13 +467,134 @@
       "rank": 0,
       "score": 0.9995,
       "verified_target": true,
-      "features": [["h11", 1], ["h21", 73], ["χ", -144]],
-      "tags": ["textbook", "curated", "cicy", "verified"],
-      "summary": "CICY P⁵[3,3] complete-intersection class.",
+      "features": [
+        [
+          "h11",
+          1
+        ],
+        [
+          "h21",
+          73
+        ],
+        [
+          "\u03c7",
+          -144
+        ]
+      ],
+      "tags": [
+        "textbook",
+        "curated",
+        "cicy",
+        "verified"
+      ],
+      "summary": "CICY P\u2075[3,3] complete-intersection class.",
       "ambient": "P^5",
       "hypersurface_equation": "Complete intersection of two cubics in P^5",
       "favourable": true,
       "viz_seed": 50005
+    },
+    {
+      "candidate_id": "textbook-cicy-24",
+      "dataset_id": "kreuzer-skarke",
+      "dataset_name": "Kreuzer-Skarke Database",
+      "rank": 0,
+      "score": 0.9994,
+      "verified_target": true,
+      "features": [
+        [
+          "h11",
+          1
+        ],
+        [
+          "h21",
+          149
+        ],
+        [
+          "\u03c7",
+          -296
+        ]
+      ],
+      "tags": [
+        "textbook",
+        "curated",
+        "cicy",
+        "verified"
+      ],
+      "summary": "CICY P\u2075[2,4] complete-intersection class.",
+      "ambient": "P^5",
+      "hypersurface_equation": "Complete intersection of a quadric and a quartic in P^5",
+      "favourable": true,
+      "viz_seed": 50006
+    },
+    {
+      "candidate_id": "textbook-self-mirror-19",
+      "dataset_id": "kreuzer-skarke",
+      "dataset_name": "Kreuzer-Skarke Database",
+      "rank": 0,
+      "score": 0.9993,
+      "verified_target": true,
+      "features": [
+        [
+          "h11",
+          19
+        ],
+        [
+          "h21",
+          19
+        ],
+        [
+          "\u03c7",
+          0
+        ]
+      ],
+      "tags": [
+        "textbook",
+        "curated",
+        "self-mirror",
+        "verified"
+      ],
+      "summary": "Self-mirror Hodge locus landmark (h\u00b9\u00b9=h\u00b2\u00b9=19, \u03c7=0).",
+      "viz_seed": 50007
+    },
+    {
+      "candidate_id": "textbook-weighted-octic",
+      "dataset_id": "kreuzer-skarke",
+      "dataset_name": "Kreuzer-Skarke Database",
+      "rank": 0,
+      "score": 0.9992,
+      "verified_target": true,
+      "features": [
+        [
+          "h11",
+          1
+        ],
+        [
+          "h21",
+          103
+        ],
+        [
+          "\u03c7",
+          -204
+        ]
+      ],
+      "tags": [
+        "textbook",
+        "curated",
+        "weighted",
+        "verified"
+      ],
+      "summary": "Weighted octic class WP\u2074[1,1,1,1,4].",
+      "ambient": "WP^4[1,1,1,1,4]",
+      "weight_system": [
+        1,
+        1,
+        1,
+        1,
+        4
+      ],
+      "hypersurface_equation": "Degree-8 hypersurface in weighted projective space",
+      "favourable": true,
+      "viz_seed": 50008
     }
   ]
 }

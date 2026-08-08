@@ -317,6 +317,179 @@ def second_chern_proxy(h11: int, h21: int) -> Dict[str, Any]:
     }
 
 
+def period_structure(h21: int) -> Dict[str, Any]:
+    """Combinatorial sizes of the period / Picard–Fuchs problem from h²¹."""
+    order = int(h21) + 1
+    return {
+        'picard_fuchs_order': order,
+        'period_vector_dim': order,
+        'formula': 'K = h²¹ + 1',
+        'note': (
+            'The GVW flux superpotential is built from periods; the number of '
+            'independent periods is h³(X)=2(h²¹+1) for a CY3, often summarized '
+            'via K=h²¹+1 for the flux monomial count proxy used above.'
+        ),
+        'h3_betti': 2 * (int(h21) + 1),
+    }
+
+
+def intersection_proxies(h11: int) -> Dict[str, Any]:
+    """Combinatorial sizes related to the Kähler / intersection ring."""
+    h = int(h11)
+    return {
+        'kahler_cone_dim': h,
+        'triple_intersection_tensor_entries': h ** 3,
+        'symmetric_triple_independent': (h * (h + 1) * (h + 2)) // 6,
+        'note': (
+            'Counts of unknown intersection numbers if the ring were fully generic. '
+            'Real CY3 intersection rings are highly constrained; these are size '
+            'estimates for the computational problem, not computed κ_ijk.'
+        ),
+    }
+
+
+def external_geometry_links(
+    dataset_id: str, h11: int, h21: int, h31: Optional[int] = None
+) -> List[Dict[str, str]]:
+    """Deep-links to public catalogs (lookup aids — not unique geometry IDs)."""
+    links: List[Dict[str, str]] = []
+    if dataset_id in ('kreuzer-skarke', 'info-density', 'heterotic'):
+        links.append({
+            'label': 'Kreuzer–Skarke CY data (TU Wien)',
+            'url': 'http://hep.itp.tuwien.ac.at/~kreuzer/CY/',
+            'detail': f'Search polytopes with h11={h11}, h12={h21} in the online forms / dumps.',
+        })
+        links.append({
+            'label': 'KS list paper (arXiv)',
+            'url': 'https://arxiv.org/abs/hep-th/0002240',
+            'detail': 'Original reflexive polytope enumeration.',
+        })
+    if dataset_id == 'cy5-folds':
+        links.append({
+            'label': 'cymetric / CI5F resources',
+            'url': 'https://github.com/pythoncymetric/cymetric',
+            'detail': (
+                f'Look for configurations compatible with '
+                f'(h¹¹,h²¹,h³¹)=({h11},{h21},{h31}).'
+            ),
+        })
+    links.append({
+        'label': 'CYTools (geometry toolkit)',
+        'url': 'https://arxiv.org/abs/2211.03823',
+        'detail': 'Offline: polytopes, triangulations, intersection numbers.',
+    })
+    return links
+
+
+def scan_readiness(
+    construction: Optional[Dict[str, Any]],
+    h11: int,
+    h21: int,
+    euler: int,
+) -> Dict[str, Any]:
+    """How many flux-scan prerequisites we already have vs still missing."""
+    present = set((construction or {}).get('present_geometry') or {})
+    curated = bool((construction or {}).get('curated'))
+    items = [
+        {
+            'id': 'hodge',
+            'label': 'Hodge invariants locked',
+            'ok': True,
+            'detail': f'(h¹¹,h²¹,χ)=({h11},{h21},{euler})',
+        },
+        {
+            'id': 'tadpole',
+            'label': 'Tadpole budget L=|χ|/24',
+            'ok': True,
+            'detail': f'L={abs(euler)/24:.4f}',
+        },
+        {
+            'id': 'ambient_or_curated',
+            'label': 'Ambient / curated construction class',
+            'ok': curated or ('ambient' in present),
+            'detail': 'Textbook class or stored ambient' if (curated or 'ambient' in present) else 'Missing',
+        },
+        {
+            'id': 'equation',
+            'label': 'Hypersurface / CICY equation',
+            'ok': 'hypersurface_equation' in present,
+            'detail': 'Present' if 'hypersurface_equation' in present else 'Not stored',
+        },
+        {
+            'id': 'vertices',
+            'label': 'Polytope vertex matrix',
+            'ok': 'polytope_vertices' in present or 'vertex_matrix' in present,
+            'detail': 'Present' if ('polytope_vertices' in present or 'vertex_matrix' in present) else 'Needs PALP/CYTools',
+        },
+        {
+            'id': 'triangulation',
+            'label': 'Fine regular star triangulation',
+            'ok': 'triangulation' in present or 'triangulation_id' in present,
+            'detail': 'Present' if ('triangulation' in present or 'triangulation_id' in present) else 'Needs CYTools',
+        },
+        {
+            'id': 'periods',
+            'label': 'Periods / prepotential',
+            'ok': False,
+            'detail': f'Picard–Fuchs order proxy K=h²¹+1={h21 + 1}; not computed here',
+        },
+        {
+            'id': 'orientifold',
+            'label': 'Orientifold O3/O7 data',
+            'ok': False,
+            'detail': 'Requires involution + resolved geometry',
+        },
+    ]
+    done = sum(1 for i in items if i['ok'])
+    return {
+        'items': items,
+        'score': done,
+        'total': len(items),
+        'pct': round(100.0 * done / len(items), 1),
+        'note': (
+            'Readiness for a *real* flux vacuum scan. Green items are available '
+            'from Hodge/curated metadata; red items need an external geometry pipeline.'
+        ),
+    }
+
+
+def heterotic_model_sketch(h11: int, h21: int, euler: int) -> Dict[str, Any]:
+    """Topological checklist for heterotic model building (not a bundle)."""
+    gens = generation_index(euler)
+    return {
+        'n_generations': gens['n_generations'],
+        'three_generation_target': gens['three_generation_target'],
+        'anomaly_cancellation_sketch': (
+            'Heterotic anomaly cancellation schematically requires c₂(V) = c₂(TX) '
+            '(plus five-branes). c₂(TX) needs intersection data — only a c₂·J '
+            'ranking proxy is available here.'
+        ),
+        'bundle_status': 'unavailable',
+        'checklist': [
+            {
+                'label': 'Base CY3 with these Hodge numbers',
+                'ok': False,
+                'detail': 'Pick KS/CICY geometry (non-unique at Hodge level)',
+            },
+            {
+                'label': 'Stable holomorphic vector bundle / monad',
+                'ok': False,
+                'detail': 'Not stored — needed for spectrum',
+            },
+            {
+                'label': f'Net chirality target n_gen={gens["n_generations"]}',
+                'ok': True,
+                'detail': 'Fixed by |χ|/2 once index(V)=χ(X)/2 setup is chosen',
+            },
+            {
+                'label': 'Yukawa / soft terms',
+                'ok': False,
+                'detail': 'Need bundle cohomology + moduli vevs',
+            },
+        ],
+    }
+
+
 def generation_index(euler: int) -> Dict[str, Any]:
     """Net chiral generation index |χ|/2 (heterotic / topological index proxy)."""
     n_gen = abs(int(euler)) // 2
@@ -674,6 +847,10 @@ def build_tabs(
     gens = generation_index(euler)
     c2 = second_chern_proxy(h11, h21)
     stab = stabilization_map(h11, h21)
+    periods = period_structure(h21)
+    intersections = intersection_proxies(h11)
+    links = external_geometry_links(dataset_id, h11, h21, dossier.get('h31'))
+    readiness = scan_readiness(construction, h11, h21, euler)
 
     mirror_block = {
         'h11': int(s['mirror_h11']),
@@ -681,6 +858,14 @@ def build_tabs(
         'euler': int(s['mirror_euler']),
         'note': 'Mirror swaps h¹¹ ↔ h²¹ and sends χ → −χ at the Hodge level.',
         'partner': mirror_partner,
+        'compare': {
+            'same_abs_euler': True,
+            'moduli_swap': f'({h11},{h21}) ↔ ({int(s["mirror_h11"])},{int(s["mirror_h21"])})',
+            'kahler_vs_cs': (
+                f'Here Kähler-heavy' if h11 > h21 else
+                ('CS-heavy' if h21 > h11 else 'balanced')
+            ),
+        },
     }
     if dataset_id == 'cy5-folds':
         mirror_block['note'] = (
@@ -704,12 +889,18 @@ def build_tabs(
             'total_moduli': int(s['total_moduli']),
             'moduli_compactness': s['moduli_compactness'],
             'hodge_balance': s['hodge_balance'],
+            'picard_fuchs_order': periods['picard_fuchs_order'],
+            'h3_betti': periods['h3_betti'],
+            'triple_intersection_unknowns': intersections['symmetric_triple_independent'],
         },
+        'periods': periods,
+        'intersections': intersections,
         'mirror': mirror_block,
         'stabilization': stab,
         'meaning': [
             'h¹¹ counts independent Kähler (size) deformations of even cycles.',
             'h²¹ counts complex-structure (shape) deformations.',
+            f'Period / Picard–Fuchs problem size proxy: K = h²¹+1 = {periods["picard_fuchs_order"]}.',
             'G₃ fluxes can fix complex structure in principle; Kähler moduli '
             'need non-perturbative effects — see stabilization map below.',
         ],
@@ -732,14 +923,27 @@ def build_tabs(
             'log_N_flux': vacua['log_N_flux'],
             'log10_N_flux': vacua.get('log10_N_flux'),
             'N_flux_est_sci': vacua['N_flux_est_sci'],
+            'picard_fuchs_order': periods['picard_fuchs_order'],
+            'h3_betti': periods['h3_betti'],
         },
         'vacua_estimate': vacua,
+        'periods': periods,
+        'readiness': readiness,
         'constraints': [
             {
                 'name': 'D3 tadpole (IIB sketch)',
                 'tex': r'N_{D3} + N_{\mathrm{flux}} = L = |\chi|/24',
                 'status': 'exact_budget',
                 'detail': f"L = {s['tadpole_L']}; headroom proxy = {s['tadpole_headroom']}",
+            },
+            {
+                'name': 'Period / flux monomial count',
+                'tex': r'K = h^{2,1}+1,\quad b_3 = 2(h^{2,1}+1)',
+                'status': 'exact_count',
+                'detail': (
+                    f"K={periods['picard_fuchs_order']}, "
+                    f"b₃={periods['h3_betti']} (CY3 Betti)"
+                ),
             },
             {
                 'name': 'Flux vacua asymptotic estimate',
@@ -777,6 +981,10 @@ def build_tabs(
         },
         'indices': gens,
         'chern': c2,
+        'heterotic': (
+            heterotic_model_sketch(h11, h21, euler)
+            if dataset_id == 'heterotic' else None
+        ),
         'dataset_target': next(
             (c for c in dossier['checks'] if c['id'] == 'dataset_target'), None
         ),
@@ -799,6 +1007,12 @@ def build_tabs(
                 'value': c2['c2_J_proxy'],
                 'status': 'proxy',
                 'detail': c2['note'],
+            },
+            {
+                'name': 'Symmetric triple-intersection unknowns (generic)',
+                'value': intersections['symmetric_triple_independent'],
+                'status': 'combinatorial',
+                'detail': intersections['note'],
             },
         ],
         'not_computed': [
@@ -836,12 +1050,32 @@ def build_tabs(
             'stored invariants. These are certificates, not uniqueness theorems '
             'or existence proofs for string vacua.'
         ),
-        'checks': all_checks,
+        'checks': all_checks + [
+            {
+                'id': 'period_count',
+                'label': 'Period count identity',
+                'rule': 'K = h²¹+1 and b₃ = 2(h²¹+1) for CY3',
+                'ok': dataset_id == 'cy5-folds' or periods['h3_betti'] == 2 * (h21 + 1),
+                'detail': f"K={periods['picard_fuchs_order']}, b₃={periods['h3_betti']}",
+            },
+            {
+                'id': 'scan_readiness',
+                'label': 'Flux-scan readiness',
+                'rule': f'{readiness["score"]}/{readiness["total"]} prerequisites available',
+                'ok': readiness['score'] >= 3,
+                'detail': f"{readiness['pct']}% — see Fluxes / Construction tabs",
+            },
+        ],
         'identities': dossier['identities'] + [
             {
                 'name': 'Net generation index',
                 'tex': r'n_{\mathrm{gen}} = |\chi|/2',
                 'value': gens['n_generations'],
+            },
+            {
+                'name': 'Period / Betti count (CY3)',
+                'tex': r'b_3 = 2(h^{2,1}+1)',
+                'value': periods['h3_betti'],
             },
             {
                 'name': 'Flux vacua log-count (Stirling proxy)',
@@ -850,6 +1084,7 @@ def build_tabs(
             },
         ],
         'euler_consistent': dossier['euler_consistent'],
+        'readiness': readiness,
     }
 
     overview = {
@@ -865,8 +1100,26 @@ def build_tabs(
             'flux_density': s['flux_density'],
             'n_generations': gens['n_generations'],
             'N_flux_est_sci': vacua['N_flux_est_sci'],
+            'scan_readiness_pct': readiness['pct'],
+            'picard_fuchs_order': periods['picard_fuchs_order'],
         },
+        'readiness': readiness,
+        'external_links': links,
     }
+
+    out_construction = dict(construction or {
+        'honesty': 'No construction context supplied.',
+        'unavailable': [],
+        'present_geometry': {},
+        'raw_keys': [],
+        'feature_map': {},
+        'tags': [],
+        'reconstruct_howto': '',
+        'curated': None,
+        'workplan': [],
+    })
+    out_construction['external_links'] = links
+    out_construction['readiness'] = readiness
 
     return {
         'ok': True,
@@ -875,16 +1128,6 @@ def build_tabs(
         'moduli': moduli,
         'fluxes': fluxes,
         'phenomenology': pheno,
-        'construction': construction or {
-            'honesty': 'No construction context supplied.',
-            'unavailable': [],
-            'present_geometry': {},
-            'raw_keys': [],
-            'feature_map': {},
-            'tags': [],
-            'reconstruct_howto': '',
-            'curated': None,
-            'workplan': [],
-        },
+        'construction': out_construction,
         'certificates': certificates,
     }

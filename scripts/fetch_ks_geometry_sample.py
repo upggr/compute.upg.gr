@@ -29,6 +29,8 @@ SLICES = [
     'polytopes-4d-08-vertices.parquet',
     'polytopes-4d-09-vertices.parquet',
     'polytopes-4d-10-vertices.parquet',
+    'polytopes-4d-11-vertices.parquet',
+    'polytopes-4d-12-vertices.parquet',
 ]
 
 TARGETS: Dict[Tuple[int, int], str] = {
@@ -37,13 +39,21 @@ TARGETS: Dict[Tuple[int, int], str] = {
     (2, 83): 'Bicubic Hodge class',
     (4, 68): 'Tetraquadric Hodge class',
     (1, 149): 'CICY P5[2,4] Hodge class',
+    (1, 73): 'CICY P5[3,3] Hodge class',
     (1, 103): 'Weighted octic Hodge class',
     (19, 19): 'Self-mirror Hodge class',
     (2, 86): 'P3xP1 hypersurface Hodge class',
+    (3, 243): 'Large-CS elliptic / KS class (3,243)',
     (38, 12): 'HoF featured KS (38,12)',
     (25, 26): 'HoF featured KS (25,26)',
     (14, 62): 'HoF featured KS (14,62)',
     (44, 33): 'HoF featured KS (44,33)',
+    (58, 55): 'HoF landscape KS (58,55)',
+    (97, 77): 'HoF landscape KS (97,77)',
+    (104, 98): 'HoF landscape KS (104,98)',
+    (12, 38): 'Mirror of HoF featured KS (38,12)',
+    (62, 14): 'Mirror of HoF featured KS (14,62)',
+    (33, 44): 'Mirror of HoF featured KS (44,33)',
 }
 
 
@@ -68,8 +78,9 @@ def main() -> None:
         path = CACHE / fname
         if not path.exists():
             url = f'{HF_BASE}/{fname}'
-            print(f'downloading {fname} ...')
+            print(f'downloading {fname} ...', flush=True)
             urllib.request.urlretrieve(url, path)
+        print(f'reading {fname} ...', flush=True)
         df = pd.read_parquet(
             path,
             columns=[
@@ -115,7 +126,12 @@ def main() -> None:
                     'Kreuzer–Skarke arXiv:hep-th/0002240; '
                     'HF calabi-yau-data/polytopes-4d'
                 ),
+                'reference_url': 'https://arxiv.org/abs/hep-th/0002240',
             }
+        print(f'  hits so far {len(hits)}/{len(TARGETS)}', flush=True)
+        if len(hits) == len(TARGETS):
+            print('all targets found; skipping remaining slices', flush=True)
+            break
 
     payload = {
         'version': 1,

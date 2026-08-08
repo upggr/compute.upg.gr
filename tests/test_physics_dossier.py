@@ -53,8 +53,13 @@ def test_build_tabs_moduli_and_flux_budget():
     assert tabs['fluxes']['budget']['N_flux_est_sci']
     assert tabs['moduli']['stabilization']
     assert tabs['phenomenology']['indices']['n_generations'] == abs(d['euler_char']) // 2
-    assert 'Periods' in tabs['fluxes']['requires_for_full_scan'][0]
-    assert 'Standard Model' in tabs['phenomenology']['not_computed'][0]
+    assert 'period' in tabs['fluxes']['requires_for_full_scan'][0].lower()
+    assert any('Yukawa' in x or 'soft' in x.lower() for x in tabs['phenomenology']['pending_geometry'])
+    assert tabs['fluxes']['lattice_miniscan']['K'] == 13
+    assert tabs['fluxes']['orientifold']['base_L'] is not None
+    assert tabs['fluxes']['periods_full']['picard_fuchs_order'] == 13
+    assert tabs['phenomenology']['soft_terms']['terms']
+    assert tabs['phenomenology']['gauge']['steps']
     assert tabs['phenomenology']['tags'] == ['verified']
     assert tabs['certificates']['checks']
     assert any(c['id'] == 'generation_index' for c in tabs['certificates']['checks'])
@@ -192,3 +197,20 @@ def test_heterotic_sketch_on_pheno_tab():
     tabs = physics_dossier.build_tabs(d)
     assert tabs['phenomenology']['heterotic']['three_generation_target'] is True
     assert tabs['phenomenology']['heterotic']['checklist']
+
+
+def test_geometry_pack_fills_quintic_vertices():
+    c = physics_dossier.construction_payload(
+        'kreuzer-skarke', 'q', h11=1, h21=101, euler_char=-200,
+    )
+    assert 'vertex_matrix' in c['present_geometry'] or 'polytope_vertices' in c['present_geometry']
+    assert 'hypersurface_equation' in c['present_geometry']
+    assert not any(u['id'] == 'hypersurface_equation' for u in c['unavailable'])
+
+
+def test_flux_miniscan_mirror_quintic():
+    import physics_extensions
+    scan = physics_extensions.flux_lattice_miniscan(1, 200 / 24.0)
+    assert scan['status'] == 'computed'
+    assert scan['counted'] > 0
+    assert scan['K'] == 2

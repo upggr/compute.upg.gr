@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "note": "Curated geometry payloads for textbook Hodge keys. Class-level examples — not uniqueness proofs.",
+  "geometries": [
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 1,
+      "h21": 101,
+      "name": "Quintic threefold in P^4",
+      "ambient": "P^4",
+      "weight_system": [1, 1, 1, 1, 1],
+      "favourable": true,
+      "polytope_id": "simplex-P4",
+      "vertex_matrix": [
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1],
+        [-1, -1, -1, -1]
+      ],
+      "polytope_vertices": [
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1],
+        [-1, -1, -1, -1]
+      ],
+      "triangulation": "projective-ambient-P4 (unique smooth ambient; no toric FRST required)",
+      "triangulation_id": "P4-ambient",
+      "hypersurface_equation": "sum_{|alpha|=5} c_alpha x^alpha = 0  (generic quintic; Fermat: x0^5+...+x4^5=0)",
+      "configuration_matrix": null,
+      "reference": "Candelas–Horowitz–Strominger–Witten"
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 101,
+      "h21": 1,
+      "name": "Mirror quintic (Greene–Plesser)",
+      "ambient": "Orbifold of Fermat quintic / toric mirror",
+      "weight_system": [1, 1, 1, 1, 1],
+      "favourable": true,
+      "polytope_id": "mirror-quintic-GP",
+      "vertex_matrix": [
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1],
+        [-1, -1, -1, -1]
+      ],
+      "polytope_vertices": [
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1],
+        [-1, -1, -1, -1]
+      ],
+      "triangulation": "Greene-Plesser orbifold resolution of Fermat quintic mirror family",
+      "triangulation_id": "GP-mirror-quintic",
+      "hypersurface_equation": "x0^5+x1^5+x2^5+x3^5+x4^5 - 5 psi x0 x1 x2 x3 x4 = 0 (mirror family)",
+      "reference": "Greene–Plesser; Candelas–de la Ossa–Green–Parkes"
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 2,
+      "h21": 83,
+      "name": "Bicubic in P2 x P2",
+      "ambient": "P^2 x P^2",
+      "weight_system": null,
+      "favourable": true,
+      "polytope_id": "cicy-P2xP2-33",
+      "configuration_matrix": [[3, 3], [1, 1]],
+      "vertex_matrix": null,
+      "polytope_vertices": null,
+      "triangulation": "product of projective planes (smooth ambient)",
+      "triangulation_id": "P2xP2",
+      "hypersurface_equation": "bidegree (3,3) section of O(3,3) on P2 x P2",
+      "reference": "CICY lists"
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 4,
+      "h21": 68,
+      "name": "Tetraquadric in (P1)^4",
+      "ambient": "P1 x P1 x P1 x P1",
+      "favourable": true,
+      "polytope_id": "tetraquadric-P1^4",
+      "configuration_matrix": [[2, 2, 2, 2]],
+      "triangulation": "product of P1 factors",
+      "triangulation_id": "P1x4",
+      "hypersurface_equation": "multidegree (2,2,2,2) hypersurface",
+      "reference": "Classic CICY / mirror symmetry pedagogy"
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 1,
+      "h21": 149,
+      "name": "CICY P5[2,4]",
+      "ambient": "P^5",
+      "favourable": true,
+      "polytope_id": "cicy-P5-24",
+      "configuration_matrix": [[2], [4]],
+      "triangulation": "projective ambient P5",
+      "triangulation_id": "P5",
+      "hypersurface_equation": "complete intersection of quadric and quartic in P5",
+      "reference": "CICY / Hubsch"
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 1,
+      "h21": 73,
+      "name": "CICY P5[3,3]",
+      "ambient": "P^5",
+      "favourable": true,
+      "polytope_id": "cicy-P5-33",
+      "configuration_matrix": [[3], [3]],
+      "triangulation": "projective ambient P5",
+      "triangulation_id": "P5",
+      "hypersurface_equation": "complete intersection of two cubics in P5",
+      "reference": "CICY lists"
+    },
+    {
+      "dataset_id": "kreuzer-skarke",
+      "h11": 1,
+      "h21": 103,
+      "name": "Weighted octic WP4[1,1,1,1,4]",
+      "ambient": "WP^4[1,1,1,1,4]",
+      "weight_system": [1, 1, 1, 1, 4],
+      "favourable": true,
+      "polytope_id": "wp11114-deg8",
+      "triangulation": "weighted projective ambient (stacky; resolve singularities as needed)",
+      "triangulation_id": "WP11114",
+      "hypersurface_equation": "degree-8 hypersurface in WP4[1,1,1,1,4]",
+      "reference": "Weighted hypersurface catalogs"
+    },
+    {
+      "dataset_id": "cy5-folds",
+      "h11": 140,
+      "h21": 62,
+      "h31": 18,
+      "name": "Example CI5F class (featured)",
+      "ambient": "Complete-intersection fivefold (example placeholder)",
+      "configuration_matrix": "attach real CI5F matrix in raw when available",
+      "hypersurface_equation": "CI5F configuration — example class only",
+      "triangulation": null,
+      "reference": "cymetric / CI5F"
+    },
+    {
+      "dataset_id": "heterotic",
+      "h11": 73,
+      "h21": 70,
+      "name": "Three-generation heterotic index candidate",
+      "ambient": "Any CY3 with these Hodge numbers + stable bundle",
+      "hypersurface_equation": null,
+      "triangulation": null,
+      "bundle_note": "Needs stable holomorphic vector bundle with index |chi|/2 = 3",
+      "reference": "Heterotic standard embedding / monad literature"
+    }
+  ]
+}

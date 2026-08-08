@@ -248,6 +248,58 @@
                     <div class="detail-item"><span>b₃</span><strong>{{ tabs.fluxes.budget.h3_betti }}</strong></div>
                     <div class="detail-item"><span>Flux density (ranking)</span><strong>{{ tabs.fluxes.budget.flux_density_proxy }}</strong></div>
                 </div>
+                {% if tabs.fluxes.periods_full %}
+                <h3>Periods / special geometry</h3>
+                <div class="equation-board">
+                    <figure class="equation-card">
+                        <figcaption>Period vector</figcaption>
+                        <div class="tex tex-display">{{ tabs.fluxes.periods_full.period_vector_tex }}</div>
+                    </figure>
+                    <figure class="equation-card">
+                        <figcaption>Picard–Fuchs</figcaption>
+                        <div class="tex tex-display">{{ tabs.fluxes.periods_full.pf_operator_tex }}</div>
+                    </figure>
+                    <figure class="equation-card">
+                        <figcaption>Yukawa from periods</figcaption>
+                        <div class="tex tex-display">{{ tabs.fluxes.periods_full.yukawa_from_periods_tex }}</div>
+                    </figure>
+                    <figure class="equation-card">
+                        <figcaption>Prepotential</figcaption>
+                        <div class="tex tex-display">{{ tabs.fluxes.periods_full.prepotential_tex }}</div>
+                    </figure>
+                </div>
+                <p class="note">{{ tabs.fluxes.periods_full.note }}</p>
+                {% endif %}
+                {% if tabs.fluxes.orientifold %}
+                <h3>Orientifold / O3–O7 tadpole</h3>
+                <div class="tex tex-display">{{ tabs.fluxes.orientifold.tex }}</div>
+                <ul class="check-list readiness-list">
+                    {% for c in tabs.fluxes.orientifold.components %}
+                    <li class="{{ 'check-pass' if c.status == 'exact' else 'check-fail' }}">
+                        <span class="check-mark">{{ c.status }}</span>
+                        <div>
+                            <strong>{{ c.label }}</strong>
+                            <div class="note">{% if c.value is not none %}value={{ c.value }}{% else %}unknown{% endif %}</div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p class="note">{{ tabs.fluxes.orientifold.note }}</p>
+                {% endif %}
+                {% if tabs.fluxes.lattice_miniscan %}
+                <h3>Toy flux-lattice enumeration</h3>
+                <div class="details-grid">
+                    <div class="detail-item"><span>Status</span><strong>{{ tabs.fluxes.lattice_miniscan.status }}</strong></div>
+                    <div class="detail-item"><span>K</span><strong>{{ tabs.fluxes.lattice_miniscan.K }}</strong></div>
+                    <div class="detail-item"><span>Budget ∑n²</span><strong>{{ tabs.fluxes.lattice_miniscan.budget_sum_sq }}</strong></div>
+                    <div class="detail-item"><span>Counted</span><strong>{{ tabs.fluxes.lattice_miniscan.counted if tabs.fluxes.lattice_miniscan.counted is not none else '—' }}</strong></div>
+                </div>
+                <div class="tex tex-display">{{ tabs.fluxes.lattice_miniscan.tex }}</div>
+                <p class="note">{{ tabs.fluxes.lattice_miniscan.note or tabs.fluxes.lattice_miniscan.reason }}</p>
+                {% if tabs.fluxes.lattice_miniscan.sample %}
+                <p class="note">Sample lattice points: <code>{{ tabs.fluxes.lattice_miniscan.sample }}</code></p>
+                {% endif %}
+                {% endif %}
                 {% if tabs.fluxes.readiness %}
                 <h3>Flux-scan readiness ({{ tabs.fluxes.readiness.score }}/{{ tabs.fluxes.readiness.total }} · {{ tabs.fluxes.readiness.pct }}%)</h3>
                 <p class="note">{{ tabs.fluxes.readiness.note }}</p>
@@ -316,6 +368,45 @@
                     not a Standard Model vacuum by itself.
                 </div>
                 {% endif %}
+                {% if tabs.phenomenology.soft_terms %}
+                <h3>Soft terms (symbolic)</h3>
+                <p class="note">{{ tabs.phenomenology.soft_terms.note }}</p>
+                <div class="equation-board">
+                    {% for term in tabs.phenomenology.soft_terms.terms %}
+                    <figure class="equation-card">
+                        <figcaption>{{ term.name }} · {{ term.status }}</figcaption>
+                        <div class="tex tex-display">{{ term.tex }}</div>
+                    </figure>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% if tabs.phenomenology.yukawas %}
+                <h3>Yukawa structure</h3>
+                <div class="tex tex-display">{{ tabs.phenomenology.yukawas.tex }}</div>
+                <p class="note">{{ tabs.phenomenology.yukawas.note }}</p>
+                {% if tabs.phenomenology.yukawas.counts %}
+                <div class="details-grid">
+                    {% for k, v in tabs.phenomenology.yukawas.counts.items() %}
+                    <div class="detail-item"><span>{{ k }}</span><strong>{{ v }}</strong></div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endif %}
+                {% if tabs.phenomenology.gauge %}
+                <h3>Gauge embedding roadmap</h3>
+                <p class="note">{{ tabs.phenomenology.gauge.note }}</p>
+                <ul class="check-list readiness-list">
+                    {% for step in tabs.phenomenology.gauge.steps %}
+                    <li class="{{ 'check-pass' if step.status in ['exact_index', 'assumed_framework'] else 'check-fail' }}">
+                        <span class="check-mark">{{ step.status }}</span>
+                        <div>
+                            <strong>{{ step.label }}</strong>
+                            <div class="tex">{{ step.tex }}</div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
                 {% if tabs.phenomenology.heterotic %}
                 <h3>Heterotic model sketch</h3>
                 <p class="note">{{ tabs.phenomenology.heterotic.anomaly_cancellation_sketch }}</p>
@@ -351,9 +442,9 @@
                     {% endfor %}
                 </p>
                 {% endif %}
-                <h3>Still needs geometry / bundles / fluxes</h3>
+                <h3>Still needs vevs / branes / bundles</h3>
                 <ul class="meaning-list unavailable-list">
-                    {% for item in tabs.phenomenology.not_computed %}
+                    {% for item in tabs.phenomenology.pending_geometry %}
                     <li>{{ item }}</li>
                     {% endfor %}
                 </ul>
@@ -393,6 +484,10 @@
                     <div class="detail-item"><span>{{ key }}</span><strong><code>{{ val }}</code></strong></div>
                     {% endfor %}
                 </div>
+                {% if tabs.construction.present_geometry.vertex_matrix or tabs.construction.present_geometry.polytope_vertices %}
+                <h3>Vertex matrix</h3>
+                <pre class="vertex-matrix">{% set vm = tabs.construction.present_geometry.vertex_matrix or tabs.construction.present_geometry.polytope_vertices %}{{ vm | tojson(indent=2) }}</pre>
+                {% endif %}
                 {% else %}
                 <p class="callout callout-warning" style="margin-top: 1rem;">
                     No polytope vertices, triangulation, or hypersurface equation is stored for this entry.

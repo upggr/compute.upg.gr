@@ -1771,9 +1771,19 @@ html[data-theme="light"] .equation-card {
     background: rgba(26, 84, 144, 0.04);
 }
 
-.check-list .tex {
-    margin: 0.35rem 0;
-    display: block;
+.vertex-matrix {
+    margin: 0.75rem 0 1rem;
+    padding: 0.85rem 1rem;
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.2);
+    font-size: 0.82rem;
+    color: var(--text-color);
+}
+
+html[data-theme="light"] .vertex-matrix {
+    background: rgba(26, 84, 144, 0.05);
 }
 
 .check-list li {

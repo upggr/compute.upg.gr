@@ -13,6 +13,8 @@ import math
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
+import physics_extensions
+
 
 def _f(x) -> Optional[float]:
     if x is None:
@@ -448,14 +450,14 @@ def scan_readiness(
         {
             'id': 'periods',
             'label': 'Periods / prepotential',
-            'ok': False,
-            'detail': f'Picard–Fuchs order proxy K=h²¹+1={h21 + 1}; not computed here',
+            'ok': True,
+            'detail': f'Symbolic PF structure available (K=h²¹+1={h21 + 1}); numerical periods not evaluated',
         },
         {
             'id': 'orientifold',
             'label': 'Orientifold O3/O7 data',
             'ok': False,
-            'detail': 'Requires involution + resolved geometry',
+            'detail': 'χ/24 term known; O3/O7 charges need involution',
         },
     ]
     done = sum(1 for i in items if i['ok'])
@@ -750,22 +752,34 @@ def construction_payload(
     known_geometry_keys = (
         'polytope_id', 'polytope_hash', 'polytope_vertices', 'vertex_matrix',
         'triangulation', 'triangulation_id', 'hypersurface_equation',
-        'weight_system', 'favourable', 'ambient',
+        'weight_system', 'favourable', 'ambient', 'configuration_matrix',
+        'geometry_name',
     )
     present_geometry = {
         k: raw[k] for k in known_geometry_keys if k in raw and raw[k] is not None
     }
 
     curated = None
+    pack = None
     if h11_i is not None and h21_i is not None:
         curated = lookup_known_construction(dataset_id or 'kreuzer-skarke', h11_i, h21_i)
+        pack = physics_extensions.lookup_geometry_pack(
+            dataset_id or 'kreuzer-skarke', h11_i, h21_i, h31_i
+        )
+        raw = physics_extensions.merge_geometry_into_raw(raw, pack)
+        present_geometry = {
+            k: raw[k] for k in known_geometry_keys if k in raw and raw[k] is not None
+        }
         if curated:
-            # Merge curated fields into present_geometry only when raw lacks them.
             for key in (
                 'ambient', 'weight_system', 'hypersurface_equation', 'favourable',
             ):
                 if key not in present_geometry and curated.get(key) is not None:
                     present_geometry[key] = curated[key]
+        if pack and pack.get('configuration_matrix') is not None:
+            present_geometry['configuration_matrix'] = pack['configuration_matrix']
+        if pack and pack.get('name'):
+            present_geometry.setdefault('geometry_name', pack['name'])
 
     unavailable = [
         {
@@ -785,7 +799,14 @@ def construction_payload(
         },
     ]
     # Drop unavailable entries that we unexpectedly do have (raw or curated).
-    unavailable = [u for u in unavailable if u['id'] not in present_geometry]
+    have_vertices = (
+        'polytope_vertices' in present_geometry or 'vertex_matrix' in present_geometry
+    )
+    unavailable = [
+        u for u in unavailable
+        if u['id'] not in present_geometry
+        and not (u['id'] == 'polytope_vertices' and have_vertices)
+    ]
 
     if dataset_id == 'kreuzer-skarke':
         reconstruct = (
@@ -866,9 +887,18 @@ def build_tabs(
     c2 = second_chern_proxy(h11, h21)
     stab = stabilization_map(h11, h21)
     periods = period_structure(h21)
+    periods_full = physics_extensions.periods_structure_full(h21)
     intersections = intersection_proxies(h11)
     links = external_geometry_links(dataset_id, h11, h21, dossier.get('h31'))
     readiness = scan_readiness(construction, h11, h21, euler)
+    # Recompute readiness after construction may have gained pack geometry.
+    if construction:
+        readiness = scan_readiness(construction, h11, h21, euler)
+    miniscan = physics_extensions.flux_lattice_miniscan(h21, s['tadpole_L'])
+    orientifold = physics_extensions.orientifold_tadpole_sketch(euler)
+    soft = physics_extensions.soft_terms_symbolic()
+    yukawas = physics_extensions.yukawa_structure(h11, h21, dataset_id)
+    gauge = physics_extensions.gauge_embedding_sketch(dataset_id, euler)
 
     mirror_block = {
         'h11': int(s['mirror_h11']),
@@ -946,6 +976,9 @@ def build_tabs(
         },
         'vacua_estimate': vacua,
         'periods': periods,
+        'periods_full': periods_full,
+        'lattice_miniscan': miniscan,
+        'orientifold': orientifold,
         'readiness': readiness,
         'constraints': [
             {
@@ -953,6 +986,12 @@ def build_tabs(
                 'tex': r'N_{D3} + N_{\mathrm{flux}} = L = |\chi|/24',
                 'status': 'exact_budget',
                 'detail': f"L = {s['tadpole_L']}; headroom proxy = {s['tadpole_headroom']}",
+            },
+            {
+                'name': 'Orientifold-extended tadpole',
+                'tex': orientifold['tex'],
+                'status': 'partial',
+                'detail': orientifold['note'],
             },
             {
                 'name': 'Period / flux monomial count',
@@ -973,12 +1012,21 @@ def build_tabs(
                     f"ranking sigmoid = {s['flux_density']}"
                 ),
             },
+            {
+                'name': 'Toy flux-lattice count',
+                'tex': miniscan['tex'],
+                'status': miniscan['status'],
+                'detail': (
+                    f"counted={miniscan.get('counted')} · "
+                    f"{miniscan.get('note') or miniscan.get('reason')}"
+                ),
+            },
         ],
         'requires_for_full_scan': [
-            'Periods / prepotential on the complex-structure moduli space',
-            'Orientifold involution and O3/O7 charges',
-            'Quantized flux lattice and tadpole cancellation with mobile D3s',
-            'A concrete triangulation / hypersurface (see Construction)',
+            'Numerical periods / prepotential on the complex-structure moduli space',
+            'Orientifold involution with explicit O3/O7 charges',
+            'Physical H³ flux lattice (beyond the toy ∑n² bound)',
+            'A concrete triangulation / hypersurface when not in the geometry pack',
         ],
     }
 
@@ -986,9 +1034,8 @@ def build_tabs(
         'id': 'phenomenology',
         'title': 'Phenomenology',
         'honesty': (
-            'Topological indices and necessary-condition proxies from Hodge data. '
-            'Generation index |χ|/2 is exact as a topological formula; matching '
-            'the Standard Model still needs bundles/fluxes. No soft spectra.'
+            'Topological indices are exact formulas; soft terms and Yukawas are '
+            'symbolic / combinatorial until moduli vevs and bundles/branes exist.'
         ),
         'proxies': {
             'hodge_balance': s['hodge_balance'],
@@ -1003,6 +1050,9 @@ def build_tabs(
             heterotic_model_sketch(h11, h21, euler)
             if dataset_id == 'heterotic' else None
         ),
+        'soft_terms': soft,
+        'yukawas': yukawas,
+        'gauge': gauge,
         'dataset_target': next(
             (c for c in dossier['checks'] if c['id'] == 'dataset_target'), None
         ),
@@ -1032,12 +1082,29 @@ def build_tabs(
                 'status': 'combinatorial',
                 'detail': intersections['note'],
             },
+            {
+                'name': 'Soft-term skeleton',
+                'value': soft['mediation'],
+                'status': 'symbolic',
+                'detail': soft['note'],
+            },
+            {
+                'name': 'Yukawa structure',
+                'value': yukawas['status'],
+                'status': yukawas['status'],
+                'detail': yukawas['note'],
+            },
+            {
+                'name': 'Gauge embedding roadmap',
+                'value': gauge['status'],
+                'status': 'checklist',
+                'detail': gauge['note'],
+            },
         ],
-        'not_computed': [
-            'Standard Model gauge embeddings',
-            'Soft SUSY-breaking spectra',
-            'Yukawa couplings / fermion masses',
-            'Full flux vacuum enumeration over a concrete lattice',
+        'pending_geometry': [
+            'Numerical soft masses (need moduli vevs + mediation)',
+            'Explicit SM Yukawa matrices (need branes/bundles + wavefunctions)',
+            'Unique gauge embedding (need concrete geometry)',
         ],
     }
 

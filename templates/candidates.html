@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% set active_page = "candidates" %}
 
-{% block title %}Candidates Gallery - upg-strings{% endblock %}
-{% block description %}Top-ranked verified Calabi-Yau candidates with interactive manifold visualizations.{% endblock %}
+{% block title %}Candidate Gallery - upg-strings{% endblock %}
+{% block description %}Browse ranked Calabi-Yau manifolds from featured examples or a live search. Verified means the geometry matches that dataset’s target rule.{% endblock %}
 {% block og_tags %}
-    <meta property="og:title" content="Candidates Gallery - upg-strings">
-    <meta property="og:description" content="Top-ranked verified Calabi-Yau candidates with interactive manifold visualizations.">
+    <meta property="og:title" content="Candidate Gallery - upg-strings">
+    <meta property="og:description" content="Browse ranked Calabi-Yau manifolds from featured examples or a live search. Verified means the geometry matches that dataset’s target rule.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://compute.upg.gr/candidates.html">
 {% endblock %}
@@ -13,14 +13,19 @@
 {% block content %}
     <main class="container">
         <section class="section">
-            <h1>Top-Ranked Verified Candidates</h1>
-            <p>Explore a curated gallery of the highest-ranked manifolds. Click any candidate to view a detailed manifold visualization and topological profile.</p>
+            <h1>Candidate Gallery</h1>
+            <p>
+                Each card is one Calabi–Yau geometry the model ranked highly for a search goal.
+                <strong>Rank / score</strong> = how likely the model thinks it matches the goal.
+                <strong>Verified</strong> = we checked the ground-truth rule and it really does.
+            </p>
+            <p id="gallery-target" class="note">Target for Kreuzer–Skarke: manifolds with |χ| &lt; 100.</p>
             <div class="candidate-controls">
                 <div class="control-group">
-                    <label for="gallery-view">View</label>
+                    <label for="gallery-view">Source</label>
                     <select id="gallery-view">
-                        <option value="featured" selected>Featured</option>
-                        <option value="live">Live Results</option>
+                        <option value="featured" selected>Featured examples</option>
+                        <option value="live">Live search results</option>
                     </select>
                 </div>
                 <div class="control-group">
@@ -44,9 +49,9 @@
                     <input type="number" id="gallery-seed" value="42" min="1" max="9999">
                 </div>
                 <div class="control-group">
-                    <label for="gallery-verified">Verified</label>
+                    <label for="gallery-verified">Filter</label>
                     <select id="gallery-verified">
-                        <option value="all" selected>All</option>
+                        <option value="all" selected>All ranks</option>
                         <option value="true">Verified only</option>
                         <option value="false">Unverified only</option>
                     </select>
@@ -138,9 +143,9 @@
     <script src="{{ url_for('static', filename='js/cy-shape.js') }}"></script>
     <script>
     const datasetDescriptions = {
-        'kreuzer-skarke': 'Searching for manifolds with |chi| < 100.',
-        'cy5-folds': 'Searching for manifolds with h11 > 100 (large volume scenarios).',
-        'heterotic': 'Searching for balanced manifolds with h11 ~= h21.'
+        'kreuzer-skarke': 'Target: manifolds with |χ| < 100 (small Euler characteristic).',
+        'cy5-folds': 'Target: manifolds with h¹¹ > 100 (many Kähler moduli / large-volume scenarios).',
+        'heterotic': 'Target: balanced manifolds with h¹¹ ≈ h²¹.'
     };
 
     const grid = document.getElementById('candidates-grid');
@@ -198,7 +203,10 @@
 
     function updateDescription() {
         const datasetId = document.getElementById('gallery-dataset').value;
-        document.getElementById('gallery-description').textContent = datasetDescriptions[datasetId] || '';
+        const targetText = datasetDescriptions[datasetId] || '';
+        document.getElementById('gallery-description').textContent = targetText;
+        const targetEl = document.getElementById('gallery-target');
+        if (targetEl) targetEl.textContent = targetText;
     }
 
     function setLoading() {

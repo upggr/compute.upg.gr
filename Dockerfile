@@ -15,6 +15,7 @@ COPY hall_of_fame.py .
 COPY geometry_store.py .
 COPY physics_dossier.py .
 COPY physics_extensions.py .
+COPY math_specimen.py .
 COPY model_exclusions.py .
 COPY model_cards.py .
 COPY job_store.py .
@@ -22,6 +23,7 @@ COPY ml_roadmap.py .
 COPY templates/ templates/
 COPY static/ static/
 COPY data/ data/
+COPY docs/notes/ docs/notes/
 COPY scripts/ scripts/
 
 # Create data directory for KS database cache (also holds baked seed JSON)

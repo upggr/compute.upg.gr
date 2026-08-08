@@ -3,12 +3,14 @@ import io
 import zipfile
 import json
 import os
+import re
 import time
 import uuid
 import numpy as np
 import hashlib
 from collections import OrderedDict, defaultdict, deque
 from datetime import datetime, timezone
+from pathlib import Path
 from werkzeug.utils import safe_join
 from cy_search import run_search, get_sample_results  # Demo implementation
 from cy_search_real import (  # Real implementation
@@ -391,6 +393,22 @@ def about():
     return render_template('about.html')
 
 
+@app.route('/note/honest-landscape')
+@app.route('/note/honest-landscape.html')
+def note_honest_landscape():
+    """ArXiv-style draft note: honest landscape dossiers (HTML)."""
+    return render_template('note_honest_landscape.html')
+
+
+@app.route('/note/honest-landscape.md')
+def note_honest_landscape_md():
+    """Raw markdown source for the honest-landscape draft note."""
+    path = Path('docs/notes/2026-honest-landscape-dossiers.md')
+    if not path.is_file():
+        abort(404)
+    return send_file(path, mimetype='text/markdown; charset=utf-8')
+
+
 @app.route('/demo.html')
 def demo():
     """Interactive demo page"""
@@ -523,14 +541,121 @@ def candidate_page(candidate_id):
     if chi is not None:
         og_parts.append(f"χ={chi}")
     display_title = " · ".join(og_parts) if og_parts else candidate['candidate_id']
-    og_title = f"{display_title} — upg-strings"
+    hodge_bit = ''
+    if h11 is not None and h21 is not None:
+        hodge_bit = f"Hodge ({h11},{h21})"
+        if h31 is not None:
+            hodge_bit = f"Hodge ({h11},{h21},{h31})"
+    if hodge_bit and chi is not None:
+        og_title = f"{hodge_bit} · χ={chi} — upg-strings dossier"
+    elif hodge_bit:
+        og_title = f"{hodge_bit} — upg-strings dossier"
+    else:
+        og_title = f"{display_title} — upg-strings dossier"
+    verified = bool(candidate.get('verified_target'))
+    ds_label = candidate.get('dataset_name') or candidate.get('dataset_id') or 'dataset'
     og_description = (
-        f"{candidate.get('dataset_name') or candidate.get('dataset_id')}: "
-        f"{display_title}, "
-        f"{'verified' if candidate.get('verified_target') else 'unverified'}, "
-        f"best score {float(candidate.get('score') or 0):.4f}"
+        f"{'Verified' if verified else 'Unverified'} topological dossier for {ds_label}: "
+        f"{display_title}. "
+        "Verified means the geometry matches that dataset’s target rule "
+        "(not experimental physics). "
+        "Open certificates, model-building exclusions, and cite this permalink."
     )
-    og_url = request.url
+    canonical_url = f"https://compute.upg.gr/candidate/{candidate_id}"
+    og_url = canonical_url
+    year = datetime.now(timezone.utc).year
+    cite_title = (
+        f"upg-strings topological dossier: {hodge_bit or candidate_id}"
+        if hodge_bit else
+        f"upg-strings topological dossier: {candidate_id}"
+    )
+    bib_key = 'upgstrings_' + re.sub(r'[^a-zA-Z0-9]', '_', candidate_id)
+    cite_bibtex = (
+        f"@misc{{{bib_key},\n"
+        f"  title = {{{cite_title}}},\n"
+        f"  author = {{Kokkinis, Ioannis}},\n"
+        f"  howpublished = {{\\url{{{canonical_url}}}}},\n"
+        f"  note = {{{display_title}; Verified means dataset target-rule match, "
+        f"not experimental physics; identity scheme upg-strings/sha256-invariants-v1}},\n"
+        f"  year = {{{year}}}\n"
+        f"}}"
+    )
+    cite_plain = (
+        f"Ioannis Kokkinis, {cite_title} ({year}). "
+        f"{canonical_url}. "
+        f"Invariants: {display_title}. "
+        "Verified = dataset target-rule match (software/tool output), not a journal claim."
+    )
+    cite_markdown = (
+        f"[upg-strings dossier — {display_title or candidate_id}]({canonical_url})"
+    )
+    deep_bits = [
+        f"[Certificates]({canonical_url}#certificates)",
+        f"[Model-building]({canonical_url}#model-building)",
+    ]
+    if tabs and tabs.get('mathematics'):
+        deep_bits.insert(0, f"[Mathematics]({canonical_url}#mathematics)")
+    cite_markdown_deep = ' · '.join(deep_bits)
+    json_ld = {
+        '@context': 'https://schema.org',
+        '@type': 'Dataset',
+        'name': cite_title,
+        'description': og_description,
+        'url': canonical_url,
+        'identifier': candidate_id,
+        'creativeWorkStatus': 'Draft',
+        'isAccessibleForFree': True,
+        'license': 'https://compute.upg.gr/about.html',
+        'keywords': [
+            'Calabi-Yau',
+            'Hodge numbers',
+            'string phenomenology',
+            'topological certificate',
+            'upg-strings',
+        ],
+        'creator': {
+            '@type': 'Person',
+            'name': 'Ioannis Kokkinis',
+            'url': 'https://upg.gr',
+        },
+        'publisher': {
+            '@type': 'Organization',
+            'name': 'upg.gr',
+            'url': 'https://upg.gr',
+        },
+        'about': {
+            '@type': 'Thing',
+            'name': display_title or candidate_id,
+            'description': (
+                'Software tool output / Hall-of-Fame dataset entry: topological '
+                'invariants and necessary-condition certificates. Not a peer-reviewed '
+                'journal article.'
+            ),
+        },
+    }
+    if h11 is not None:
+        json_ld['variableMeasured'] = [
+            {'@type': 'PropertyValue', 'name': 'h11', 'value': h11},
+            {'@type': 'PropertyValue', 'name': 'h21', 'value': h21},
+        ]
+        if chi is not None:
+            json_ld['variableMeasured'].append(
+                {'@type': 'PropertyValue', 'name': 'euler_char', 'value': chi}
+            )
+    showcase = bool(tabs and (tabs.get('model_building') or {}).get('showcase'))
+    showcase_note = None
+    if tabs and tabs.get('construction'):
+        showcase = showcase or bool(tabs['construction'].get('showcase'))
+        showcase_note = (
+            tabs['construction'].get('showcase_note')
+            or (tabs.get('model_building') or {}).get('showcase_note')
+        )
+    if candidate_id == 'kreuzer-skarke-66d611d18a9d':
+        showcase = True
+        showcase_note = showcase_note or (
+            'Flagship linking example for the textbook quintic class (h¹¹,h²¹)=(1,101).'
+        )
+
     return render_template(
         'candidate.html',
         candidate=candidate,
@@ -546,6 +671,13 @@ def candidate_page(candidate_id):
         og_title=og_title,
         og_description=og_description,
         og_url=og_url,
+        cite_bibtex=cite_bibtex,
+        cite_plain=cite_plain,
+        cite_markdown=cite_markdown,
+        cite_markdown_deep=cite_markdown_deep,
+        json_ld=json_ld,
+        showcase=showcase,
+        showcase_note=showcase_note,
     )
 
 

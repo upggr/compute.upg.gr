@@ -7,11 +7,16 @@
     {% if candidate %}
     <meta property="og:title" content="{{ og_title }}">
     <meta property="og:description" content="{{ og_description }}">
-    <meta property="og:type" content="website">
+    <meta property="og:type" content="article">
     <meta property="og:url" content="{{ og_url }}">
+    <meta property="og:site_name" content="upg-strings">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="{{ og_title }}">
     <meta name="twitter:description" content="{{ og_description }}">
+    <link rel="canonical" href="{{ og_url }}">
+    {% if json_ld %}
+    <script type="application/ld+json">{{ json_ld | tojson }}</script>
+    {% endif %}
     {% endif %}
 {% endblock %}
 
@@ -29,15 +34,71 @@
         <p class="note"><a href="/candidates.html">← Hall of Fame</a></p>
         <h1>{{ display_title }}</h1>
         <p class="note"><code>{{ candidate.candidate_id }}</code></p>
+        {% if showcase %}
+        <div class="callout callout-info showcase-callout" style="margin: 1rem 0;">
+            <strong>Showcase</strong>
+            {{ showcase_note or 'Flagship example for linking and citation on compute.upg.gr.' }}
+            {% if tabs and tabs.fluxes and tabs.fluxes.periods_full and tabs.fluxes.periods_full.literature %}
+            <div class="note" style="margin-top:0.5rem;">
+                CdOGP literature periods / special points are on the
+                <a href="#fluxes" data-tab-jump="fluxes">Fluxes</a> tab
+                (published closed forms only — no invented numerical integrals).
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
         <p>
             Permanent topological certificate for these invariants.
-            Share this URL — the id is content-addressed from Hodge data, not from a run rank.
+            <strong>Link to this dossier</strong> — the id is content-addressed from Hodge data, not from a run rank.
         </p>
-        <div class="share-row" style="margin: 1rem 0;">
-            <input id="share-url" class="share-input" type="text" readonly value="{{ og_url }}" aria-label="Share URL">
-            <button id="copy-share" class="btn btn-secondary" type="button">Copy link</button>
-            <button id="copy-bibtex" class="btn btn-secondary" type="button">Copy BibTeX</button>
+        <div class="permalink-block" style="margin: 1rem 0;">
+            <label class="share-label" for="share-url">Permalink</label>
+            <div class="share-row" style="margin: 0.35rem 0 0;">
+                <input id="share-url" class="share-input" type="text" readonly value="{{ og_url }}" aria-label="Permalink URL">
+                <button id="copy-share" class="btn btn-secondary" type="button">Copy link</button>
+            </div>
+            <p class="note" style="margin-top:0.5rem;">
+                Deep links:
+                {% if tabs and tabs.mathematics %}
+                <a href="{{ og_url }}#mathematics">#mathematics</a>
+                ·
+                {% endif %}
+                <a href="{{ og_url }}#certificates">#certificates</a>
+                ·
+                <a href="{{ og_url }}#model-building">#model-building</a>
+            </p>
         </div>
+        <details class="cite-panel" open>
+            <summary>Cite this dossier</summary>
+            <p class="note">
+                Software / dataset entry — not a journal article.
+                Verified means a dataset target-rule match, not experimental physics.
+            </p>
+            <div class="cite-grid">
+                <div class="cite-block">
+                    <div class="cite-block-head">
+                        <strong>BibTeX</strong>
+                        <button id="copy-bibtex" class="btn btn-secondary" type="button" data-copy-target="cite-bibtex">Copy BibTeX</button>
+                    </div>
+                    <textarea id="cite-bibtex" class="cite-textarea" readonly rows="8" aria-label="BibTeX citation">{{ cite_bibtex }}</textarea>
+                </div>
+                <div class="cite-block">
+                    <div class="cite-block-head">
+                        <strong>Plain citation</strong>
+                        <button class="btn btn-secondary" type="button" data-copy-target="cite-plain">Copy</button>
+                    </div>
+                    <textarea id="cite-plain" class="cite-textarea" readonly rows="4" aria-label="Plain citation">{{ cite_plain }}</textarea>
+                </div>
+                <div class="cite-block">
+                    <div class="cite-block-head">
+                        <strong>Markdown link</strong>
+                        <button class="btn btn-secondary" type="button" data-copy-target="cite-markdown">Copy</button>
+                    </div>
+                    <textarea id="cite-markdown" class="cite-textarea" readonly rows="2" aria-label="Markdown link">{{ cite_markdown }}</textarea>
+                    <p class="note" style="margin-top:0.35rem;">Deep tabs: {{ cite_markdown_deep }}</p>
+                </div>
+            </div>
+        </details>
         <div class="details-grid">
             <div class="detail-item"><span>Dataset</span><strong>{{ candidate.dataset_name or candidate.dataset_id }}</strong></div>
             <div class="detail-item"><span>Verified</span><strong>{{ 'Yes' if candidate.verified_target else 'No' }}</strong></div>
@@ -70,8 +131,17 @@
                 <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-moduli" id="tabbtn-moduli" data-tab="moduli">Moduli</button>
                 <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-fluxes" id="tabbtn-fluxes" data-tab="fluxes">Fluxes</button>
                 <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-phenomenology" id="tabbtn-phenomenology" data-tab="phenomenology">Phenomenology</button>
+                {% if tabs.mathematics %}
+                <button type="button" class="analysis-tab{% if tabs.mathematics.found %} analysis-tab-found{% endif %}" role="tab" aria-selected="false" aria-controls="tab-mathematics" id="tabbtn-mathematics" data-tab="mathematics">
+                    Mathematics{% if tabs.mathematics.found_badge %} <span class="tab-found-badge">{{ tabs.mathematics.found_badge }}</span>{% endif %}
+                </button>
+                {% endif %}
+                {% if tabs.model_building %}
+                <button type="button" class="analysis-tab{% if tabs.model_building.found %} analysis-tab-found{% endif %}" role="tab" aria-selected="false" aria-controls="tab-model-building" id="tabbtn-model-building" data-tab="model-building">
+                    Model-building{% if tabs.model_building.found_badge %} <span class="tab-found-badge">{{ tabs.model_building.found_badge }}</span>{% endif %}
+                </button>
+                {% endif %}
                 <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-construction" id="tabbtn-construction" data-tab="construction">Construction</button>
-                <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-model-building" id="tabbtn-model-building" data-tab="model-building">Model-building</button>
                 <button type="button" class="analysis-tab" role="tab" aria-selected="false" aria-controls="tab-certificates" id="tabbtn-certificates" data-tab="certificates">Certificates</button>
             </div>
 
@@ -496,6 +566,192 @@
                 </ul>
             </div>
 
+            {% if tabs.mathematics %}
+            <div class="analysis-tabpanel" role="tabpanel" id="tab-mathematics" aria-labelledby="tabbtn-mathematics" data-tab-panel="mathematics" hidden>
+                <p class="honesty-label"><span class="pill">geometry · not string proofs</span> {{ tabs.mathematics.honesty }}</p>
+
+                {% if tabs.mathematics.found %}
+                <div class="found-banner found-banner-yes" role="status">
+                    <div class="found-banner-kicker">{{ tabs.mathematics.match.headline }}</div>
+                    <p>{{ tabs.mathematics.match.blurb }}</p>
+                    <ul class="found-reason-list">
+                        {% for reason in tabs.mathematics.match.reasons %}
+                        <li>{{ reason }}</li>
+                        {% endfor %}
+                    </ul>
+                    <p class="note">{{ tabs.mathematics.specimen.framing }}</p>
+                </div>
+                {% else %}
+                <div class="found-banner found-banner-no" role="status">
+                    <div class="found-banner-kicker">{{ tabs.mathematics.match.headline if tabs.mathematics.match else 'Specimen pending' }}</div>
+                    <p>{{ tabs.mathematics.match.blurb if tabs.mathematics.match else tabs.mathematics.specimen.framing }}</p>
+                    <p class="note">{{ tabs.mathematics.specimen.detail }}</p>
+                </div>
+                {% endif %}
+
+                <h3>Invariants for geometers</h3>
+                <div class="details-grid">
+                    <div class="detail-item"><span>h¹¹</span><strong>{{ tabs.mathematics.invariants.h11 }}</strong></div>
+                    <div class="detail-item"><span>h²¹</span><strong>{{ tabs.mathematics.invariants.h21 }}</strong></div>
+                    {% if tabs.mathematics.invariants.h31 is not none %}
+                    <div class="detail-item"><span>h³¹</span><strong>{{ tabs.mathematics.invariants.h31 }}</strong></div>
+                    {% endif %}
+                    <div class="detail-item"><span>χ</span><strong>{{ tabs.mathematics.invariants.euler_char }}</strong></div>
+                    {% if tabs.mathematics.invariants.b3 is not none %}
+                    <div class="detail-item"><span>b₃</span><strong>{{ tabs.mathematics.invariants.b3 }}</strong></div>
+                    {% endif %}
+                    {% if tabs.mathematics.invariants.picard_fuchs_order is not none %}
+                    <div class="detail-item"><span>Period count proxy K</span><strong>{{ tabs.mathematics.invariants.picard_fuchs_order }}</strong></div>
+                    {% endif %}
+                    <div class="detail-item"><span>Mirror (h¹¹, h²¹)</span><strong>({{ tabs.mathematics.invariants.mirror_h11 }}, {{ tabs.mathematics.invariants.mirror_h21 }})</strong></div>
+                    <div class="detail-item"><span>Mirror χ</span><strong>{{ tabs.mathematics.invariants.mirror_euler }}</strong></div>
+                </div>
+                {% if tabs.mathematics.invariants.mirror_partner %}
+                <p class="mirror-partner">
+                    Hodge mirror:
+                    {% if tabs.mathematics.invariants.mirror_partner.on_board and tabs.mathematics.invariants.mirror_partner.candidate_id %}
+                    <a href="/candidate/{{ tabs.mathematics.invariants.mirror_partner.candidate_id }}#mathematics">{{ tabs.mathematics.invariants.mirror_partner.display }}</a>
+                    <span class="pill">on board</span>
+                    {% else %}
+                    <strong>{{ tabs.mathematics.invariants.mirror_partner.display }}</strong>
+                    <span class="note">— not yet in the Hall of Fame</span>
+                    {% endif %}
+                </p>
+                {% endif %}
+
+                <h3>Mirror symmetry</h3>
+                <p>{{ tabs.mathematics.mirror_symmetry.explanation }}</p>
+                <p class="honesty-label"><span class="pill">{{ tabs.mathematics.mirror_symmetry.level }}</span> {{ tabs.mathematics.mirror_symmetry.honesty }}</p>
+                <div class="equation-board">
+                    {% for item in tabs.mathematics.mirror_symmetry.formulas %}
+                    <figure class="equation-card">
+                        <figcaption>{{ item.name }}</figcaption>
+                        <div class="tex tex-display">{{ item.tex }}</div>
+                    </figure>
+                    {% endfor %}
+                </div>
+                {% if tabs.mathematics.mirror_symmetry.note %}
+                <p class="note">{{ tabs.mathematics.mirror_symmetry.note }}</p>
+                {% endif %}
+
+                <h3>Enumerative geometry / periods</h3>
+                <p>{{ tabs.mathematics.enumerative.summary }}</p>
+                <div class="details-grid">
+                    <div class="detail-item"><span>Periods status</span><strong>{{ tabs.mathematics.enumerative.periods_status }}</strong></div>
+                    <div class="detail-item"><span>Pipeline stage</span><strong>{{ tabs.mathematics.enumerative.pipeline_stage or 'pending' }}</strong></div>
+                </div>
+                <p class="note">{{ tabs.mathematics.enumerative.pipeline_note }}</p>
+                <p class="note">{{ tabs.mathematics.enumerative.gw_note }}</p>
+                {% if tabs.mathematics.enumerative.checklist %}
+                <ul class="check-list readiness-list">
+                    {% for step in tabs.mathematics.enumerative.checklist %}
+                    <li class="{{ 'check-pass' if step.filled else 'check-fail' }}">
+                        <span class="check-mark">{{ step.status or ('HAVE' if step.filled else 'NEED') }}</span>
+                        <div>
+                            <strong>{{ step.label or step.stage }}</strong>
+                            {% if step.detail %}<div class="note">{{ step.detail }}</div>{% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if tabs.mathematics.enumerative.periods_literature %}
+                <h4>Literature periods (CdOGP)</h4>
+                {% if tabs.mathematics.enumerative.periods_full and tabs.mathematics.enumerative.periods_full.mirror_family_pf_tex %}
+                <div class="tex tex-display">{{ tabs.mathematics.enumerative.periods_full.mirror_family_pf_tex }}</div>
+                {% endif %}
+                <p class="note">{{ tabs.mathematics.enumerative.periods_literature.honesty }}</p>
+                {% if tabs.mathematics.enumerative.periods_literature.references %}
+                <p class="note">Refs: {{ tabs.mathematics.enumerative.periods_literature.references | join('; ') }}</p>
+                {% endif %}
+                {% else %}
+                <p class="callout callout-warning" style="margin-top: 0.75rem;">{{ tabs.mathematics.enumerative.handoff }}</p>
+                {% endif %}
+
+                <h3>Toric / combinatorial classification</h3>
+                <p class="honesty-label"><span class="pill">{{ tabs.mathematics.toric.status }}</span> {{ tabs.mathematics.toric.note }}</p>
+                <div class="details-grid">
+                    {% if tabs.mathematics.toric.ambient %}
+                    <div class="detail-item"><span>Ambient</span><strong>{{ tabs.mathematics.toric.ambient }}</strong></div>
+                    {% endif %}
+                    {% if tabs.mathematics.toric.weight_system %}
+                    <div class="detail-item"><span>Weight system</span><strong><code>{{ tabs.mathematics.toric.weight_system }}</code></strong></div>
+                    {% endif %}
+                    {% if tabs.mathematics.toric.geometry_source %}
+                    <div class="detail-item"><span>Source</span><strong>{{ tabs.mathematics.toric.geometry_source }}</strong></div>
+                    {% endif %}
+                    <div class="detail-item"><span>Vertices present</span><strong>{{ 'yes' if tabs.mathematics.toric.has_vertices else 'no' }}</strong></div>
+                </div>
+                {% if tabs.mathematics.toric.hypersurface_equation %}
+                <p class="note">{{ tabs.mathematics.toric.hypersurface_equation }}</p>
+                {% endif %}
+                {% if tabs.mathematics.toric.vertices %}
+                <h4>Vertices / vertex matrix</h4>
+                <pre class="vertex-matrix">{{ tabs.mathematics.toric.vertices | tojson(indent=2) }}</pre>
+                {% endif %}
+                {% if tabs.mathematics.toric.configuration_matrix %}
+                <h4>Configuration matrix</h4>
+                <pre class="vertex-matrix">{{ tabs.mathematics.toric.configuration_matrix | tojson(indent=2) }}</pre>
+                {% endif %}
+                {% if tabs.mathematics.toric.external_links %}
+                <ul class="meaning-list">
+                    {% for link in tabs.mathematics.toric.external_links %}
+                    <li>
+                        <a href="{{ link.url }}" rel="noopener noreferrer" target="_blank">{{ link.label }}</a>
+                        {% if link.detail %}<span class="note"> — {{ link.detail }}</span>{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                <h3>Hodge theory / moduli</h3>
+                <p>{{ tabs.mathematics.hodge_theory.blurb }}</p>
+                <div class="equation-board">
+                    {% for item in tabs.mathematics.hodge_theory.formulas %}
+                    <figure class="equation-card">
+                        <figcaption>{{ item.name }}</figcaption>
+                        <div class="tex tex-display">{{ item.tex }}</div>
+                    </figure>
+                    {% endfor %}
+                </div>
+                <p class="note">{{ tabs.mathematics.hodge_theory.vhs_note }}</p>
+
+                <h3>Cite this specimen</h3>
+                <p class="note">{{ tabs.mathematics.cite.framing }}</p>
+                <div class="cite-grid">
+                    <div class="cite-block">
+                        <div class="cite-block-head"><span>BibTeX</span></div>
+                        <textarea class="cite-textarea" readonly rows="7" aria-label="BibTeX citation">{{ tabs.mathematics.cite.bibtex }}</textarea>
+                    </div>
+                    <div class="cite-block">
+                        <div class="cite-block-head"><span>Markdown</span></div>
+                        <textarea class="cite-textarea" readonly rows="3" aria-label="Markdown citation">{{ tabs.mathematics.cite.markdown }}
+
+{{ tabs.mathematics.cite.markdown_deep }}</textarea>
+                    </div>
+                </div>
+                <p class="note">
+                    Deep links:
+                    <a href="{{ tabs.mathematics.cite.deep_links.mathematics }}">#mathematics</a>
+                    ·
+                    <a href="{{ tabs.mathematics.cite.deep_links.certificates }}">#certificates</a>
+                </p>
+
+                <h3>Handoff checklist</h3>
+                <ul class="check-list readiness-list">
+                    {% for step in tabs.mathematics.handoff %}
+                    <li class="{{ 'check-pass' if step.ready else 'check-fail' }}">
+                        <span class="check-mark">{{ 'READY' if step.ready else 'TODO' }}</span>
+                        <div>
+                            <strong>{{ step.label }}</strong>
+                            <div class="note">{{ step.detail }}</div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
             <div class="analysis-tabpanel" role="tabpanel" id="tab-construction" aria-labelledby="tabbtn-construction" data-tab-panel="construction" hidden>
                 <p class="honesty-label"><span class="pill">metadata · curated · workplan</span> {{ tabs.construction.honesty }}</p>
                 {% if tabs.construction.summary %}
@@ -553,6 +809,24 @@
                         {% if cite.source %}
                         <span class="note"> — {{ cite.source }}</span>
                         {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if tabs.construction.pipeline_checklist %}
+                <h3>Pipeline stage checklist</h3>
+                <p class="note">
+                    Honest progress: vertices → triangulation / ambient → intersections → periods.
+                    Literature / combinatorial counts are labeled; numerical periods are never invented.
+                </p>
+                <ul class="check-list">
+                    {% for step in tabs.construction.pipeline_checklist %}
+                    <li class="{{ 'check-pass' if step.filled else 'check-fail' }}">
+                        <span class="check-mark">{% if step.status == 'literature' %}LIT{% elif step.filled %}HAVE{% else %}TODO{% endif %}</span>
+                        <div>
+                            <strong>{{ step.label }}</strong>
+                            {% if step.detail %}<div class="note">{{ step.detail }}</div>{% endif %}
+                        </div>
                     </li>
                     {% endfor %}
                 </ul>
@@ -629,8 +903,20 @@
                 {% endif %}
             </div>
 
+            {% if tabs.model_building %}
             <div class="analysis-tabpanel" role="tabpanel" id="tab-model-building" aria-labelledby="tabbtn-model-building" data-tab-panel="model-building" hidden>
                 <p class="honesty-label"><span class="pill">model-building · necessary only</span> {{ tabs.model_building.honesty_banner or tabs.model_building.honesty }}</p>
+                {% if tabs.model_building.found %}
+                <div class="found-banner found-banner-yes" role="status">
+                    <div class="found-banner-kicker">{{ tabs.model_building.match.headline }}</div>
+                    <p>{{ tabs.model_building.match.blurb }}</p>
+                    <ul class="found-reason-list">
+                        {% for reason in tabs.model_building.match.reasons %}
+                        <li>{{ reason }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
                 <div class="callout callout-warning" style="margin-top: 0.75rem;">
                     <strong>Honesty</strong>
                     {{ tabs.model_building.honesty_banner or tabs.model_building.honesty }}
@@ -639,21 +925,46 @@
                 <h3>Geometry pipeline stage</h3>
                 {% set pipe = tabs.model_building.geometry_pipeline %}
                 <p class="note">{{ pipe.pipeline_note }}</p>
+                <p class="note">
+                    Pipeline: vertices → triangulation (ambient) → intersections
+                    (combinatorial / literature unless offline dump) → periods
+                    (CdOGP literature formulas when applicable — never invented numerics).
+                </p>
+                {% if tabs.model_building.showcase %}
+                <div class="callout callout-info" style="margin: 0.75rem 0;">
+                    <strong>Showcase</strong>
+                    {{ tabs.model_building.showcase_note or 'Flagship linking example.' }}
+                </div>
+                {% endif %}
                 <ul class="check-list">
                     {% for step in pipe.checklist %}
                     <li class="{{ 'check-pass' if step.filled else 'check-fail' }}">
-                        <span class="check-mark">{{ 'PASS' if step.filled else 'PENDING' }}</span>
+                        <span class="check-mark">{% if step.status == 'literature' %}LIT{% elif step.filled %}HAVE{% else %}TODO{% endif %}</span>
                         <div>
                             <strong>{{ step.label }}</strong>
                             {% if pipe.stage == step.stage %}
-                            <div class="note">current stage</div>
+                            <div class="note">current offline stage</div>
+                            {% endif %}
+                            {% if step.detail %}
+                            <div class="note">{{ step.detail }}</div>
                             {% endif %}
                         </div>
                     </li>
                     {% endfor %}
                 </ul>
+                {% if tabs.model_building.periods_literature %}
+                <h3>Periods showcase (literature)</h3>
+                <p class="note">{{ tabs.model_building.periods_literature.honesty }}</p>
+                {% if tabs.model_building.periods_literature.mirror_family_pf_tex %}
+                <div class="tex tex-display">{{ tabs.model_building.periods_literature.mirror_family_pf_tex }}</div>
+                {% endif %}
+                <p class="note">See also the <a href="#fluxes" data-tab-jump="fluxes">Fluxes</a> tab for special points.</p>
+                {% endif %}
                 {% if pipe.intersections %}
-                <h3>Intersections (offline)</h3>
+                <h3>Intersections</h3>
+                {% if pipe.intersections is mapping and pipe.intersections.honesty %}
+                <p class="note">{{ pipe.intersections.honesty }}</p>
+                {% endif %}
                 <pre class="vertex-matrix">{{ pipe.intersections | tojson(indent=2) }}</pre>
                 {% endif %}
 
@@ -711,6 +1022,7 @@
                 <p class="note">No literature model card is seeded for this Hodge class yet.</p>
                 {% endif %}
             </div>
+            {% endif %}
 
             <div class="analysis-tabpanel" role="tabpanel" id="tab-certificates" aria-labelledby="tabbtn-certificates" data-tab-panel="certificates" hidden>
                 <p class="honesty-label"><span class="pill">certificates · not theorems</span> {{ tabs.certificates.honesty }}</p>
@@ -934,24 +1246,32 @@
         });
     }
 
-    const bibBtn = document.getElementById('copy-bibtex');
-    if (bibBtn) {
-        bibBtn.addEventListener('click', async () => {
-            const bib = `@misc{upgstrings_${candidateId.replace(/[^a-zA-Z0-9]/g, '_')},
-  title = {upg-strings topological certificate: ${candidateId}},
-  howpublished = {\\url{${window.location.href}}},
-  note = {h11=${h11}, h21=${h21}, chi=${chi}; identity scheme upg-strings/sha256-invariants-v1},
-  year = {${new Date().getFullYear()}}
-}`;
+    document.querySelectorAll('[data-copy-target]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const el = document.getElementById(btn.getAttribute('data-copy-target'));
+            if (!el) return;
+            const text = el.value != null ? el.value : el.textContent;
+            const original = btn.textContent;
             try {
-                await navigator.clipboard.writeText(bib);
-                bibBtn.textContent = 'Copied';
-                setTimeout(() => { bibBtn.textContent = 'Copy BibTeX'; }, 1200);
+                await navigator.clipboard.writeText(text);
+                btn.textContent = 'Copied';
+                setTimeout(() => { btn.textContent = original; }, 1200);
             } catch (err) {
-                console.error(err);
+                if (el.select) el.select();
             }
         });
-    }
+    });
+
+    document.querySelectorAll('[data-tab-jump]').forEach((link) => {
+        link.addEventListener('click', (ev) => {
+            const name = link.getAttribute('data-tab-jump');
+            const btn = document.querySelector(`[data-analysis-tabs] [data-tab="${name}"]`);
+            if (btn) {
+                ev.preventDefault();
+                btn.click();
+            }
+        });
+    });
 
     async function runAnalysis() {
         const status = document.getElementById('analysis-status');

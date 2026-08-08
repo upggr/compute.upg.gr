@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% set active_page = "about" %}
+
+{% block title %}Honest landscape dossiers (draft note) - upg-strings{% endblock %}
+{% block description %}Draft note: honest ML, topological no-go certificates, and open Calabi–Yau dossiers on compute.upg.gr.{% endblock %}
+{% block og_tags %}
+    <meta property="og:title" content="Honest landscape dossiers — draft note">
+    <meta property="og:description" content="Honest ML + topological certificates + citeable open dossiers. Draft by Ioannis Kokkinis / upg.gr.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://compute.upg.gr/note/honest-landscape">
+    <meta property="og:site_name" content="upg-strings">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Honest landscape dossiers — draft note">
+    <meta name="twitter:description" content="Honest ML + topological certificates + citeable open dossiers.">
+    <link rel="canonical" href="https://compute.upg.gr/note/honest-landscape">
+{% endblock %}
+
+{% block content %}
+<main class="container note-page">
+    <section class="section">
+        <p class="note"><a href="/about.html">← About</a> · <a href="/note/honest-landscape.md">Markdown source</a></p>
+        <p class="pill">Draft note · not an arXiv upload</p>
+        <h1>Honest ML, topological no-go certificates, and open Calabi–Yau dossiers</h1>
+        <p class="note">
+            Ioannis Kokkinis / <a href="https://upg.gr" rel="noopener noreferrer" target="_blank">upg.gr</a>
+            · 2026-08-09 ·
+            <a href="mailto:ioannis.kokkinis@upg.gr">ioannis.kokkinis@upg.gr</a>
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>Abstract</h2>
+        <p>
+            We describe a small, public research tool that ranks synthetic Calabi–Yau-like Hodge targets,
+            attaches shareable dossiers (topological identities, necessary-condition certificates,
+            literature model cards), and refuses common overclaims: label leakage in ML marketing,
+            invented period integrals, and spectra without citations. The product surface is the
+            Hall of Fame and permalinked candidate pages on
+            <a href="https://compute.upg.gr">compute.upg.gr</a>.
+            This note is a citable draft for linking; a formal arXiv submission may follow after feedback.
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>1. The problem: label leakage and overclaim</h2>
+        <p>String-phenomenology tooling often mixes three layers that should stay separate:</p>
+        <ol>
+            <li><strong>Search / ranking</strong> over large combinatorial spaces (e.g. Kreuzer–Skarke-inspired Hodge draws).</li>
+            <li><strong>Geometry backends</strong> (PALP, CYTools, …) that compute triangulations, intersections, periods.</li>
+            <li><strong>Phenomenology</strong> (flux vacua, bundles, soft terms) that needs vevs, branes, and literature-backed spectra.</li>
+        </ol>
+        <p>
+            Marketing shortcuts are easy: report retrieval lift when the target label (e.g. |χ|) was in the feature set;
+            call a Hodge pair a “vacuum”; ship numerical periods that were never computed; quote soft spectra without a reference.
+            An honest stack should <strong>hold out</strong> target-defining labels from the model, state what “Verified” means
+            (dataset target-rule match on synthetic draws — <em>not</em> experimental physics), and mark proxies vs exact identities vs unavailable geometry.
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>2. What we built</h2>
+        <p><strong>upg-strings</strong> provides:</p>
+        <ul>
+            <li>Synthetic retrieval demos with leakage hold-out and baseline comparisons.</li>
+            <li>A persistent <a href="/candidates.html">Hall of Fame</a> of content-addressed candidates.</li>
+            <li>Per-candidate dossiers: identities, certificates, construction metadata, Model-building exclusions + literature cards.</li>
+            <li>An offline geometry pipeline ladder: vertices → triangulation / ambient → intersections → periods — without running CYTools in the web container.</li>
+        </ul>
+        <p>
+            <strong>Flagship showcase:</strong>
+            <a href="/candidate/kreuzer-skarke-66d611d18a9d">kreuzer-skarke-66d611d18a9d</a>
+            — textbook quintic class (h¹¹,h²¹)=(1,101).
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>3. How to cite a candidate</h2>
+        <p>
+            Each dossier has a stable URL <code>https://compute.upg.gr/candidate/&lt;id&gt;</code>
+            and a one-click Cite panel (BibTeX, plain citation, Markdown), plus deep links
+            <code>#certificates</code> and <code>#model-building</code>.
+            Pages expose Schema.org <code>Dataset</code> JSON-LD as software/tool output — not a journal paper.
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>4. Limitations</h2>
+        <ul>
+            <li>Demo corpora are synthetic Hodge draws, not a live full KS census crawl.</li>
+            <li>Hodge numbers do not uniquely fix a polytope or vacuum.</li>
+            <li>Exclusion certificates are necessary conditions only — never sufficiency.</li>
+            <li>Spectra appear only when cited; numerical periods beyond published closed forms are not computed here.</li>
+        </ul>
+    </section>
+
+    <section class="section">
+        <h2>5. Live links</h2>
+        <ul class="meaning-list">
+            <li><a href="/">Home</a></li>
+            <li><a href="/candidates.html">Hall of Fame</a></li>
+            <li><a href="/candidate/kreuzer-skarke-66d611d18a9d">Quintic showcase</a></li>
+            <li><a href="/lookup.html">Geometry lookup</a></li>
+            <li><a href="/api/exclusions?dataset_id=kreuzer-skarke&amp;h11=1&amp;h21=101">Exclusions API (example)</a></li>
+            <li><a href="/api/model-cards?dataset_id=kreuzer-skarke&amp;h11=1&amp;h21=101">Model cards API (example)</a></li>
+            <li><a href="/note/honest-landscape.md">This note (Markdown)</a></li>
+            <li><a href="/about.html">About</a></li>
+        </ul>
+    </section>
+
+    <section class="section">
+        <h2>Status</h2>
+        <p class="note">
+            Draft for community feedback. Not yet submitted to arXiv.
+            Outreach copy: <code>docs/notes/outreach-thread.md</code> in the repository.
+        </p>
+    </section>
+</main>
+{% endblock %}

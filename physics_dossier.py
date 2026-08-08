@@ -14,6 +14,7 @@ import os
 from typing import Any, Dict, List, Optional, Tuple
 
 import geometry_store
+import math_specimen
 import model_cards
 import model_exclusions
 import physics_extensions
@@ -1581,6 +1582,46 @@ def build_tabs(
         },
     }
 
+    mathematics = math_specimen.mathematics_payload(
+        dossier,
+        construction=out_construction,
+        mirror_partner=mirror_partner,
+        mirror_block=mirror_block,
+        periods=periods,
+        periods_full=periods_full,
+        periods_literature=periods_literature,
+        external_links=links,
+        pipeline_stage=stage,
+        pipeline_note=pipeline or geometry_store.pipeline_note(stage),
+        pipeline_checklist=stage_checklist,
+        candidate_id=(construction or {}).get('candidate_id'),
+        tags=tags,
+    )
+    # Surface FOUND on Model-building when exclusions/cards/showcase hit too.
+    mb_reasons = []
+    if showcase:
+        mb_reasons.append('Flagship showcase / literature periods')
+    if any(
+        (ex or {}).get('ok') and (ex or {}).get('id') == 'heterotic_standard_embedding_3gen'
+        for ex in exclusions
+    ):
+        mb_reasons.append('Passes heterotic |χ|=6 three-generation necessary condition')
+    if cards:
+        mb_reasons.append(f'{len(cards)} literature model card(s) matched')
+    model_building['found'] = bool(mb_reasons)
+    model_building['found_badge'] = 'FOUND' if mb_reasons else None
+    model_building['match'] = {
+        'found': bool(mb_reasons),
+        'headline': 'MODEL HIT FOUND' if mb_reasons else 'No model-card hit',
+        'blurb': (
+            'Literature cards and/or topological necessary conditions match this Hodge class.'
+            if mb_reasons
+            else 'No literature model card or showcase condition matched.'
+        ),
+        'reasons': mb_reasons,
+        'tab_badge': 'FOUND' if mb_reasons else None,
+    }
+
     return {
         'ok': True,
         'dataset_id': dataset_id,
@@ -1588,7 +1629,8 @@ def build_tabs(
         'moduli': moduli,
         'fluxes': fluxes,
         'phenomenology': pheno,
+        'mathematics': mathematics,
+        'model_building': model_building,
         'construction': out_construction,
         'certificates': certificates,
-        'model_building': model_building,
     }

@@ -13,18 +13,19 @@
 {% block content %}
     <main class="container">
         <section class="section">
-            <h1>Candidate Gallery</h1>
+            <h1>Hall of Fame</h1>
             <p>
-                Each card is one Calabi–Yau geometry the model ranked highly for a search goal.
-                <strong>Rank / score</strong> = how likely the model thinks it matches the goal.
-                <strong>Verified</strong> = we checked the ground-truth rule and it really does.
+                Persistent board of verified geometries the tool has found.
+                Each card has its own shareable page. <strong>Rank / score</strong> is the
+                best the model has assigned so far; <strong>Verified</strong> means it
+                passed that dataset’s target rule.
             </p>
             <p id="gallery-target" class="note">Target for Kreuzer–Skarke: manifolds with |χ| &lt; 100.</p>
             <div class="candidate-controls">
                 <div class="control-group">
                     <label for="gallery-view">Source</label>
                     <select id="gallery-view">
-                        <option value="featured" selected>Featured examples</option>
+                        <option value="featured" selected>Hall of fame</option>
                         <option value="live">Live search results</option>
                     </select>
                 </div>
@@ -220,20 +221,23 @@
         }
 
         grid.innerHTML = list.map(candidate => {
-            const featureTags = candidate.features.map(([label, value]) =>
+            const featureTags = (candidate.features || []).map(([label, value]) =>
                 `<span class="pill">${label}: ${value}</span>`
             ).join('');
             const verifiedText = candidate.verified_target ? 'Verified' : 'Unverified';
             const selectedClass = selectedIds.has(candidate.candidate_id) ? 'selected' : '';
+            const score = Number(candidate.score || 0).toFixed(4);
+            const detailHref = `/candidate/${encodeURIComponent(candidate.candidate_id)}`;
             return `
-                <div class="candidate-card ${selectedClass}" data-id="${candidate.candidate_id}" data-dataset="${candidate.dataset_id}" data-seed="${candidate.viz_seed}" data-score="${candidate.score}" data-rank="${candidate.rank}" data-verified="${candidate.verified_target}" data-name="${candidate.dataset_name}">
-                    <div class="candidate-rank">#${candidate.rank}</div>
+                <a class="candidate-card ${selectedClass}" href="${detailHref}" data-id="${candidate.candidate_id}" data-dataset="${candidate.dataset_id}" data-seed="${candidate.viz_seed}" data-score="${candidate.score}" data-rank="${candidate.rank}" data-verified="${candidate.verified_target}" data-name="${candidate.dataset_name}">
+                    <div class="candidate-rank">#${candidate.rank ?? '—'}</div>
                     <h3 class="candidate-title">${candidate.candidate_id}</h3>
-                    <p class="candidate-meta">${candidate.dataset_name}</p>
-                    <div class="candidate-score">Score: ${candidate.score.toFixed(4)}</div>
+                    <p class="candidate-meta">${candidate.dataset_name || candidate.dataset_id}</p>
+                    <div class="candidate-score">Score: ${score}</div>
                     <div class="candidate-features">${featureTags}</div>
                     <div class="candidate-tag ${candidate.verified_target ? 'verified' : 'unverified'}">${verifiedText}</div>
-                </div>
+                    <span class="candidate-open">Open page →</span>
+                </a>
             `;
         }).join('');
     }
@@ -631,6 +635,7 @@
         const card = event.target.closest('.candidate-card');
         if (!card || card.classList.contains('candidate-card-loading')) return;
         if (document.getElementById('select-mode').checked) {
+            event.preventDefault();
             const id = card.dataset.id;
             if (selectedIds.has(id)) {
                 selectedIds.delete(id);
@@ -640,18 +645,8 @@
                 card.classList.add('selected');
             }
             updateSelectionUI();
-            return;
         }
-
-        openModal({
-            candidate_id: card.dataset.id,
-            dataset_id: card.dataset.dataset,
-            rank: Number(card.dataset.rank),
-            score: Number(card.dataset.score),
-            verified_target: card.dataset.verified === 'true',
-            dataset_name: card.dataset.name,
-            viz_seed: Number(card.dataset.seed)
-        });
+        // Otherwise follow the card link to the shareable detail page.
     });
 
     document.getElementById('modal-close').addEventListener('click', closeModal);

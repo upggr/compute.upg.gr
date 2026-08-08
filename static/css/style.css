@@ -535,6 +535,9 @@ tbody tr:hover {
     box-shadow: 0 8px 20px rgba(13, 58, 107, 0.08);
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+    display: block;
 }
 
 .candidate-card.selected {
@@ -889,7 +892,33 @@ html[data-theme="dark"] .compat-pill {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
 }
 
-/* Renderer page — museum plinth */
+.candidate-open {
+    display: inline-block;
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.share-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.share-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: inherit;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85rem;
+}
+
 .renderer-shell {
     background: #0c1016;
     border-radius: 18px;

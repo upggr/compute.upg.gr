@@ -5,10 +5,12 @@ import json
 import os
 import numpy as np
 import hashlib
-from datetime import datetime
+from collections import OrderedDict
+from datetime import datetime, timezone
 from cy_search import run_search, get_sample_results  # Demo implementation
 from cy_search_real import run_real_search, list_available_datasets, CYSearchEngine  # Real implementation
 from datasets_registry import DatasetRegistry, get_info_density_dataset
+import hall_of_fame
 
 app = Flask(__name__)
 
@@ -18,8 +20,87 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 ANALYSIS_DIR = os.path.join('static', 'data', 'analysis')
 os.makedirs(ANALYSIS_DIR, exist_ok=True)
 
-CANDIDATE_CACHE = {}
+# Request limits. These bound the work a single unauthenticated request can
+# cause: without them one POST can occupy a gunicorn worker indefinitely.
+MAX_N_CANDIDATES = 50000
+MAX_TOP_K = 1000
+MAX_CUSTOM_ROWS = 10000
+CANDIDATE_CACHE_MAXSIZE = 64
+
+# Bounded LRU cache: the key includes user-controlled params, so an unbounded
+# dict here grows without limit as callers vary the seed.
+CANDIDATE_CACHE = OrderedDict()
 FEATURED_PATH = os.path.join('static', 'data', 'featured_candidates.json')
+HALL_OF_FAME_PATH = os.path.join('static', 'data', 'hall_of_fame.sqlite')
+
+
+def _utcnow_iso():
+    """Timezone-aware UTC timestamp (datetime.utcnow() is deprecated in 3.12+)."""
+    return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+
+
+def _bounded_int(value, default, minimum, maximum):
+    """Coerce a request parameter to an int clamped to [minimum, maximum].
+
+    Falls back to `default` when the value is missing or non-numeric, so that
+    malformed input yields a usable request rather than a 500.
+    """
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, min(parsed, maximum))
+
+
+def _is_known_dataset(dataset_id):
+    """Check a dataset id without raising (which would leak the registry keys)."""
+    return any(d['id'] == dataset_id for d in list_available_datasets())
+
+
+# Topological invariants that identify a geometry, per dataset. Deliberately
+# excludes run artifacts (rank, score, verified_target) so the same manifold
+# gets the same id regardless of which search surfaced it.
+IDENTITY_FIELDS = {
+    'kreuzer-skarke': ('h11', 'h21', 'euler_char'),
+    'cy5-folds': ('h11', 'h21', 'h31', 'euler_char'),
+    'heterotic': ('h11', 'h21', 'euler_char'),
+    'info-density': ('h11', 'h21', 'euler_char'),
+}
+
+
+def canonical_id(dataset_id, result):
+    """Build a stable, content-addressed id for a candidate.
+
+    The old scheme was f"{dataset_id}-{rank:03d}", i.e. a position in one
+    ranking: the same string named different manifolds for different seeds or
+    n_candidates, so it could not be used to refer to a geometry at all.
+
+    Here the id is derived from the invariants themselves, so it is stable
+    across runs and reproducible by anyone holding the same numbers.
+    """
+    fields = IDENTITY_FIELDS.get(dataset_id, ('h11', 'h21', 'euler_char'))
+    missing = [f for f in fields if result.get(f) is None]
+    if missing:
+        raise ValueError(f"cannot build id, missing invariants: {missing}")
+    # Canonical text form -> hash. Sorted, explicit, and stable across versions.
+    payload = f"{dataset_id}|" + "|".join(f"{f}={int(result[f])}" for f in fields)
+    digest = hashlib.sha256(payload.encode('utf-8')).hexdigest()[:12]
+    return f"{dataset_id}-{digest}"
+
+
+def identity_payload(dataset_id, result):
+    """The exact invariants an id commits to, for display and verification."""
+    fields = IDENTITY_FIELDS.get(dataset_id, ('h11', 'h21', 'euler_char'))
+    return {f: int(result[f]) for f in fields if result.get(f) is not None}
+
+
+# Seed curated examples into the persistent board on first boot (empty DB only).
+hall_of_fame.init_db(HALL_OF_FAME_PATH)
+hall_of_fame.seed_from_featured(
+    featured_path=FEATURED_PATH,
+    canonical_id_fn=canonical_id,
+    db_path=HALL_OF_FAME_PATH,
+)
 
 
 @app.route('/')
@@ -54,14 +135,55 @@ def demo():
 
 @app.route('/candidates.html')
 def candidates():
-    """Candidates gallery page"""
+    """Candidate gallery / hall of fame"""
     return render_template('candidates.html')
+
+
+@app.route('/candidate/<path:candidate_id>')
+def candidate_page(candidate_id):
+    """Shareable permanent detail page for one hall-of-fame geometry."""
+    candidate = hall_of_fame.get_candidate(candidate_id, db_path=HALL_OF_FAME_PATH)
+    if not candidate:
+        # Fall back to API-shaped lookup across live cache / featured seed ids.
+        return render_template('candidate.html', candidate=None, candidate_id=candidate_id), 404
+
+    og_title = f"{candidate['candidate_id']} — upg-strings"
+    features = dict(candidate.get('features') or [])
+    h11 = candidate.get('h11') if candidate.get('h11') is not None else features.get('h11')
+    h21 = candidate.get('h21') if candidate.get('h21') is not None else features.get('h21')
+    chi = candidate.get('euler_char')
+    if chi is None:
+        chi = features.get('χ', features.get('euler_char'))
+    og_description = (
+        f"{candidate.get('dataset_name') or candidate.get('dataset_id')}: "
+        f"h11={h11}, h21={h21}, χ={chi}, "
+        f"{'verified' if candidate.get('verified_target') else 'unverified'}, "
+        f"best score {float(candidate.get('score') or 0):.4f}"
+    )
+    og_url = request.url
+    return render_template(
+        'candidate.html',
+        candidate=candidate,
+        candidate_id=candidate_id,
+        h11=h11,
+        h21=h21,
+        chi=chi,
+        og_title=og_title,
+        og_description=og_description,
+        og_url=og_url,
+    )
 
 
 @app.route('/eli5.html')
 def eli5():
     """ELI5 page"""
     return render_template('eli5.html')
+
+
+@app.route('/lookup.html')
+def lookup():
+    """Look up a geometry by its invariants"""
+    return render_template('lookup.html', active_page='lookup')
 
 
 @app.route('/render.html')
@@ -121,12 +243,18 @@ def run_demo():
     """
     try:
         params = request.get_json() or {}
-        top_k = params.get('top_k', 100)
-        seed = params.get('seed', 42)
+        top_k = _bounded_int(params.get('top_k'), 100, 1, MAX_TOP_K)
+        seed = _bounded_int(params.get('seed'), 42, 0, 2**32 - 1)
         verify = params.get('verify', True)
-        n_candidates = params.get('n_candidates', 5000)
+        n_candidates = _bounded_int(params.get('n_candidates'), 5000, 10, MAX_N_CANDIDATES)
         dataset_id = params.get('dataset_id', 'kreuzer-skarke')
         use_real = params.get('use_real', True)  # Default to real implementation
+
+        if not _is_known_dataset(dataset_id):
+            return jsonify({
+                'status': 'error',
+                'message': f'Unknown dataset: {dataset_id}'
+            }), 400
 
         # Run the search - use real implementation by default
         if use_real:
@@ -185,10 +313,22 @@ def sample_results():
 
 
 def _save_results(results):
-    run_id = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    run_id = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
     results_file = os.path.join(RESULTS_DIR, f'results_{run_id}.json')
     with open(results_file, 'w') as f:
         json.dump(results, f, indent=2)
+    # Promote verified hits onto the permanent board.
+    try:
+        hall_of_fame.promote_from_run(
+            results,
+            run_id=run_id,
+            canonical_id_fn=canonical_id,
+            identity_payload_fn=identity_payload,
+            db_path=HALL_OF_FAME_PATH,
+        )
+    except Exception:
+        # Persistence of the run file already succeeded; hall-of-fame is best-effort.
+        pass
     return run_id
 
 
@@ -203,6 +343,7 @@ def _load_results(run_id):
 def _build_candidate_cards(dataset_id, seed=42, top_n=12, n_candidates=5000):
     cache_key = (dataset_id, seed, top_n, n_candidates)
     if cache_key in CANDIDATE_CACHE:
+        CANDIDATE_CACHE.move_to_end(cache_key)
         return CANDIDATE_CACHE[cache_key]
 
     results = run_real_search(
@@ -218,7 +359,10 @@ def _build_candidate_cards(dataset_id, seed=42, top_n=12, n_candidates=5000):
 
     candidates = []
     for result in results["top_results"]:
-        candidate_id = f"{dataset_id}-{result['rank']:03d}"
+        # Content-addressed: stable across seeds/runs. The rank-based string is
+        # retained separately because it is only meaningful within one run.
+        candidate_id = canonical_id(dataset_id, result)
+        rank_label = f"{dataset_id}-{result['rank']:03d}"
         if dataset_id == 'cy5-folds':
             feature_pairs = [
                 ("h11", result.get("h11")),
@@ -246,6 +390,9 @@ def _build_candidate_cards(dataset_id, seed=42, top_n=12, n_candidates=5000):
 
         candidates.append({
             "candidate_id": candidate_id,
+            "rank_label": rank_label,
+            "identity": identity_payload(dataset_id, result),
+            "identity_scheme": "upg-strings/sha256-invariants-v1",
             "rank": result.get("rank"),
             "score": result.get("score"),
             "verified_target": result.get("verified_target"),
@@ -267,15 +414,40 @@ def _build_candidate_cards(dataset_id, seed=42, top_n=12, n_candidates=5000):
         "candidates": candidates
     }
     CANDIDATE_CACHE[cache_key] = payload
+    while len(CANDIDATE_CACHE) > CANDIDATE_CACHE_MAXSIZE:
+        CANDIDATE_CACHE.popitem(last=False)
+
+    # Verified hits from live gallery browses also grow the permanent board.
+    try:
+        hall_of_fame.promote_from_run(
+            {
+                'dataset_id': dataset_id,
+                'run_metadata': {
+                    'dataset_id': dataset_id,
+                    'dataset_name': metadata.name,
+                },
+                'top_results': results['top_results'],
+            },
+            run_id=f'live-{dataset_id}-{seed}-{top_n}',
+            canonical_id_fn=canonical_id,
+            identity_payload_fn=identity_payload,
+            db_path=HALL_OF_FAME_PATH,
+        )
+    except Exception:
+        pass
+
     return payload
 
 
 @app.route('/api/candidates')
 def top_candidates():
     dataset_id = request.args.get('dataset_id', 'kreuzer-skarke')
-    seed = int(request.args.get('seed', 42))
-    top_n = int(request.args.get('top_n', 12))
-    n_candidates = int(request.args.get('n_candidates', 5000))
+    seed = _bounded_int(request.args.get('seed'), 42, 0, 2**32 - 1)
+    top_n = _bounded_int(request.args.get('top_n'), 12, 1, MAX_TOP_K)
+    n_candidates = _bounded_int(request.args.get('n_candidates'), 5000, 10, MAX_N_CANDIDATES)
+
+    if not _is_known_dataset(dataset_id):
+        return jsonify({'status': 'error', 'message': f'Unknown dataset: {dataset_id}'}), 400
 
     payload = _build_candidate_cards(
         dataset_id=dataset_id,
@@ -286,12 +458,49 @@ def top_candidates():
     return jsonify({'status': 'success', **payload})
 
 
-@app.route('/api/candidate/<candidate_id>')
+@app.route('/api/candidate/<path:candidate_id>')
 def candidate_detail(candidate_id):
+    # Permanent board first — shareable ids resolve here without re-running search.
+    hof = hall_of_fame.get_candidate(candidate_id, db_path=HALL_OF_FAME_PATH)
+    if hof:
+        raw = hof.get('raw') or {}
+        invariants = []
+        if hof.get('euler_char') is not None:
+            invariants.append({'label': 'Euler χ', 'value': hof.get('euler_char')})
+        elif 'euler_char' in raw:
+            invariants.append({'label': 'Euler χ', 'value': raw.get('euler_char')})
+        for key, label in (
+            ('hodge_balance', 'Hodge balance'),
+            ('n_generations', 'Generations'),
+            ('info_density', 'Info density'),
+            ('times_seen', 'Times seen'),
+        ):
+            if key in raw and raw.get(key) is not None:
+                val = raw.get(key)
+                if isinstance(val, float):
+                    val = round(val, 4)
+                invariants.append({'label': label, 'value': val})
+        if hof.get('times_seen') is not None:
+            invariants.append({'label': 'Times seen', 'value': hof.get('times_seen')})
+        if hof.get('first_seen_at'):
+            invariants.append({'label': 'First seen', 'value': hof.get('first_seen_at')})
+        if hof.get('last_seen_at'):
+            invariants.append({'label': 'Last seen', 'value': hof.get('last_seen_at')})
+        detail = hof.copy()
+        detail.update({
+            'invariants': invariants,
+            'summary': hof.get('summary') or 'Hall of fame candidate',
+            'detail_url': f'/candidate/{candidate_id}',
+        })
+        return jsonify({'status': 'success', 'candidate': detail})
+
     dataset_id = request.args.get('dataset_id', 'kreuzer-skarke')
-    seed = int(request.args.get('seed', 42))
-    top_n = int(request.args.get('top_n', 12))
-    n_candidates = int(request.args.get('n_candidates', 5000))
+    seed = _bounded_int(request.args.get('seed'), 42, 0, 2**32 - 1)
+    top_n = _bounded_int(request.args.get('top_n'), 12, 1, MAX_TOP_K)
+    n_candidates = _bounded_int(request.args.get('n_candidates'), 5000, 10, MAX_N_CANDIDATES)
+
+    if not _is_known_dataset(dataset_id):
+        return jsonify({'status': 'error', 'message': f'Unknown dataset: {dataset_id}'}), 400
 
     payload = _build_candidate_cards(
         dataset_id=dataset_id,
@@ -326,49 +535,216 @@ def candidate_detail(candidate_id):
 
             detail.update({
                 "invariants": invariants,
-                "summary": f"Target: {detail.get('target_description')}"
+                "summary": f"Target: {detail.get('target_description')}",
+                "detail_url": f'/candidate/{candidate_id}',
             })
 
             return jsonify({'status': 'success', 'candidate': detail})
-
-    # Fallback to featured candidates for curated gallery views
-    if os.path.exists(FEATURED_PATH):
-        with open(FEATURED_PATH, 'r') as f:
-            featured = json.load(f)
-        for candidate in featured.get('candidates', []):
-            if candidate.get('candidate_id') == candidate_id:
-                detail = candidate.copy()
-                detail.update({
-                    "invariants": [],
-                    "summary": f"Target: {detail.get('summary', 'Featured candidate')}"
-                })
-                return jsonify({'status': 'success', 'candidate': detail})
 
     return jsonify({'status': 'error', 'message': 'Candidate not found'}), 404
 
 
 @app.route('/api/featured-candidates')
 def featured_candidates():
-    if not os.path.exists(FEATURED_PATH):
-        return jsonify({'status': 'error', 'message': 'Featured candidates not available'}), 404
-
-    with open(FEATURED_PATH, 'r') as f:
-        payload = json.load(f)
-
-    candidates = payload.get('candidates', [])
+    """Hall of fame listing (seeded from featured JSON, grown by verified runs)."""
     dataset_id = request.args.get('dataset_id')
     tag = request.args.get('tag')
     verified = request.args.get('verified')
-
-    if dataset_id:
-        candidates = [c for c in candidates if c.get('dataset_id') == dataset_id]
-    if tag:
-        candidates = [c for c in candidates if tag in c.get('tags', [])]
+    verified_only = None
     if verified is not None:
-        verified_bool = verified.lower() == 'true'
-        candidates = [c for c in candidates if c.get('verified_target') == verified_bool]
+        verified_only = verified.lower() == 'true'
 
-    return jsonify({'status': 'success', 'candidates': candidates})
+    candidates = hall_of_fame.list_candidates(
+        dataset_id=dataset_id or None,
+        verified_only=verified_only,
+        tag=tag,
+        limit=_bounded_int(request.args.get('top_n'), 100, 1, 500),
+        db_path=HALL_OF_FAME_PATH,
+    )
+    return jsonify({'status': 'success', 'candidates': candidates, 'source': 'hall_of_fame'})
+
+
+@app.route('/api/identify', methods=['POST'])
+def identify():
+    """Look up a geometry by its invariants rather than by rank position.
+
+    This is the "I have an interesting manifold, is it in your system?" entry
+    point. The caller supplies the invariants they already know (h11, h21, and
+    for CY5 h31); we return the canonical id, the derived quantities, and how
+    the manifold scores.
+
+    IMPORTANT: the id returned is local to this system and is NOT a
+    community-standard identifier. See `identifier_note` in the response.
+    """
+    params = request.get_json() or {}
+    dataset_id = params.get('dataset_id', 'kreuzer-skarke')
+
+    if not _is_known_dataset(dataset_id):
+        return jsonify({'status': 'error', 'message': f'Unknown dataset: {dataset_id}'}), 400
+
+    fields = IDENTITY_FIELDS.get(dataset_id, ('h11', 'h21', 'euler_char'))
+    required = [f for f in fields if f != 'euler_char']
+
+    provided = {}
+    for field in required:
+        if params.get(field) is None:
+            return jsonify({
+                'status': 'error',
+                'message': f'Missing required invariant: {field}',
+                'required': required
+            }), 400
+        try:
+            provided[field] = int(params[field])
+        except (TypeError, ValueError):
+            return jsonify({'status': 'error', 'message': f'{field} must be an integer'}), 400
+
+    if any(v < 0 for v in provided.values()):
+        return jsonify({'status': 'error', 'message': 'Hodge numbers must be non-negative'}), 400
+
+    # Euler characteristic is derived, not supplied, so it always agrees with
+    # the Hodge numbers rather than being trusted from the caller.
+    if dataset_id == 'cy5-folds':
+        euler = 6 + 6 * (provided['h11'] - provided['h21'] + provided['h31'])
+    else:
+        euler = 2 * (provided['h11'] - provided['h21'])
+
+    record = dict(provided)
+    record['euler_char'] = euler
+
+    supplied_euler = params.get('euler_char')
+    euler_mismatch = None
+    if supplied_euler is not None:
+        try:
+            if int(supplied_euler) != euler:
+                euler_mismatch = (
+                    f'Supplied euler_char={int(supplied_euler)} disagrees with '
+                    f'the value derived from the Hodge numbers ({euler}). '
+                    'Using the derived value.'
+                )
+        except (TypeError, ValueError):
+            euler_mismatch = 'Supplied euler_char was not an integer; ignored.'
+
+    cid = canonical_id(dataset_id, record)
+    hof = hall_of_fame.get_candidate(cid, db_path=HALL_OF_FAME_PATH)
+    response = {
+        'status': 'success',
+        'candidate_id': cid,
+        'identity': identity_payload(dataset_id, record),
+        'identity_scheme': 'upg-strings/sha256-invariants-v1',
+        'dataset_id': dataset_id,
+        'detail_url': f'/candidate/{cid}',
+        'in_hall_of_fame': bool(hof),
+        'hall_of_fame': {
+            'score': hof.get('score'),
+            'verified_target': hof.get('verified_target'),
+            'times_seen': hof.get('times_seen'),
+            'last_seen_at': hof.get('last_seen_at'),
+        } if hof else None,
+        'derived': {
+            'euler_char': euler,
+            'abs_euler': abs(euler),
+            'total_moduli': sum(provided.values()),
+            'tadpole_charge_chi_over_24': round(abs(euler) / 24, 4),
+        },
+        'identifier_note': (
+            'This id is local to upg-strings and is NOT a community-standard '
+            'identifier. Hodge numbers do not uniquely determine a Calabi-Yau '
+            'manifold: distinct geometries can share (h11, h21, chi). To refer '
+            'to a specific geometry unambiguously, cite the Kreuzer-Skarke '
+            'polytope (its vertex matrix) plus the triangulation used.'
+        ),
+        'uniqueness': 'non-unique: many manifolds may share these invariants',
+    }
+    if euler_mismatch:
+        response['warning'] = euler_mismatch
+
+    return jsonify(response)
+
+
+@app.route('/api/search', methods=['POST'])
+def search_candidates():
+    """Find ranked candidates near a set of invariants.
+
+    Exact matches on (h11, h21) are rare in any one sampled run, so an exact
+    lookup would almost always return nothing useful. Instead we rank the
+    generated candidates by distance from the query and return the nearest,
+    flagging which (if any) match exactly.
+    """
+    params = request.get_json() or {}
+    dataset_id = params.get('dataset_id', 'kreuzer-skarke')
+
+    if not _is_known_dataset(dataset_id):
+        return jsonify({'status': 'error', 'message': f'Unknown dataset: {dataset_id}'}), 400
+
+    seed = _bounded_int(params.get('seed'), 42, 0, 2**32 - 1)
+    n_candidates = _bounded_int(params.get('n_candidates'), 5000, 10, MAX_N_CANDIDATES)
+    limit = _bounded_int(params.get('limit'), 10, 1, 100)
+
+    query = {}
+    for field in ('h11', 'h21', 'h31'):
+        if params.get(field) is not None:
+            try:
+                query[field] = int(params[field])
+            except (TypeError, ValueError):
+                return jsonify({'status': 'error', 'message': f'{field} must be an integer'}), 400
+
+    if not query:
+        return jsonify({
+            'status': 'error',
+            'message': 'Provide at least one of h11, h21, h31 to search.'
+        }), 400
+    if any(v < 0 for v in query.values()):
+        return jsonify({'status': 'error', 'message': 'Hodge numbers must be non-negative'}), 400
+
+    # Search the full ranked set, not just the top slice, so a query can find
+    # geometries the ranking scored poorly.
+    payload = _build_candidate_cards(
+        dataset_id=dataset_id, seed=seed,
+        top_n=min(MAX_TOP_K, n_candidates), n_candidates=n_candidates
+    )
+
+    scored = []
+    for card in payload['candidates']:
+        raw = card.get('raw', {})
+        distance = 0.0
+        for field, wanted in query.items():
+            actual = raw.get(field)
+            if actual is None:
+                distance = float('inf')
+                break
+            distance += (float(actual) - wanted) ** 2
+        if distance == float('inf'):
+            continue
+        scored.append((distance ** 0.5, card))
+
+    scored.sort(key=lambda pair: (pair[0], pair[1].get('rank', 0)))
+
+    matches = []
+    for distance, card in scored[:limit]:
+        matches.append({
+            'candidate_id': card['candidate_id'],
+            'identity': card.get('identity'),
+            'rank': card.get('rank'),
+            'score': card.get('score'),
+            'verified_target': card.get('verified_target'),
+            'features': card.get('features'),
+            'distance': round(distance, 4),
+            'exact_match': distance == 0.0,
+        })
+
+    return jsonify({
+        'status': 'success',
+        'query': query,
+        'dataset_id': dataset_id,
+        'searched': len(payload['candidates']),
+        'exact_matches': sum(1 for m in matches if m['exact_match']),
+        'matches': matches,
+        'note': (
+            'Results are the nearest candidates in this sampled run by '
+            'Euclidean distance on the supplied invariants. Distance 0 means '
+            'the invariants agree exactly, not that the manifold is the same.'
+        ),
+    })
 
 
 def _export_candidates(results):
@@ -410,18 +786,27 @@ def _export_mathematica(results):
     return "candidates = {" + ", ".join(rows) + "};"
 
 
+def _csv_cell(value):
+    """Quote a CSV cell, neutralising spreadsheet formula injection.
+
+    A leading =, +, - or @ makes Excel/Sheets evaluate the cell as a formula,
+    so prefix those with a single quote before quoting.
+    """
+    if value is None:
+        return '""'
+    text = str(value)
+    if text[:1] in ('=', '+', '-', '@', '\t', '\r'):
+        text = "'" + text
+    return '"' + text.replace('"', '""') + '"'
+
+
 def _candidates_to_csv(candidates):
     if not candidates:
         return ""
     headers = sorted({key for candidate in candidates for key in candidate.keys()})
-    lines = [",".join(headers)]
+    lines = [",".join(_csv_cell(h) for h in headers)]
     for candidate in candidates:
-        row = []
-        for header in headers:
-            value = candidate.get(header, "")
-            value_str = "" if value is None else str(value).replace('"', '""')
-            row.append(f'"{value_str}"')
-        lines.append(",".join(row))
+        lines.append(",".join(_csv_cell(candidate.get(h, "")) for h in headers))
     return "\n".join(lines)
 
 
@@ -484,7 +869,7 @@ def _analyze_candidate(candidate):
         "complexity_index": complexity_index,
         "stability_score": stability_score,
         "summary": summary,
-        "generated_at": datetime.utcnow().isoformat() + "Z"
+        "generated_at": _utcnow_iso()
     }
     return analysis
 
@@ -501,20 +886,7 @@ def export_results(run_id):
         filename = f"results_{run_id}.json"
         mime = "application/json"
     elif export_format == 'csv':
-        candidates = _export_candidates(results)
-        if not candidates:
-            content = ""
-        else:
-            headers = sorted({key for candidate in candidates for key in candidate.keys()})
-            lines = [",".join(headers)]
-            for candidate in candidates:
-                row = []
-                for header in headers:
-                    value = candidate.get(header, "")
-                    value_str = "" if value is None else str(value).replace('"', '""')
-                    row.append(f'"{value_str}"')
-                lines.append(",".join(row))
-            content = "\n".join(lines)
+        content = _candidates_to_csv(_export_candidates(results))
         filename = f"results_{run_id}.csv"
         mime = "text/csv"
     elif export_format == 'cytools':
@@ -547,8 +919,8 @@ def export_gallery():
     candidate_ids = params.get('candidate_ids', [])
     source = params.get('source', 'featured')
     dataset_id = params.get('dataset_id')
-    seed = int(params.get('seed', 42))
-    top_n = int(params.get('top_n', 12))
+    seed = _bounded_int(params.get('seed'), 42, 0, 2**32 - 1)
+    top_n = _bounded_int(params.get('top_n'), 12, 1, MAX_TOP_K)
 
     if not candidate_ids or not isinstance(candidate_ids, list):
         return jsonify({'error': 'No candidate ids provided'}), 400
@@ -556,12 +928,11 @@ def export_gallery():
         return jsonify({'error': 'Too many candidates selected (max 50).'}), 400
 
     candidates = []
-    if source == 'featured':
-        if not os.path.exists(FEATURED_PATH):
-            return jsonify({'error': 'Featured candidates not available'}), 404
-        with open(FEATURED_PATH, 'r') as f:
-            payload = json.load(f)
-        candidates = [c for c in payload.get('candidates', []) if c.get('candidate_id') in candidate_ids]
+    if source in ('featured', 'hall_of_fame'):
+        for cid in candidate_ids:
+            item = hall_of_fame.get_candidate(cid, db_path=HALL_OF_FAME_PATH)
+            if item:
+                candidates.append(item.get('raw') or item)
     elif source == 'live':
         if not dataset_id:
             return jsonify({'error': 'dataset_id required for live export'}), 400
@@ -577,7 +948,7 @@ def export_gallery():
         "source": source,
         "dataset_id": dataset_id,
         "selection_count": len(candidates),
-        "generated_at": datetime.utcnow().isoformat() + "Z"
+        "generated_at": _utcnow_iso()
     }
 
     bundle = _bundle_candidates(candidates, metadata)
@@ -590,19 +961,15 @@ def analyze_candidate():
     candidate_id = params.get('candidate_id')
     source = params.get('source', 'featured')
     dataset_id = params.get('dataset_id')
-    seed = int(params.get('seed', 42))
-    top_n = int(params.get('top_n', 12))
+    seed = _bounded_int(params.get('seed'), 42, 0, 2**32 - 1)
+    top_n = _bounded_int(params.get('top_n'), 12, 1, MAX_TOP_K)
 
     if not candidate_id:
         return jsonify({'error': 'candidate_id required'}), 400
 
     candidate = None
-    if source == 'featured':
-        if not os.path.exists(FEATURED_PATH):
-            return jsonify({'error': 'Featured candidates not available'}), 404
-        with open(FEATURED_PATH, 'r') as f:
-            payload = json.load(f)
-        candidate = next((c for c in payload.get('candidates', []) if c.get('candidate_id') == candidate_id), None)
+    if source in ('featured', 'hall_of_fame'):
+        candidate = hall_of_fame.get_candidate(candidate_id, db_path=HALL_OF_FAME_PATH)
     elif source == 'live':
         if not dataset_id:
             return jsonify({'error': 'dataset_id required for live analysis'}), 400
@@ -768,10 +1135,13 @@ def export_physics_data():
     try:
         params = request.get_json() or {}
         dataset_id = params.get('dataset_id', 'info-density')
-        top_k = int(params.get('top_k', 100))
-        seed = int(params.get('seed', 42))
-        n_candidates = int(params.get('n_candidates', 5000))
+        top_k = _bounded_int(params.get('top_k'), 100, 1, MAX_TOP_K)
+        seed = _bounded_int(params.get('seed'), 42, 0, 2**32 - 1)
+        n_candidates = _bounded_int(params.get('n_candidates'), 5000, 10, MAX_N_CANDIDATES)
         export_format = params.get('format', 'json').lower()
+
+        if not _is_known_dataset(dataset_id):
+            return jsonify({'status': 'error', 'message': f'Unknown dataset: {dataset_id}'}), 400
 
         # Run search
         results = run_real_search(
@@ -842,13 +1212,7 @@ def export_physics_data():
             if not candidates_data:
                 return jsonify({'status': 'error', 'message': 'No candidates to export'}), 400
 
-            headers = list(candidates_data[0].keys())
-            lines = [','.join(headers)]
-            for c in candidates_data:
-                row = [str(c.get(h, '')) for h in headers]
-                lines.append(','.join(row))
-
-            response = Response('\n'.join(lines), mimetype='text/csv')
+            response = Response(_candidates_to_csv(candidates_data), mimetype='text/csv')
             response.headers['Content-Disposition'] = f'attachment; filename=physics_export_{dataset_id}.csv'
             return response
 
@@ -900,13 +1264,20 @@ def score_custom():
         params = request.get_json() or {}
         dataset_id = params.get('dataset_id', 'kreuzer-skarke')
         rows = params.get('rows', [])
-        top_k = int(params.get('top_k', 20))
-        seed = int(params.get('seed', 42))
+        top_k = _bounded_int(params.get('top_k'), 20, 1, MAX_TOP_K)
+        seed = _bounded_int(params.get('seed'), 42, 0, 2**32 - 1)
         verify = bool(params.get('verify', True))
         save_results = bool(params.get('save', False))
 
         if not rows or not isinstance(rows, list):
             return jsonify({'status': 'error', 'message': 'No input rows provided.'}), 400
+        if len(rows) > MAX_CUSTOM_ROWS:
+            return jsonify({
+                'status': 'error',
+                'message': f'Too many rows (max {MAX_CUSTOM_ROWS}).'
+            }), 400
+        if not _is_known_dataset(dataset_id):
+            return jsonify({'status': 'error', 'message': f'Unknown dataset: {dataset_id}'}), 400
 
         dataset = DatasetRegistry.get_dataset(dataset_id)
         metadata = dataset.get_metadata()
@@ -921,7 +1292,19 @@ def score_custom():
                     'status': 'error',
                     'message': f'Expected {feature_dim} values per row for {dataset_id}.'
                 }), 400
-            parsed_rows.append([float(val) for val in row])
+            try:
+                parsed = [float(val) for val in row]
+            except (TypeError, ValueError):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Each row must contain only numbers.'
+                }), 400
+            if not all(np.isfinite(parsed)):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Rows must not contain NaN or infinite values.'
+                }), 400
+            parsed_rows.append(parsed)
 
         custom_data = np.array(parsed_rows, dtype=np.float32)
 
@@ -958,7 +1341,7 @@ def score_custom():
 
         results = {
             "run_metadata": {
-                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "timestamp": _utcnow_iso(),
                 "dataset": metadata.name,
                 "dataset_id": dataset_id,
                 "dataset_description": metadata.description,

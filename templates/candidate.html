@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% set active_page = "candidates" %}
+
+{% block title %}{{ og_title if candidate else 'Candidate not found' }} - upg-strings{% endblock %}
+{% block description %}{{ og_description if candidate else 'This geometry is not in the hall of fame yet.' }}{% endblock %}
+{% block og_tags %}
+    {% if candidate %}
+    <meta property="og:title" content="{{ og_title }}">
+    <meta property="og:description" content="{{ og_description }}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ og_url }}">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ og_title }}">
+    <meta name="twitter:description" content="{{ og_description }}">
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<main class="container">
+    {% if not candidate %}
+    <section class="section">
+        <h1>Candidate not found</h1>
+        <p>No hall-of-fame entry for <code>{{ candidate_id }}</code>.</p>
+        <p class="note">Verified hits from live searches are promoted here automatically. Featured seeds are loaded on first boot.</p>
+        <p><a class="btn btn-secondary" href="/candidates.html">Back to gallery</a></p>
+    </section>
+    {% else %}
+    <section class="section">
+        <p class="note"><a href="/candidates.html">← Hall of fame</a></p>
+        <h1>{{ candidate.candidate_id }}</h1>
+        <p>
+            Permanent page for this geometry. Share this URL —
+            it stays stable because the id is derived from the invariants, not from a run rank.
+        </p>
+        <div class="share-row" style="margin: 1rem 0;">
+            <input id="share-url" class="share-input" type="text" readonly value="{{ og_url }}" aria-label="Share URL">
+            <button id="copy-share" class="btn btn-secondary" type="button">Copy link</button>
+        </div>
+        <div class="details-grid">
+            <div class="detail-item"><span>Dataset</span><strong>{{ candidate.dataset_name or candidate.dataset_id }}</strong></div>
+            <div class="detail-item"><span>Verified</span><strong>{{ 'Yes' if candidate.verified_target else 'No' }}</strong></div>
+            <div class="detail-item"><span>Best score</span><strong>{{ '%.4f'|format(candidate.score or 0) }}</strong></div>
+            <div class="detail-item"><span>Best rank seen</span><strong>{{ candidate.rank or '—' }}</strong></div>
+            <div class="detail-item"><span>h¹¹</span><strong>{{ h11 if h11 is not none else '—' }}</strong></div>
+            <div class="detail-item"><span>h²¹</span><strong>{{ h21 if h21 is not none else '—' }}</strong></div>
+            <div class="detail-item"><span>χ</span><strong>{{ chi if chi is not none else '—' }}</strong></div>
+            <div class="detail-item"><span>Times seen</span><strong>{{ candidate.times_seen or 1 }}</strong></div>
+            <div class="detail-item"><span>First seen</span><strong>{{ candidate.first_seen_at or '—' }}</strong></div>
+            <div class="detail-item"><span>Last seen</span><strong>{{ candidate.last_seen_at or '—' }}</strong></div>
+            <div class="detail-item"><span>Last run</span><strong>{{ candidate.last_run_id or '—' }}</strong></div>
+        </div>
+        {% if candidate.summary %}
+        <p class="note" style="margin-top: 1rem;">{{ candidate.summary }}</p>
+        {% endif %}
+    </section>
+
+    <section class="section">
+        <h2>3D preview</h2>
+        <div class="renderer-shell">
+            <canvas id="candidate-canvas" class="renderer-canvas"></canvas>
+        </div>
+        <p style="margin-top: 1rem;">
+            <a class="btn btn-primary"
+               href="/render.html?candidate_id={{ candidate.candidate_id }}&dataset_id={{ candidate.dataset_id }}&seed={{ candidate.viz_seed or 42 }}&h11={{ h11 or '' }}&h21={{ h21 or '' }}&chi={{ chi or '' }}">
+                Open interactive renderer
+            </a>
+        </p>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}
+
+{% block scripts %}
+{% if candidate %}
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="{{ url_for('static', filename='js/cy-shape.js') }}"></script>
+<script>
+(function () {
+    const copyBtn = document.getElementById('copy-share');
+    const shareInput = document.getElementById('share-url');
+    if (copyBtn && shareInput) {
+        copyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(shareInput.value);
+                copyBtn.textContent = 'Copied';
+                setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 1200);
+            } catch (err) {
+                shareInput.select();
+            }
+        });
+    }
+
+    const canvas = document.getElementById('candidate-canvas');
+    if (!window.THREE || !window.CYShape || !canvas) return;
+
+    const width = canvas.clientWidth || 900;
+    const height = canvas.clientHeight || 500;
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setSize(width, height, false);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+    CYShape.configureScene(THREE, { renderer, scene });
+
+    const params = CYShape.paramsFor(
+        Number({{ h11 if h11 is not none else 10 }}),
+        Number({{ h21 if h21 is not none else 12 }}),
+        Number({{ chi if chi is not none else 0 }})
+    );
+    const geometry = CYShape.geometryFor(THREE, params, 220, 90);
+    const material = CYShape.materialFor(THREE, params);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.rotation.set(-0.42, 0.55, 0.1);
+    CYShape.frameMesh(camera, mesh, geometry);
+
+    const pivot = new THREE.Group();
+    pivot.add(mesh);
+    scene.add(pivot);
+
+    const animate = () => {
+        pivot.rotation.y += 0.005;
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+    };
+    animate();
+})();
+</script>
+{% endif %}
+{% endblock %}

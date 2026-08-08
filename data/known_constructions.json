@@ -126,26 +126,73 @@
       "dataset_id": "cy5-folds",
       "h11": 140,
       "h21": 62,
-      "name": "Example CI5F configuration class",
-      "ambient": "Complete-intersection fivefold (example)",
+      "name": "Featured CI5F Hodge class (140,62,18)",
+      "ambient": "Complete-intersection fivefold (pedagogical class key)",
       "weight_system": null,
-      "hypersurface_equation": "Example only — configuration matrix not unique for these Hodge numbers",
+      "hypersurface_equation": null,
       "favourable": null,
       "reference": "CI5F / cymetric catalogs",
-      "note": "Pedagogical placeholder for featured cy5 (140,62,18); attach a real config matrix in raw when available.",
-      "example_config_hint": "Store ambient + multi-degree matrix in raw_json to replace this hint."
+      "note": "Featured Hodge triple only — a real CI5F configuration matrix from the database is still needed; do not invent one from Hodge numbers."
+    },
+    {
+      "dataset_id": "cy5-folds",
+      "h11": 151,
+      "h21": 41,
+      "name": "Featured CI5F Hodge class (151,41,22)",
+      "ambient": "Complete-intersection fivefold (pedagogical class key)",
+      "weight_system": null,
+      "hypersurface_equation": null,
+      "favourable": null,
+      "reference": "CI5F / cymetric catalogs",
+      "note": "Featured Hodge triple only — a real CI5F configuration matrix from the database is still needed; do not invent one from Hodge numbers."
+    },
+    {
+      "dataset_id": "cy5-folds",
+      "h11": 131,
+      "h21": 55,
+      "name": "Featured CI5F Hodge class (131,55,29)",
+      "ambient": "Complete-intersection fivefold (pedagogical class key)",
+      "weight_system": null,
+      "hypersurface_equation": null,
+      "favourable": null,
+      "reference": "CI5F / cymetric catalogs",
+      "note": "Featured Hodge triple only — a real CI5F configuration matrix from the database is still needed; do not invent one from Hodge numbers."
+    },
+    {
+      "dataset_id": "cy5-folds",
+      "h11": 112,
+      "h21": 48,
+      "name": "Featured CI5F Hodge class (112,48,33)",
+      "ambient": "Complete-intersection fivefold (pedagogical class key)",
+      "weight_system": null,
+      "hypersurface_equation": null,
+      "favourable": null,
+      "reference": "CI5F / cymetric catalogs",
+      "note": "Featured Hodge triple only — a real CI5F configuration matrix from the database is still needed; do not invent one from Hodge numbers."
     },
     {
       "dataset_id": "heterotic",
       "h11": 73,
       "h21": 70,
-      "name": "Three-generation index candidate (χ=6)",
+      "name": "Three-generation index candidate (χ=+6)",
       "ambient": "Any CY3 with these Hodge numbers + stable bundle",
       "weight_system": null,
       "hypersurface_equation": null,
       "favourable": null,
       "reference": "Heterotic index theorem (net chirality |χ|/2)",
-      "note": "Topology gives n_gen=3 when |χ|=6. Still needs a concrete geometry and holomorphic bundle."
+      "note": "Topology gives n_gen=3 when |χ|=6. Still needs a concrete geometry and holomorphic bundle — not invented here."
+    },
+    {
+      "dataset_id": "heterotic",
+      "h11": 89,
+      "h21": 92,
+      "name": "Three-generation index candidate (χ=−6)",
+      "ambient": "Any CY3 with these Hodge numbers + stable bundle",
+      "weight_system": null,
+      "hypersurface_equation": null,
+      "favourable": null,
+      "reference": "Heterotic index theorem (net chirality |χ|/2)",
+      "note": "χ=2(89−92)=−6 ⇒ n_gen=3. Still needs a concrete geometry and holomorphic bundle — not invented here."
     }
   ]
 }

@@ -348,6 +348,7 @@ Scales to:
 - [ ] Automated algebraic geometry verification
 - [x] Mirror symmetry detection (Hodge swap + Hall of Fame deep-link)
 - [x] Hall of Fame gallery export + shareable candidate dossiers with analysis tabs
+- [x] Server-side export bundle for gallery selections (`POST /api/export-gallery` → ZIP of selected candidates; `/api/analysis/<id>/bundle` for full analysis tabs JSON)
 - [ ] Real-time progress tracking for long-running searches
 - [ ] Batch processing API
 
@@ -387,12 +388,14 @@ If you use upg-strings in your research, please cite:
 }
 ```
 
-## Roadmap
+## Roadmap (shipped UX)
 
 - [x] Candidates gallery with ranked manifolds
 - [x] Manifold visualization modal (2D/3D)
 - [x] Candidate details API endpoint
-- [ ] Server-side export bundle for gallery selections
+- [x] Server-side export bundle for gallery selections (`POST /api/export-gallery` ZIP; analysis download bundle)
+
+Still open (see Features / Dataset Expansion above): real CYTools library integration, flux compactification vacua datasets.
 
 ## Contact
 

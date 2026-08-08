@@ -654,7 +654,21 @@
                     <figcaption>Generations</figcaption>
                     <div class="tex tex-display">n_{\mathrm{gen}} = \dfrac{|\chi|}{2}</div>
                 </figure>
+                <figure class="equation-card">
+                    <figcaption>Flux count proxy</figcaption>
+                    <div class="tex tex-display">K = h^{2,1}+1</div>
+                </figure>
+                <figure class="equation-card">
+                    <figcaption>Stirling landscape</figcaption>
+                    <div class="tex tex-display">\log N \sim 2K\log(2\pi L)-\log K!</div>
+                </figure>
             </div>
+            <p class="note">
+                The <span class="tex">N_{\mathrm{flux}}</span> estimate is the same asymptotic
+                Bousso–Polchinski / Denef–Douglas-style proxy used by
+                <code>physics_dossier.flux_vacua_estimate</code> (Stirling for
+                <span class="tex">\log K!</span>) — not a vacuum scan.
+            </p>
         </details>
         <details>
             <summary>Derive χ yourself</summary>
@@ -844,13 +858,37 @@
         });
     }
 
-    // Student lab
+    // Student lab — same χ / L / K / Stirling proxy as physics_dossier.flux_vacua_estimate
+    function fluxVacuaEstimateJS(h21Val, tadpoleL) {
+        const K = Math.floor(h21Val) + 1;
+        const L = Math.max(Number(tadpoleL), 1e-12);
+        if (K <= 0) {
+            return { K, L, logN: null, log10N: null, sci: null };
+        }
+        const logKFact = K * Math.log(K) - K + 0.5 * Math.log(2 * Math.PI * K);
+        const logN = 2 * K * Math.log(2 * Math.PI * L) - logKFact;
+        const log10N = logN / Math.LN10;
+        let sci;
+        if (log10N > 300) {
+            sci = `10^{${log10N.toFixed(2)}}`;
+        } else {
+            const nEst = Math.exp(logN);
+            const exp = Math.floor(Math.log10(nEst));
+            const mant = nEst / Math.pow(10, exp);
+            const sign = exp >= 0 ? '+' : '';
+            sci = `${mant.toFixed(3)}e${sign}${exp}`;
+        }
+        return { K, L, logN, log10N, sci };
+    }
+
     const labOut = document.getElementById('lab-out');
     document.getElementById('lab-compute')?.addEventListener('click', () => {
         const a = Number(document.getElementById('lab-h11').value);
         const b = Number(document.getElementById('lab-h21').value);
         const e = 2 * (a - b);
         const L = Math.abs(e) / 24;
+        const nGen = Math.abs(e) / 2;
+        const est = fluxVacuaEstimateJS(b, L);
         labOut.innerHTML = `
             <div class="equation-board equation-board-plugged">
               <figure class="equation-card">
@@ -862,17 +900,30 @@
                 <div class="tex tex-display" data-math-dynamic="1">L = |\\chi|/24 = ${L.toFixed(4)}</div>
               </figure>
               <figure class="equation-card">
+                <figcaption>Generations</figcaption>
+                <div class="tex tex-display" data-math-dynamic="1">n_{\\mathrm{gen}} = |\\chi|/2 = ${nGen}</div>
+              </figure>
+              <figure class="equation-card">
+                <figcaption>Flux K</figcaption>
+                <div class="tex tex-display" data-math-dynamic="1">K = h^{2,1}+1 = ${est.K}</div>
+              </figure>
+              <figure class="equation-card">
+                <figcaption>Stirling N_flux</figcaption>
+                <div class="tex tex-display" data-math-dynamic="1">\\log N \\approx ${est.logN != null ? est.logN.toFixed(2) : '—'},\\ N\\sim ${est.sci || '—'}</div>
+              </figure>
+              <figure class="equation-card">
                 <figcaption>Mirror</figcaption>
                 <div class="tex tex-display" data-math-dynamic="1">(h^{1,1},h^{2,1})\\mapsto(${b},${a}),\\ \\chi\\mapsto ${-e}</div>
               </figure>
-            </div>`;
+            </div>
+            <p class="note">Same asymptotic proxy as <code>flux_vacua_estimate</code> (not a landscape scan).</p>`;
         if (window.UPGMath) window.UPGMath.typeset(labOut);
     });
     const quizEl = document.getElementById('lab-quiz');
     function newQuiz() {
         const A = 10 + Math.floor(Math.random() * 40);
         const B = 10 + Math.floor(Math.random() * 40);
-        const kind = Math.floor(Math.random() * 4);
+        const kind = Math.floor(Math.random() * 7);
         let prompt = '';
         let ansHtml = '';
         if (kind === 0) {
@@ -880,19 +931,42 @@
             prompt = `If <span class="tex" data-math-dynamic="1">h^{1,1}=${A}</span> and <span class="tex" data-math-dynamic="1">h^{2,1}=${B}</span>, what is <span class="tex" data-math-dynamic="1">\\chi</span>?`;
             ansHtml = `<span class="tex tex-display" data-math-dynamic="1">\\chi = 2(${A}-${B}) = ${ans}</span>`;
         } else if (kind === 1) {
-            const chi = 2 * (A - B);
-            const L = Math.abs(chi) / 24;
-            prompt = `If <span class="tex" data-math-dynamic="1">\\chi=${chi}</span>, what is <span class="tex" data-math-dynamic="1">L=|\\chi|/24</span>?`;
+            const chiQ = 2 * (A - B);
+            const L = Math.abs(chiQ) / 24;
+            prompt = `If <span class="tex" data-math-dynamic="1">\\chi=${chiQ}</span>, what is <span class="tex" data-math-dynamic="1">L=|\\chi|/24</span>?`;
             ansHtml = `<span class="tex tex-display" data-math-dynamic="1">L = ${L.toFixed(4)}</span>`;
         } else if (kind === 2) {
-            const chi = 2 * (A - B);
-            const nGen = Math.abs(chi) / 2;
-            prompt = `If <span class="tex" data-math-dynamic="1">\\chi=${chi}</span>, what is <span class="tex" data-math-dynamic="1">n_{\\mathrm{gen}}=|\\chi|/2</span>?`;
+            const chiQ = 2 * (A - B);
+            const nGen = Math.abs(chiQ) / 2;
+            prompt = `If <span class="tex" data-math-dynamic="1">\\chi=${chiQ}</span>, what is <span class="tex" data-math-dynamic="1">n_{\\mathrm{gen}}=|\\chi|/2</span>?`;
             ansHtml = `<span class="tex tex-display" data-math-dynamic="1">n_{\\mathrm{gen}} = ${nGen}</span>`;
-        } else {
+        } else if (kind === 3) {
             const K = B + 1;
             prompt = `If <span class="tex" data-math-dynamic="1">h^{2,1}=${B}</span>, what is <span class="tex" data-math-dynamic="1">K=h^{2,1}+1</span>?`;
             ansHtml = `<span class="tex tex-display" data-math-dynamic="1">K = ${K}</span>`;
+        } else if (kind === 4) {
+            const chiQ = 2 * (A - B);
+            const L = Math.abs(chiQ) / 24;
+            const est = fluxVacuaEstimateJS(B, L);
+            prompt = `Given <span class="tex" data-math-dynamic="1">h^{2,1}=${B}</span> and <span class="tex" data-math-dynamic="1">L=${L.toFixed(4)}</span>, what is the Stirling proxy <span class="tex" data-math-dynamic="1">\\log N_{\\mathrm{flux}}</span>?`;
+            ansHtml = `<span class="tex tex-display" data-math-dynamic="1">K=${est.K},\\ \\log N \\approx ${est.logN.toFixed(2)},\\ N\\sim ${est.sci}</span>
+                <span class="note"> (same formula as backend flux_vacua_estimate)</span>`;
+        } else if (kind === 5) {
+            const chiBig = 2 * (A + 20);
+            const chiSmall = 2 * Math.max(A - 10, 2);
+            prompt = `Qualitative: which tadpole budget is larger —
+                <span class="tex" data-math-dynamic="1">L=|\\chi|/24</span> for
+                <span class="tex" data-math-dynamic="1">\\chi=${chiBig}</span> or
+                <span class="tex" data-math-dynamic="1">\\chi=${chiSmall}</span>?`;
+            ansHtml = `<span class="tex tex-display" data-math-dynamic="1">|\\chi|</span> larger ⇒ larger tadpole budget
+                <span class="tex" data-math-dynamic="1">L</span>
+                (here <span class="tex" data-math-dynamic="1">${(Math.abs(chiBig)/24).toFixed(3)} &gt; ${(Math.abs(chiSmall)/24).toFixed(3)}</span>).`;
+        } else {
+            const chiQ = 2 * (A - B);
+            const L = Math.abs(chiQ) / 24;
+            const density = L > 0 ? ((B + 1) / L) : null;
+            prompt = `If <span class="tex" data-math-dynamic="1">\\chi=${chiQ}</span> and <span class="tex" data-math-dynamic="1">h^{2,1}=${B}</span>, what is the tadpole density proxy <span class="tex" data-math-dynamic="1">K/L</span>?`;
+            ansHtml = `<span class="tex tex-display" data-math-dynamic="1">K/L = ${(B+1)}/${L.toFixed(4)} \\approx ${density.toFixed(3)}</span>`;
         }
         quizEl.innerHTML = `${prompt} <button type="button" class="btn btn-secondary btn-small" id="lab-reveal">Reveal</button> <span id="lab-ans" hidden>${ansHtml}</span>`;
         if (window.UPGMath) window.UPGMath.typeset(quizEl);

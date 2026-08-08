@@ -214,3 +214,57 @@ def test_flux_miniscan_mirror_quintic():
     assert scan['status'] == 'computed'
     assert scan['counted'] > 0
     assert scan['K'] == 2
+
+
+def test_cy5_pack_rejects_string_config_matrix():
+    import physics_extensions
+    physics_extensions.reload_geometry_pack()
+    physics_dossier.load_known_constructions(force_reload=True)
+    # Placeholder strings must never count as a present configuration matrix.
+    assert not physics_extensions.is_real_configuration_matrix(
+        'attach real CI5F matrix in raw when available'
+    )
+    assert physics_extensions.is_real_configuration_matrix([[3, 3], [1, 1]])
+    merged = physics_extensions.merge_geometry_into_raw(
+        {},
+        {'configuration_matrix': 'fake string', 'ambient': 'P'},
+    )
+    assert 'configuration_matrix' not in merged
+    assert merged['ambient'] == 'P'
+
+    c = physics_dossier.construction_payload(
+        'cy5-folds',
+        'cy5-folds-cab01a33852a',
+        h11=140,
+        h21=62,
+        h31=18,
+        features=[['h11', 140], ['h21', 62], ['h31', 18]],
+    )
+    assert 'configuration_matrix' not in c['present_geometry']
+    assert any(u['id'] == 'configuration_matrix' for u in c['unavailable'])
+    assert 'pending' in c['reconstruct_howto'].lower() or 'still' in c['reconstruct_howto'].lower()
+    note = c['present_geometry'].get('geometry_note') or (c.get('curated') or {}).get('note') or ''
+    assert 'matrix' in note.lower() or 'CI5F' in note
+
+
+def test_featured_cy5_triples_have_honest_pack_entries():
+    import physics_extensions
+    physics_extensions.reload_geometry_pack()
+    for h11, h21, h31 in ((140, 62, 18), (151, 41, 22), (131, 55, 29), (112, 48, 33)):
+        pack = physics_extensions.lookup_geometry_pack('cy5-folds', h11, h21, h31)
+        assert pack is not None, (h11, h21, h31)
+        assert pack.get('configuration_matrix') is None
+        assert 'invent' in (pack.get('note') or '').lower() or 'needs' in (pack.get('note') or '').lower()
+        curated = physics_dossier.lookup_known_construction('cy5-folds', h11, h21)
+        assert curated is not None
+
+
+def test_heterotic_chi6_constructions():
+    physics_dossier.load_known_constructions(force_reload=True)
+    for h11, h21, chi in ((73, 70, 6), (89, 92, -6)):
+        c = physics_dossier.lookup_known_construction('heterotic', h11, h21)
+        assert c is not None
+        assert '3' in c['note'] or 'generation' in c['note'].lower()
+        d = physics_dossier.build_dossier('heterotic', h11, h21)
+        assert d['euler_char'] == chi
+        assert abs(chi) // 2 == 3

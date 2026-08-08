@@ -682,10 +682,12 @@ def construction_workplan(
         steps.extend([
             {
                 'id': 'config',
-                'title': 'Recover a CI5F configuration matrix',
+                'title': 'Look up a real CI5F configuration matrix',
                 'detail': (
                     f'Compatible with (h¹¹,h²¹,h³¹)=({h11},{h21},{h31}). '
-                    'Configuration matrices are not stored on this page yet.'
+                    'Featured pages list Hodge-class examples only — attach a '
+                    'literature-backed multi-degree matrix before claiming a '
+                    'concrete fivefold.'
                 ),
             },
             {
@@ -753,11 +755,22 @@ def construction_payload(
         'polytope_id', 'polytope_hash', 'polytope_vertices', 'vertex_matrix',
         'triangulation', 'triangulation_id', 'hypersurface_equation',
         'weight_system', 'favourable', 'ambient', 'configuration_matrix',
-        'geometry_name',
+        'geometry_name', 'geometry_note',
     )
-    present_geometry = {
-        k: raw[k] for k in known_geometry_keys if k in raw and raw[k] is not None
-    }
+
+    def _present_from(src: Dict[str, Any]) -> Dict[str, Any]:
+        out: Dict[str, Any] = {}
+        for k in known_geometry_keys:
+            if k not in src or src[k] is None:
+                continue
+            if k == 'configuration_matrix' and not physics_extensions.is_real_configuration_matrix(
+                src[k]
+            ):
+                continue
+            out[k] = src[k]
+        return out
+
+    present_geometry = _present_from(raw)
 
     curated = None
     pack = None
@@ -767,19 +780,23 @@ def construction_payload(
             dataset_id or 'kreuzer-skarke', h11_i, h21_i, h31_i
         )
         raw = physics_extensions.merge_geometry_into_raw(raw, pack)
-        present_geometry = {
-            k: raw[k] for k in known_geometry_keys if k in raw and raw[k] is not None
-        }
+        present_geometry = _present_from(raw)
         if curated:
             for key in (
                 'ambient', 'weight_system', 'hypersurface_equation', 'favourable',
             ):
                 if key not in present_geometry and curated.get(key) is not None:
                     present_geometry[key] = curated[key]
-        if pack and pack.get('configuration_matrix') is not None:
+            if curated.get('note') and 'geometry_note' not in present_geometry:
+                present_geometry['geometry_note'] = curated['note']
+        if pack and physics_extensions.is_real_configuration_matrix(
+            pack.get('configuration_matrix')
+        ):
             present_geometry['configuration_matrix'] = pack['configuration_matrix']
         if pack and pack.get('name'):
             present_geometry.setdefault('geometry_name', pack['name'])
+        if pack and pack.get('note'):
+            present_geometry.setdefault('geometry_note', pack['note'])
 
     unavailable = [
         {
@@ -796,6 +813,14 @@ def construction_payload(
             'id': 'hypersurface_equation',
             'label': 'Hypersurface / CICY equation',
             'reason': 'Not recoverable from Hodge numbers alone.',
+        },
+        {
+            'id': 'configuration_matrix',
+            'label': 'Configuration matrix (CICY / CI5F)',
+            'reason': (
+                'No real multi-degree / CI5F matrix is stored for this Hodge class; '
+                'look up a matching entry in the literature database.'
+            ),
         },
     ]
     # Drop unavailable entries that we unexpectedly do have (raw or curated).
@@ -817,17 +842,24 @@ def construction_payload(
         )
         source_url = 'http://hep.itp.tuwien.ac.at/~kreuzer/CY/'
     elif dataset_id == 'cy5-folds':
+        has_matrix = 'configuration_matrix' in present_geometry
         reconstruct = (
             'CY5 / CI5F: recover a complete-intersection fivefold configuration '
-            'compatible with (h¹¹, h²¹, h³¹). Configuration matrices are not '
-            'stored on this page yet.'
+            'compatible with (h¹¹, h²¹, h³¹). '
+            + (
+                'A curated configuration matrix is attached below.'
+                if has_matrix else
+                'Featured Hodge triples here are pedagogical class keys — a real '
+                'CI5F configuration matrix from the CI5F database is still pending.'
+            )
         )
         source_url = None
     elif dataset_id == 'heterotic':
         reconstruct = (
             'Heterotic: Hodge balance is only a necessary filter. A full model '
             'needs a stable holomorphic vector bundle (or monad) on a concrete '
-            'geometry — not present in stored fields.'
+            'geometry — not present in stored fields. χ=±6 only flags a '
+            'three-generation index target, not a bundle construction.'
         )
         source_url = None
     else:

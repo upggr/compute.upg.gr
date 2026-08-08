@@ -17,9 +17,9 @@ _LEGACY_GEOMETRY_PACK = os.path.join('static', 'data', 'geometry_pack.json')
 _PACK_CACHE: Optional[Dict[str, Any]] = None
 
 
-def _load_pack(path: Optional[str] = None) -> Dict[str, Any]:
+def _load_pack(path: Optional[str] = None, *, force_reload: bool = False) -> Dict[str, Any]:
     global _PACK_CACHE
-    if _PACK_CACHE is not None and path is None:
+    if _PACK_CACHE is not None and path is None and not force_reload:
         return _PACK_CACHE
     for candidate in ([path] if path else []) + [GEOMETRY_PACK_PATH, _LEGACY_GEOMETRY_PACK]:
         if not candidate:
@@ -37,6 +37,10 @@ def _load_pack(path: Optional[str] = None) -> Dict[str, Any]:
         _PACK_CACHE = empty
     return empty
 
+
+def reload_geometry_pack() -> Dict[str, Any]:
+    """Clear cache and reload geometry pack from disk (tests / hot reload)."""
+    return _load_pack(force_reload=True)
 
 def lookup_geometry_pack(
     dataset_id: str, h11: int, h21: int, h31: Optional[int] = None
@@ -300,6 +304,21 @@ def gauge_embedding_sketch(dataset_id: str, euler: int) -> Dict[str, Any]:
     }
 
 
+def is_real_configuration_matrix(value: Any) -> bool:
+    """True only for list/tuple matrices — never placeholder strings."""
+    if not isinstance(value, (list, tuple)) or not value:
+        return False
+    for row in value:
+        if isinstance(row, (list, tuple)):
+            if not row:
+                return False
+            if not all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in row):
+                return False
+        elif not (isinstance(row, (int, float)) and not isinstance(row, bool)):
+            return False
+    return True
+
+
 def merge_geometry_into_raw(
     raw: Optional[Dict[str, Any]],
     pack: Optional[Dict[str, Any]],
@@ -321,8 +340,14 @@ def merge_geometry_into_raw(
         'configuration_matrix': 'configuration_matrix',
     }
     for src, dst in mapping.items():
-        if pack.get(src) is not None and out.get(dst) is None:
-            out[dst] = pack[src]
+        val = pack.get(src)
+        if val is None or out.get(dst) is not None:
+            continue
+        if src == 'configuration_matrix' and not is_real_configuration_matrix(val):
+            continue
+        out[dst] = val
     if pack.get('name') and 'geometry_name' not in out:
         out['geometry_name'] = pack['name']
+    if pack.get('note') and 'geometry_note' not in out:
+        out['geometry_note'] = pack['note']
     return out

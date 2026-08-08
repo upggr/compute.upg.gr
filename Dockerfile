@@ -23,3 +23,5 @@ EXPOSE 5102
 
 # Run with gunicorn (Coolify sets PORT dynamically)
 CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5102} --workers 4 --timeout 120 app:app"]
+
+# Persistent Coolify volume mounts at /app/static/data (hall_of_fame.sqlite).

@@ -205,7 +205,7 @@
                 <h3>Flux-scan readiness ({{ tabs.fluxes.readiness.score }}/{{ tabs.fluxes.readiness.total }} · {{ tabs.fluxes.readiness.pct }}%)</h3>
                 <p class="note">{{ tabs.fluxes.readiness.note }}</p>
                 <ul class="check-list readiness-list">
-                    {% for item in tabs.fluxes.readiness.items %}
+                    {% for item in tabs.fluxes.readiness.checklist %}
                     <li class="{{ 'check-pass' if item.ok else 'check-fail' }}">
                         <span class="check-mark">{{ 'HAVE' if item.ok else 'NEED' }}</span>
                         <div>

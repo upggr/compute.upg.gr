@@ -442,7 +442,7 @@ def scan_readiness(
     ]
     done = sum(1 for i in items if i['ok'])
     return {
-        'items': items,
+        'checklist': items,
         'score': done,
         'total': len(items),
         'pct': round(100.0 * done / len(items), 1),

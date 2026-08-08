@@ -11,6 +11,7 @@ from cy_search import run_search, get_sample_results  # Demo implementation
 from cy_search_real import run_real_search, list_available_datasets, CYSearchEngine  # Real implementation
 from datasets_registry import DatasetRegistry, get_info_density_dataset
 import hall_of_fame
+import physics_dossier
 
 app = Flask(__name__)
 
@@ -150,17 +151,60 @@ def candidate_page(candidate_id):
     features = dict(candidate.get('features') or [])
     h11 = candidate.get('h11') if candidate.get('h11') is not None else features.get('h11')
     h21 = candidate.get('h21') if candidate.get('h21') is not None else features.get('h21')
+    h31 = candidate.get('h31') if candidate.get('h31') is not None else features.get('h31')
     chi = candidate.get('euler_char')
     if chi is None:
         chi = features.get('χ', features.get('euler_char'))
+
+    dossier = physics_dossier.build_dossier(
+        dataset_id=candidate.get('dataset_id') or 'kreuzer-skarke',
+        h11=h11,
+        h21=h21,
+        h31=h31,
+        euler_char=chi,
+        verified_target=candidate.get('verified_target'),
+    )
+    if dossier.get('ok'):
+        h11 = dossier['h11']
+        h21 = dossier['h21']
+        chi = dossier['euler_char']
+
+    neighbors = []
+    if h11 is not None and h21 is not None:
+        board = hall_of_fame.list_candidates(
+            dataset_id=candidate.get('dataset_id'),
+            limit=200,
+            db_path=HALL_OF_FAME_PATH,
+        )
+        scored = []
+        for item in board:
+            ih11 = item.get('h11')
+            ih21 = item.get('h21')
+            if ih11 is None or ih21 is None:
+                continue
+            if item.get('candidate_id') == candidate_id:
+                continue
+            dist = physics_dossier.neighbor_distance(
+                (int(h11), int(h21)), (int(ih11), int(ih21)))
+            scored.append({
+                'candidate_id': item.get('candidate_id'),
+                'h11': int(ih11),
+                'h21': int(ih21),
+                'euler_char': item.get('euler_char'),
+                'score': item.get('score'),
+                'verified_target': item.get('verified_target'),
+                'distance': round(dist, 3),
+            })
+        scored.sort(key=lambda row: row['distance'])
+        neighbors = scored[:12]
 
     og_parts = []
     if h11 is not None:
         og_parts.append(f"h¹¹={h11}")
     if h21 is not None:
         og_parts.append(f"h²¹={h21}")
-    if candidate.get('h31') is not None:
-        og_parts.append(f"h³¹={candidate.get('h31')}")
+    if h31 is not None:
+        og_parts.append(f"h³¹={h31}")
     if chi is not None:
         og_parts.append(f"χ={chi}")
     display_title = " · ".join(og_parts) if og_parts else candidate['candidate_id']
@@ -180,6 +224,8 @@ def candidate_page(candidate_id):
         h11=h11,
         h21=h21,
         chi=chi,
+        dossier=dossier if dossier.get('ok') else None,
+        neighbors=neighbors,
         og_title=og_title,
         og_description=og_description,
         og_url=og_url,
@@ -842,12 +888,23 @@ def _analyze_candidate(candidate):
     feature_map = {label: value for label, value in features if isinstance(label, str)}
     score = candidate.get("score")
     verified = candidate.get("verified_target")
-    dataset_id = candidate.get("dataset_id")
+    dataset_id = candidate.get("dataset_id") or 'kreuzer-skarke'
 
-    h11 = feature_map.get("h11")
-    h21 = feature_map.get("h21")
-    h31 = feature_map.get("h31")
-    euler = candidate.get("raw", {}).get("euler_char", feature_map.get("χ"))
+    h11 = candidate.get('h11', feature_map.get("h11"))
+    h21 = candidate.get('h21', feature_map.get("h21"))
+    h31 = candidate.get('h31', feature_map.get("h31"))
+    euler = candidate.get("euler_char")
+    if euler is None:
+        euler = candidate.get("raw", {}).get("euler_char", feature_map.get("χ"))
+
+    dossier = physics_dossier.build_dossier(
+        dataset_id=dataset_id,
+        h11=h11,
+        h21=h21,
+        h31=h31,
+        euler_char=euler,
+        verified_target=verified,
+    )
 
     def ratio(a, b):
         if a is None or b in (None, 0):
@@ -860,16 +917,26 @@ def _analyze_candidate(candidate):
         "h31_h11_ratio": ratio(h31, h11),
         "euler_abs": abs(euler) if euler is not None else None
     }
+    if dossier.get('ok'):
+        derived.update(dossier.get('scalars') or {})
 
-    # Simple heuristic indicators (placeholders for deeper geometry)
     complexity_index = None
     if h11 is not None and h21 is not None:
         complexity_index = round((h11 + h21) / 2, 3)
     stability_score = None
-    if verified is not None:
+    if dossier.get('ok'):
+        stability_score = dossier['scalars'].get('vacuum_stability')
+    elif verified is not None:
         stability_score = 0.85 if verified else 0.45
 
-    summary = "Derived ratios and heuristic indicators computed for candidate."
+    passed = sum(1 for c in dossier.get('checks', []) if c.get('ok'))
+    total = len(dossier.get('checks') or [])
+    summary = (
+        f"Topological certificate: {passed}/{total} necessary checks passed. "
+        f"{dossier.get('caveat', '')}"
+        if dossier.get('ok') else
+        "Derived ratios and heuristic indicators computed for candidate."
+    )
 
     analysis = {
         "candidate_id": candidate.get("candidate_id"),
@@ -880,6 +947,7 @@ def _analyze_candidate(candidate):
         "derived_metrics": derived,
         "complexity_index": complexity_index,
         "stability_score": stability_score,
+        "dossier": dossier if dossier.get('ok') else None,
         "summary": summary,
         "generated_at": _utcnow_iso()
     }

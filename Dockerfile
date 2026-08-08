@@ -12,6 +12,7 @@ COPY cy_search.py .
 COPY cy_search_real.py .
 COPY datasets_registry.py .
 COPY hall_of_fame.py .
+COPY physics_dossier.py .
 COPY templates/ templates/
 COPY static/ static/
 

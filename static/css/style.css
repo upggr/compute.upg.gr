@@ -1460,3 +1460,132 @@ html[data-theme="dark"] .form-row select {
 html[data-theme="dark"] tr.exact-match {
     background-color: rgba(79, 191, 117, 0.16);
 }
+
+/* Candidate dossier / landscape / student lab */
+.dossier-grid {
+    display: grid;
+    grid-template-columns: minmax(180px, 240px) 1fr;
+    gap: var(--spacing-lg);
+    align-items: start;
+    margin: 1rem 0 1.5rem;
+}
+
+@media (max-width: 800px) {
+    .dossier-grid { grid-template-columns: 1fr; }
+}
+
+.hodge-diamond {
+    text-align: center;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.hd-row {
+    display: flex;
+    justify-content: center;
+    gap: 0.35rem;
+    margin: 0.15rem 0;
+}
+
+.hd-cell {
+    min-width: 2rem;
+    padding: 0.2rem 0.35rem;
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85rem;
+    background: rgba(26, 84, 144, 0.08);
+}
+
+.hd-cell.accent {
+    background: rgba(26, 84, 144, 0.18);
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.hd-cell.muted { opacity: 0.45; }
+
+.identity-list, .check-list, .neighbor-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 1rem;
+}
+
+.identity-list li, .check-list li, .neighbor-list li {
+    margin: 0.65rem 0;
+}
+
+.identity-list .tex {
+    display: block;
+    margin: 0.25rem 0;
+    white-space: pre-wrap;
+    font-size: 0.85rem;
+}
+
+.check-list li {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.65rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.check-pass { background: rgba(79, 191, 117, 0.1); }
+.check-fail { background: rgba(220, 80, 80, 0.08); }
+
+.check-mark {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.2rem 0.45rem;
+    border-radius: 6px;
+    background: var(--bg-primary);
+}
+
+.landscape-canvas {
+    width: 100%;
+    max-width: 720px;
+    height: auto;
+    border-radius: 12px;
+    display: block;
+    background: #0c1016;
+}
+
+.lab-derive {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: end;
+    margin-top: 0.75rem;
+}
+
+.lab-derive label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+}
+
+.lab-derive input {
+    width: 6rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: inherit;
+}
+
+.student-lab details {
+    margin: 0.75rem 0;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-secondary);
+}
+
+.student-lab summary {
+    cursor: pointer;
+    font-weight: 600;
+}

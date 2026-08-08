@@ -30,12 +30,13 @@
         <h1>{{ display_title }}</h1>
         <p class="note"><code>{{ candidate.candidate_id }}</code></p>
         <p>
-            Permanent page for this geometry. Share this URL —
-            it stays stable because the id is derived from the invariants, not from a run rank.
+            Permanent topological certificate for these invariants.
+            Share this URL — the id is content-addressed from Hodge data, not from a run rank.
         </p>
         <div class="share-row" style="margin: 1rem 0;">
             <input id="share-url" class="share-input" type="text" readonly value="{{ og_url }}" aria-label="Share URL">
             <button id="copy-share" class="btn btn-secondary" type="button">Copy link</button>
+            <button id="copy-bibtex" class="btn btn-secondary" type="button">Copy BibTeX</button>
         </div>
         <div class="details-grid">
             <div class="detail-item"><span>Dataset</span><strong>{{ candidate.dataset_name or candidate.dataset_id }}</strong></div>
@@ -46,13 +47,129 @@
             <div class="detail-item"><span>h²¹</span><strong>{{ h21 if h21 is not none else '—' }}</strong></div>
             <div class="detail-item"><span>χ</span><strong>{{ chi if chi is not none else '—' }}</strong></div>
             <div class="detail-item"><span>Times seen</span><strong>{{ candidate.times_seen or 1 }}</strong></div>
-            <div class="detail-item"><span>First seen</span><strong>{{ candidate.first_seen_at or '—' }}</strong></div>
-            <div class="detail-item"><span>Last seen</span><strong>{{ candidate.last_seen_at or '—' }}</strong></div>
-            <div class="detail-item"><span>Last run</span><strong>{{ candidate.last_run_id or '—' }}</strong></div>
         </div>
-        {% if candidate.summary %}
-        <p class="note" style="margin-top: 1rem;">{{ candidate.summary }}</p>
+        {% if dossier and dossier.caveat %}
+        <p class="callout callout-warning" style="margin-top: 1rem;">{{ dossier.caveat }}</p>
         {% endif %}
+    </section>
+
+    {% if dossier %}
+    <section class="section" id="dossier">
+        <h2>Topological certificate</h2>
+        <p class="note">Necessary identities and search-target checks. Pass/fail is falsifiable from the numbers above.</p>
+
+        <div class="dossier-grid">
+            <div class="hodge-diamond" aria-label="Hodge diamond">
+                <div class="hd-row"><span class="hd-cell">{{ dossier.diamond.h00 }}</span></div>
+                <div class="hd-row"><span class="hd-cell muted">0</span><span class="hd-cell muted">0</span></div>
+                <div class="hd-row"><span class="hd-cell muted">0</span><span class="hd-cell accent">{{ dossier.diamond.h11 }}</span><span class="hd-cell muted">0</span></div>
+                <div class="hd-row"><span class="hd-cell accent">{{ dossier.diamond.h30 }}</span><span class="hd-cell accent">{{ dossier.diamond.h21 }}</span><span class="hd-cell accent">{{ dossier.diamond.h21 }}</span><span class="hd-cell accent">{{ dossier.diamond.h03 }}</span></div>
+                <div class="hd-row"><span class="hd-cell muted">0</span><span class="hd-cell accent">{{ dossier.diamond.h11 }}</span><span class="hd-cell muted">0</span></div>
+                <div class="hd-row"><span class="hd-cell muted">0</span><span class="hd-cell muted">0</span></div>
+                <div class="hd-row"><span class="hd-cell">{{ dossier.diamond.h33 }}</span></div>
+                <p class="note">Simplified CY3 Hodge diamond (corners + h¹¹ / h²¹).</p>
+            </div>
+
+            <div>
+                <h3>Identities</h3>
+                <ul class="identity-list">
+                    {% for item in dossier.identities %}
+                    <li>
+                        <strong>{{ item.name }}</strong>
+                        <code class="tex">{{ item.tex }}</code>
+                        {% if item.value is not none %}<span class="pill">→ {{ item.value }}</span>{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                <h3>Necessary checks</h3>
+                <ul class="check-list">
+                    {% for check in dossier.checks %}
+                    <li class="{{ 'check-pass' if check.ok else 'check-fail' }}">
+                        <span class="check-mark">{{ 'PASS' if check.ok else 'FAIL' }}</span>
+                        <div>
+                            <strong>{{ check.label }}</strong>
+                            <div class="note"><code>{{ check.rule }}</code> — {{ check.detail }}</div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <h3>Physics proxies</h3>
+        <p class="note">Same family of scalars used in the information-density ranking (proxies, not a vacuum existence proof).</p>
+        <div class="details-grid">
+            <div class="detail-item"><span>Tadpole L=|χ|/24</span><strong>{{ dossier.scalars.tadpole_L }}</strong></div>
+            <div class="detail-item"><span>Hodge entropy</span><strong>{{ dossier.scalars.hodge_entropy }}</strong></div>
+            <div class="detail-item"><span>Topo efficiency</span><strong>{{ dossier.scalars.topo_efficiency }}</strong></div>
+            <div class="detail-item"><span>Hodge balance</span><strong>{{ dossier.scalars.hodge_balance }}</strong></div>
+            <div class="detail-item"><span>Flux density proxy</span><strong>{{ dossier.scalars.flux_density }}</strong></div>
+            <div class="detail-item"><span>Vacuum stability proxy</span><strong>{{ dossier.scalars.vacuum_stability }}</strong></div>
+            <div class="detail-item"><span>Mirror (h¹¹,h²¹)</span><strong>({{ dossier.scalars.mirror_h11|int }}, {{ dossier.scalars.mirror_h21|int }})</strong></div>
+            <div class="detail-item"><span>Mirror χ</span><strong>{{ dossier.scalars.mirror_euler|int }}</strong></div>
+        </div>
+
+        <div class="analysis-header" style="margin-top: 1.25rem;">
+            <h3>On-demand analysis</h3>
+            <button id="run-analysis" class="btn btn-primary" type="button">Run analysis</button>
+        </div>
+        <p id="analysis-status" class="note">Computes the certificate + exportable bundle for this id.</p>
+        <div id="analysis-results" class="details-grid"></div>
+        <a id="analysis-download" class="btn btn-secondary" style="display:none; margin-top: 0.75rem;">Download analysis bundle</a>
+    </section>
+    {% endif %}
+
+    <section class="section" id="landscape">
+        <h2>Landscape neighborhood</h2>
+        <p class="note">
+            Where this Hodge pair sits among Hall of Fame entries for the same dataset
+            (Euclidean distance in (h¹¹, h²¹)). Sampled board — not the full KS database.
+        </p>
+        <canvas id="landscape-canvas" class="landscape-canvas" width="720" height="420"></canvas>
+        {% if neighbors %}
+        <div class="neighbor-list">
+            <h3>Nearest on the board</h3>
+            <ul>
+                {% for n in neighbors %}
+                <li>
+                    <a href="/candidate/{{ n.candidate_id }}">h¹¹={{ n.h11 }} · h²¹={{ n.h21 }} · χ={{ n.euler_char }}</a>
+                    <span class="note">Δ={{ n.distance }}{% if n.verified_target %} · verified{% endif %}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <p class="note">No neighbors yet — run searches to grow the Hall of Fame.</p>
+        {% endif %}
+    </section>
+
+    <section class="section student-lab" id="student-lab">
+        <h2>Student lab</h2>
+        <details open>
+            <summary>What are these numbers?</summary>
+            <p>
+                Calabi–Yau shapes are candidate “hidden dimensions” in string theory.
+                <strong>h¹¹</strong> counts Kähler moduli (sizes/shapes of even cycles);
+                <strong>h²¹</strong> counts complex-structure moduli.
+                For a CY threefold, Euler characteristic is forced by
+                <code>χ = 2(h¹¹ − h²¹)</code>. The tadpole budget is <code>L = |χ|/24</code>.
+            </p>
+        </details>
+        <details>
+            <summary>Derive χ yourself</summary>
+            <div class="lab-derive">
+                <label>h¹¹ <input type="number" id="lab-h11" value="{{ h11 or 0 }}"></label>
+                <label>h²¹ <input type="number" id="lab-h21" value="{{ h21 or 0 }}"></label>
+                <button type="button" id="lab-compute" class="btn btn-secondary">Compute</button>
+                <p id="lab-out" class="note"></p>
+            </div>
+        </details>
+        <details>
+            <summary>Quick check</summary>
+            <p id="lab-quiz" class="note"></p>
+            <button type="button" id="lab-quiz-btn" class="btn btn-secondary">New question</button>
+        </details>
     </section>
 
     <section class="section">
@@ -77,6 +194,13 @@
 <script src="{{ url_for('static', filename='js/cy-shape.js') }}"></script>
 <script>
 (function () {
+    const candidateId = {{ candidate.candidate_id|tojson }};
+    const datasetId = {{ (candidate.dataset_id or '')|tojson }};
+    const h11 = Number({{ h11 if h11 is not none else 'null' }});
+    const h21 = Number({{ h21 if h21 is not none else 'null' }});
+    const chi = Number({{ chi if chi is not none else 'null' }});
+    const neighbors = {{ neighbors|tojson }};
+
     const copyBtn = document.getElementById('copy-share');
     const shareInput = document.getElementById('share-url');
     if (copyBtn && shareInput) {
@@ -91,34 +215,141 @@
         });
     }
 
+    const bibBtn = document.getElementById('copy-bibtex');
+    if (bibBtn) {
+        bibBtn.addEventListener('click', async () => {
+            const bib = `@misc{upgstrings_${candidateId.replace(/[^a-zA-Z0-9]/g, '_')},
+  title = {upg-strings topological certificate: ${candidateId}},
+  howpublished = {\\url{${window.location.href}}},
+  note = {h11=${h11}, h21=${h21}, chi=${chi}; identity scheme upg-strings/sha256-invariants-v1},
+  year = {${new Date().getFullYear()}}
+}`;
+            try {
+                await navigator.clipboard.writeText(bib);
+                bibBtn.textContent = 'Copied';
+                setTimeout(() => { bibBtn.textContent = 'Copy BibTeX'; }, 1200);
+            } catch (err) {
+                console.error(err);
+            }
+        });
+    }
+
+    const runBtn = document.getElementById('run-analysis');
+    if (runBtn) {
+        runBtn.addEventListener('click', async () => {
+            const status = document.getElementById('analysis-status');
+            const results = document.getElementById('analysis-results');
+            const download = document.getElementById('analysis-download');
+            status.textContent = 'Running analysis...';
+            results.innerHTML = '';
+            download.style.display = 'none';
+            const response = await fetch('/api/analyze-candidate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    candidate_id: candidateId,
+                    dataset_id: datasetId,
+                    source: 'hall_of_fame'
+                })
+            });
+            const data = await response.json();
+            if (data.status !== 'success') {
+                status.textContent = data.error || 'Analysis failed.';
+                return;
+            }
+            const analysis = data.analysis;
+            status.textContent = analysis.summary || 'Analysis complete.';
+            const blocks = [
+                ['Complexity index', analysis.complexity_index],
+                ['Stability proxy', analysis.stability_score],
+                ['Tadpole L', analysis.derived_metrics?.tadpole_L],
+                ['Flux density', analysis.derived_metrics?.flux_density],
+                ['Hodge balance', analysis.derived_metrics?.hodge_balance]
+            ];
+            results.innerHTML = blocks.map(([label, value]) => `
+                <div class="detail-item"><span>${label}</span><strong>${value ?? 'N/A'}</strong></div>
+            `).join('');
+            download.href = `/api/analysis/${encodeURIComponent(candidateId)}/bundle`;
+            download.style.display = 'inline-block';
+        });
+    }
+
+    // Landscape plot
+    const lc = document.getElementById('landscape-canvas');
+    if (lc && Number.isFinite(h11) && Number.isFinite(h21)) {
+        const ctx = lc.getContext('2d');
+        const w = lc.width, h = lc.height;
+        const pad = 40;
+        const pts = [{h11, h21, self: true}].concat(
+            (neighbors || []).map(n => ({h11: n.h11, h21: n.h21, self: false}))
+        );
+        const xs = pts.map(p => p.h11), ys = pts.map(p => p.h21);
+        const minX = Math.min(...xs) - 10, maxX = Math.max(...xs) + 10;
+        const minY = Math.min(...ys) - 10, maxY = Math.max(...ys) + 10;
+        const sx = (v) => pad + (v - minX) / (maxX - minX || 1) * (w - 2 * pad);
+        const sy = (v) => h - pad - (v - minY) / (maxY - minY || 1) * (h - 2 * pad);
+        ctx.fillStyle = '#0c1016';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.strokeRect(pad, pad, w - 2 * pad, h - 2 * pad);
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.font = '12px ui-monospace, monospace';
+        ctx.fillText('h¹¹', w / 2, h - 12);
+        ctx.save();
+        ctx.translate(14, h / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText('h²¹', 0, 0);
+        ctx.restore();
+        pts.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(sx(p.h11), sy(p.h21), p.self ? 7 : 4, 0, Math.PI * 2);
+            ctx.fillStyle = p.self ? '#6db7ff' : 'rgba(173, 198, 220, 0.55)';
+            ctx.fill();
+        });
+    }
+
+    // Student lab
+    const labOut = document.getElementById('lab-out');
+    document.getElementById('lab-compute')?.addEventListener('click', () => {
+        const a = Number(document.getElementById('lab-h11').value);
+        const b = Number(document.getElementById('lab-h21').value);
+        const e = 2 * (a - b);
+        const L = Math.abs(e) / 24;
+        labOut.textContent = `χ = 2(${a} − ${b}) = ${e};  tadpole L = |χ|/24 = ${L.toFixed(4)};  mirror = (h¹¹,h²¹)=(${b},${a}) with χ=${-e}.`;
+    });
+    const quizEl = document.getElementById('lab-quiz');
+    function newQuiz() {
+        const A = 10 + Math.floor(Math.random() * 40);
+        const B = 10 + Math.floor(Math.random() * 40);
+        const ans = 2 * (A - B);
+        quizEl.innerHTML = `If h¹¹=${A} and h²¹=${B}, what is χ? <button type="button" class="btn btn-secondary btn-small" id="lab-reveal">Reveal</button> <span id="lab-ans" hidden><code>${ans}</code> via χ=2(h¹¹−h²¹).</span>`;
+        document.getElementById('lab-reveal')?.addEventListener('click', () => {
+            document.getElementById('lab-ans').hidden = false;
+        });
+    }
+    document.getElementById('lab-quiz-btn')?.addEventListener('click', newQuiz);
+    newQuiz();
+
+    // 3D
     const canvas = document.getElementById('candidate-canvas');
     if (!window.THREE || !window.CYShape || !canvas) return;
-
     const width = canvas.clientWidth || 900;
     const height = canvas.clientHeight || 500;
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
     renderer.setSize(width, height, false);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
     CYShape.configureScene(THREE, { renderer, scene });
-
-    const params = CYShape.paramsFor(
-        Number({{ h11 if h11 is not none else 10 }}),
-        Number({{ h21 if h21 is not none else 12 }}),
-        Number({{ chi if chi is not none else 0 }})
-    );
+    const params = CYShape.paramsFor(h11 || 10, h21 || 12, chi || 0);
     const geometry = CYShape.geometryFor(THREE, params, 220, 90);
     const material = CYShape.materialFor(THREE, params);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.rotation.set(-0.42, 0.55, 0.1);
     CYShape.frameMesh(camera, mesh, geometry);
-
     const pivot = new THREE.Group();
     pivot.add(mesh);
     scene.add(pivot);
-
     const animate = () => {
         pivot.rotation.y += 0.005;
         renderer.render(scene, camera);

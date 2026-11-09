@@ -363,6 +363,34 @@ Construction / analyze / CYTools export prefer DB hits over static JSON when the
 
 Roadmap vs full CYTools: this is the **offline → DB → query** path. In-process CYTools inside the web image remains out of scope.
 
+### Interactive research handoff
+
+`/handoff` offers an inspectable shortlist of the sourced KS sidecar records,
+ordered by |χ|, total Hodge count, or vertex count. Select records and download
+a checksummed ZIP with exact source bytes, per-record provenance, and explicit
+missing-input lists. Ordering is within this small sample, **not global rarity
+or an ML top-k discovery**. Hodge-matched gallery links are context only; no
+scores, equations, or intersection tensors are merged across geometries.
+
+- `GET /api/handoff/catalog`: sourced records and exact integer/rational data checks.
+- `POST /api/handoff/batch`: `{ "record_ids": [...], "source_sha256": "..." }`;
+  rejects unknown/duplicate IDs, failed checks, or a changed source snapshot.
+- `GET /api/handoff/calibration`: separate quintic fixture and Python check reports.
+- `GET /handoff/quintic.zip`: the reproducible calibration ZIP, generated in memory.
+
+The page includes a browser-only Euler negative-control widget. No Lean, CYTools,
+period calculation, or ML training runs on these routes. The container ships the
+source assets; no prebuilt `dist/` artifact or new volume is required.
+
+### Formal-verification pilot handoff
+
+`python3 scripts/prepare_lean_handoff.py` creates `dist/upg-quintic-lean-pilot.zip`:
+one explicitly sourced textbook quintic, a proposed JSON schema, exact-integer
+Python checks, a corrupted-Euler negative control, and SHA-256 checksums. It is
+**not a rare top-k result or a Lean certificate**; no Lean build is performed.
+See [the handoff specification](examples/lean_handoff/README.md) for scope and
+reproduction commands. No additional dependencies or web/DB access are needed.
+
 ## Roadmap
 
 ### Dataset Expansion

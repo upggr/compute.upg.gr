@@ -12,6 +12,8 @@ build
 .gitignore
 .gitattributes
 README.md
+# This README is a runtime asset inside the downloadable calibration ZIP.
+!examples/lean_handoff/README.md
 .env
 .venv
 venv/

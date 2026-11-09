@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, send_file, Response, abort
+from flask import Flask, render_template, jsonify, request, send_file, Response, abort, url_for
 import io
 import zipfile
 import json
@@ -28,6 +28,8 @@ import model_exclusions
 import model_cards
 import job_store
 import threading
+import research_handoff
+from scripts import prepare_lean_handoff as lean_handoff
 
 app = Flask(__name__)
 
@@ -419,6 +421,80 @@ def demo():
 def candidates():
     """Candidate gallery / hall of fame"""
     return render_template('candidates.html')
+
+
+def _research_handoff_catalog():
+    catalog = research_handoff.load_catalog()
+    # Gallery links are Hodge-class context only. Never merge a gallery score,
+    # equation, or intersection tensor into a different source polytope.
+    for record in catalog['records']:
+        cid = canonical_id('kreuzer-skarke', record['geometry'])
+        record['hodge_context_url'] = url_for('candidate_page', candidate_id=cid) if (
+            hall_of_fame.get_candidate(cid, db_path=HALL_OF_FAME_PATH)
+        ) else None
+    return catalog
+
+
+@app.route('/handoff')
+def research_handoff_page():
+    """Interactive, sourced sample shortlist plus a separate calibration kit."""
+    return render_template('handoff.html', catalog=_research_handoff_catalog())
+
+
+@app.route('/api/handoff/catalog')
+def research_handoff_catalog():
+    return jsonify(_research_handoff_catalog())
+
+
+@app.route('/api/handoff/batch', methods=['POST'])
+def research_handoff_batch():
+    if request.content_length is not None and request.content_length > 16384:
+        return jsonify({'error': 'Selection request is too large'}), 413
+    # Bound the read even when the client streams a body without Content-Length.
+    body = request.stream.read(16385)
+    if len(body) > 16384:
+        return jsonify({'error': 'Selection request is too large'}), 413
+    try:
+        params = json.loads(body) if request.is_json else None
+    except ValueError:
+        params = None
+    if not isinstance(params, dict) or set(params) != {'record_ids', 'source_sha256'}:
+        return jsonify({'error': 'Expected record_ids and source_sha256'}), 400
+    try:
+        content = research_handoff.build_batch(params['record_ids'], params['source_sha256'])
+    except research_handoff.StaleSource as exc:
+        return jsonify({'error': str(exc)}), 409
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    response = send_file(
+        io.BytesIO(content), mimetype='application/zip', as_attachment=True,
+        download_name='upg-ks-handoff.zip',
+    )
+    response.headers['X-Content-SHA256'] = hashlib.sha256(content).hexdigest()
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+@app.route('/api/handoff/calibration')
+def research_handoff_calibration():
+    files = lean_handoff.build_files()
+    return jsonify({
+        'fixture': json.loads(files['quintic.json']),
+        'negative_fixture': json.loads(files['negative_euler.json']),
+        'report': json.loads(files['check_report.json']),
+    })
+
+
+@app.route('/handoff/quintic.zip')
+def research_handoff_quintic_zip():
+    # Generate in memory from shipped sources, never from an ignored dist/ ZIP.
+    content = lean_handoff.build_archive()
+    response = send_file(
+        io.BytesIO(content), mimetype='application/zip', as_attachment=True,
+        download_name='upg-quintic-lean-pilot.zip',
+    )
+    response.headers['X-Content-SHA256'] = hashlib.sha256(content).hexdigest()
+    return response
 
 
 @app.route('/candidate/<path:candidate_id>')

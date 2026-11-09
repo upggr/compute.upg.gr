@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% set active_page = "handoff" %}
+
+{% block title %}Research handoff — upg-strings{% endblock %}
+{% block description %}Inspect a sourced Kreuzer–Skarke sample, select a reproducible batch, and try a separate quintic calibration check. Not Lean-certified geometry.{% endblock %}
+{% block og_tags %}
+    <meta property="og:title" content="Research handoff — upg-strings">
+    <meta property="og:description" content="A transparent shortlist, explicit vertices, and reproducible downloads for a data-to-proof collaboration.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://compute.upg.gr/handoff">
+{% endblock %}
+{% block head_extra %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/handoff.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="container handoff">
+    <section class="section handoff-hero">
+        <p class="handoff-eyebrow">Explore → select → reproduce</p>
+        <h1>Research handoff</h1>
+        <p class="handoff-lead">A small, inspectable batch to start a real collaboration—not just a screenshot of a ranking.</p>
+        <div class="handoff-actions">
+            <a class="btn btn-primary" href="#shortlist">Explore the shortlist</a>
+            <a class="btn btn-secondary" href="#calibration">Try the calibration check</a>
+            <button class="btn btn-secondary" id="handoff-copy" type="button">Copy page link</button>
+        </div>
+        <p id="handoff-share-status" class="note" role="status"></p>
+        <div class="handoff-stats">
+            <div><strong>{{ catalog.count }}</strong><span>sourced KS vertex records</span></div>
+            <div><strong>{{ catalog.small_euler_count }}</strong><span>with |χ| &lt; 100</span></div>
+            <div><strong>0</strong><span>Lean certificates generated here</span></div>
+        </div>
+        <aside class="handoff-notice">
+            <strong>What “top” means here</strong>
+            <p>Choose a transparent ordering within this small sample. Small |χ| is a selection criterion,
+                not evidence of global rarity or physical viability. These are sourced polytope representatives,
+                <strong>not new ML discoveries</strong>. The main demo ranks synthetic Hodge draws; its
+                “verified” flag checks a target rule, not geometry.</p>
+        </aside>
+    </section>
+
+    <section class="section" id="shortlist" aria-labelledby="shortlist-title">
+        <h2 id="shortlist-title">1. Choose a batch of sourced records</h2>
+        <p>Inspect the exact integer vertices, source, and missing inputs before downloading.
+            No intersections or equations are attached from unrelated Hodge-matched examples.</p>
+        <div class="handoff-controls">
+            <div><label for="handoff-filter">Show</label><select id="handoff-filter">
+                <option value="small" selected>Small Euler: |χ| &lt; 100</option>
+                <option value="all">All sourced records</option>
+            </select></div>
+            <div><label for="handoff-sort">Order within the sample</label><select id="handoff-sort">
+                <option value="euler">Smallest |χ| first</option>
+                <option value="moduli">Smallest h¹¹ + h²¹ first</option>
+                <option value="vertices">Fewest vertices first</option>
+            </select></div>
+            <div><label for="handoff-top">Select first</label><select id="handoff-top">
+                <option value="3">3 records</option><option value="5" selected>5 records</option>
+                <option value="10">10 records</option><option value="50">All visible</option>
+            </select></div>
+            <button class="btn btn-secondary" id="handoff-select" type="button">Select top of this view</button>
+            <button class="btn btn-secondary" id="handoff-clear" type="button">Clear selection</button>
+            <button class="btn btn-primary" id="handoff-download" type="button" disabled>Download selected ZIP</button>
+        </div>
+        <p class="note" id="handoff-selection" role="status">Use the checkboxes to select a batch.</p>
+        <p id="handoff-download-status" class="note handoff-wrap" role="status" aria-live="polite"></p>
+        <noscript><p class="handoff-notice">Enable JavaScript for sorting, inspection and batch selection.
+            The <a href="{{ url_for('research_handoff_catalog') }}">catalog JSON</a> and
+            <a href="{{ url_for('research_handoff_quintic_zip') }}">quintic ZIP</a> are available without it.</p></noscript>
+        <div class="handoff-browser">
+            <div class="handoff-table-wrap">
+                <table class="handoff-table">
+                    <caption>Source labels and script checks—not recomputed Hodge numbers or geometry certificates.</caption>
+                    <thead><tr><th scope="col">Select</th><th scope="col">View #</th><th scope="col">(h¹¹, h²¹)</th>
+                        <th scope="col">χ</th><th scope="col">Vertices</th><th scope="col">Data checks</th><th scope="col">Inspect</th></tr></thead>
+                    <tbody id="handoff-rows">
+                    {% for record in catalog.records %}
+                        <tr><td>—</td><td>{{ loop.index }}</td><td>({{ record.geometry.h11 }}, {{ record.geometry.h21 }})</td>
+                            <td>{{ record.geometry.euler_char }}</td><td>{{ record.geometry.vertex_count }}</td>
+                            <td>{{ 'Pass' if record.checks.passed else 'Fail' }}</td><td>Enable JavaScript</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <aside class="handoff-inspector" aria-labelledby="handoff-detail-title" tabindex="-1">
+                <p class="handoff-eyebrow">Record inspector</p>
+                <h3 id="handoff-detail-title">Choose a record</h3>
+                <p id="handoff-record-id" class="handoff-wrap"></p>
+                <p class="handoff-tag">Sourced representative · not Lean-certified</p>
+                <p id="handoff-detail-summary"></p>
+                <h4>Script checks</h4><ul id="handoff-checks"></ul>
+                <h4>Missing inputs</h4><ul id="handoff-missing"></ul>
+                <h4>Provenance</h4><dl id="handoff-provenance" class="handoff-wrap"></dl>
+                <a id="handoff-hodge-link" hidden>Open Hodge-class gallery context (not polytope identity)</a>
+                <details open><summary>Vertex matrix (source convention)</summary>
+                    <p class="note">Confirm the lattice/polar convention before downstream import. No triangulation is supplied.</p>
+                    <pre id="handoff-vertices" class="code-block"></pre>
+                </details>
+                <details><summary>Full handoff record JSON</summary><pre id="handoff-record-json" class="code-block"></pre></details>
+            </aside>
+        </div>
+        <p class="note handoff-wrap">Source: <a href="https://huggingface.co/datasets/calabi-yau-data/polytopes-4d" target="_blank" rel="noopener">calabi-yau-data/polytopes-4d</a>
+            → <code>{{ catalog.source.file }}</code>.<br>Local source SHA-256: <code>{{ catalog.source.sha256 }}</code>.
+            <a href="{{ url_for('research_handoff_catalog') }}">Catalog JSON</a></p>
+    </section>
+
+    <section class="section handoff-calibration" id="calibration" aria-labelledby="calibration-title">
+        <h2 id="calibration-title">2. Test the bridge on a known example</h2>
+        <p>The <strong>Fermat quintic</strong> is a separate textbook calibration—not a rare hit.
+            Its kit contains the explicit equation, Hodge inputs (1, 101), H³ = 5,
+            ambient P⁴ fan rays, provenance, five exact Python checks, and a negative control.</p>
+        <div class="handoff-actions">
+            <a class="btn btn-primary" href="{{ url_for('research_handoff_quintic_zip') }}">Download calibration ZIP</a>
+            <button class="btn btn-secondary" id="handoff-calibration-load" type="button">Load Python check results</button>
+        </div>
+        <p id="handoff-calibration-status" class="note" role="status"></p>
+        <div id="handoff-calibration-results" hidden>
+            <ul id="handoff-calibration-checks"></ul>
+            <p class="note">The downloadable Python checker rejects the corrupted fixture specifically at the Euler equality.
+                No Lean executable, proof service, or geometry engine runs here.</p>
+        </div>
+        <div class="handoff-playground">
+            <h3>Break one equality</h3>
+            <p>For the declared Hodge values: <code>2 × (1 − 101) = −200</code>.</p>
+            <label for="handoff-euler">Try a supplied Euler value</label>
+            <input id="handoff-euler" type="text" inputmode="numeric" value="-200" maxlength="30" aria-describedby="handoff-euler-result">
+            <div class="handoff-actions">
+                <button class="btn btn-secondary" id="handoff-corrupt" type="button">Use corrupted value −198</button>
+                <button class="btn btn-secondary" id="handoff-restore" type="button">Restore −200</button>
+            </div>
+            <p id="handoff-euler-result" role="status" aria-live="polite"></p>
+            <p class="note">This widget uses browser integer arithmetic only. Passing it does not establish that a geometry exists.</p>
+        </div>
+    </section>
+
+    <section class="section" aria-labelledby="handoff-next-title">
+        <h2 id="handoff-next-title">3. What would make the next result meaningful?</h2>
+        <div class="outputs-grid">
+            <div class="output-item"><h3>Offline geometry first</h3><p>Recompute source Hodge numbers, select an explicit triangulation,
+                and record the intersection basis. K3/CM searches and monodromy need additional data.</p></div>
+            <div class="output-item"><h3>A precise proof contract</h3><p>Agree on one theorem about the supplied input. Return its SHA-256,
+                pinned Lean/Mathlib versions, source, build logs, assumptions, and axiom report.</p></div>
+            <div class="output-item"><h3>A negative control</h3><p>The valid fixture should pass and a corrupted invariant should fail
+                for the mathematical reason—not a missing dependency. Label exactly what was proved.</p></div>
+        </div>
+        <p class="handoff-notice">Neither this sample nor the calibration supplies a Mukai lattice, brane/flux setup, tadpole cancellation,
+            Ricci-flat metric, or Lean certificate. <strong>|χ(CY3)|/24 is not an F-theory fourfold D3-tadpole budget.</strong></p>
+    </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script id="handoff-data" type="application/json">{{ catalog | tojson }}</script>
+<script defer src="{{ url_for('static', filename='js/handoff.js') }}"></script>
+{% endblock %}
